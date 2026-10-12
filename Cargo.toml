@@ -1,0 +1,17 @@
+[package]
+name = "cogniverse-rpg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["ws"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rayon = "1.10"
+rand = "0.8"
+rand_xoshiro = "0.6"
+parking_lot = "0.12"
+futures-util = "0.3"

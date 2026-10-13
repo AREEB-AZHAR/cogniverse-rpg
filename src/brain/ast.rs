@@ -151,9 +151,17 @@ impl BehavioralGenome {
                             Expr::BinaryOp(
                                 Box::new(Expr::Vital(VitalType::Piety)),
                                 Op::GreaterThan,
-                                Box::new(Expr::Constant(0.6)),
+                                Box::new(Expr::Constant(0.55)),
                             ),
-                            Stmt::Act(ActionChoice::MakeAltarOffering),
+                            Stmt::IfElse(
+                                Expr::BinaryOp(
+                                    Box::new(Expr::DistanceTo(EntityFilter::Altar)),
+                                    Op::LessThan,
+                                    Box::new(Expr::Constant(2.5)),
+                                ),
+                                Box::new(Stmt::Act(ActionChoice::MakeAltarOffering)),
+                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::Altar))),
+                            ),
                         ),
                         (
                             Expr::BinaryOp(
@@ -164,8 +172,24 @@ impl BehavioralGenome {
                             Stmt::Act(ActionChoice::CourtNearestMate),
                         ),
                         (
+                            Expr::HasItemInInventory("Wood".into()),
+                            Stmt::IfElse(
+                                Expr::HasItemInInventory("Stone".into()),
+                                Box::new(Stmt::Act(ActionChoice::BuildShelter)),
+                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::StoneRock))),
+                            ),
+                        ),
+                        (
                             Expr::Constant(1.0),
-                            Stmt::Act(ActionChoice::ChopWood),
+                            Stmt::IfElse(
+                                Expr::BinaryOp(
+                                    Box::new(Expr::DistanceTo(EntityFilter::Tree)),
+                                    Op::LessThan,
+                                    Box::new(Expr::Constant(1.8)),
+                                ),
+                                Box::new(Stmt::Act(ActionChoice::ChopWood)),
+                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::Tree))),
+                            ),
                         ),
                     ])),
                 )),

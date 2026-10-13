@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use super::world::altar::DeityAlignment;
 use super::world::items::{Inventory, ItemId};
 use super::world::tile::Tile;
 use super::world::WorldGrid;
@@ -206,9 +207,15 @@ impl Agent {
         let min_stone = min_stone_sq.sqrt();
         let min_iron = min_iron_sq.sqrt();
 
-        // Check nearest altar
+        // Check nearest altar (preferring faction altar)
         for altar in &world.altars {
-            let d = (altar.x as f32 - ax).hypot(altar.y as f32 - ay);
+            let matches_faction = match (self.race, altar.deity) {
+                (CivilizationRace::SolarTerran, DeityAlignment::SolarPlayerGod) => true,
+                (CivilizationRace::ChthonicLunarian, DeityAlignment::LunarShadowWeaver) => true,
+                _ => false,
+            };
+            let penalty = if matches_faction { 0.0 } else { 200.0 };
+            let d = (altar.x as f32 - ax).hypot(altar.y as f32 - ay) + penalty;
             if d < min_altar {
                 min_altar = d;
             }

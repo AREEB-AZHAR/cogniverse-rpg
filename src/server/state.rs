@@ -1,5 +1,6 @@
 use super::super::world::{WorldGrid, WORLD_WIDTH, WORLD_HEIGHT};
-use super::super::world::tile::BiomeType;
+use super::super::world::tile::{BiomeType, PlacedStructure, StructureKind};
+use super::super::world::altar::DeityAlignment;
 use super::super::world::items::ItemId;
 use super::super::agent::{Agent, CivilizationRace};
 use super::super::brain::ast::{ActionChoice, EntityFilter};
@@ -195,9 +196,28 @@ impl SimulationEngine {
 
             match action {
                 ActionChoice::IdleRest => {
-                    let agent = &mut self.agents[idx];
-                    agent.energy = (agent.energy + 0.05).min(1.0);
-                    agent.brain.neuromod.update(0.1, 1.0 - agent.hunger, false, false, 0.0);
+                    let (ax, ay, a_id, a_energy, a_hunger, a_thirst) = {
+                        let a = &mut self.agents[idx];
+                        a.energy = (a.energy + 0.06).min(1.0);
+                        a.brain.neuromod.update(0.1, 1.0 - a.hunger, false, false, 0.0);
+                        (a.x, a.y, a.id, a.energy, a.hunger, a.thirst)
+                    };
+                    // WorldBox Roaming: if rested and vitals good, wander towards home settlement or explore
+                    if a_energy > 0.50 && a_hunger < 0.60 && a_thirst < 0.60 {
+                        if current_tick % 2 == 0 {
+                            let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                            if let Some((hx, hy)) = altar_target {
+                                self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
+                            }
+                        } else {
+                            let r_dx = (current_tick as isize % 3) - 1;
+                            let r_dy = ((a_id + current_tick as usize) as isize % 3) - 1;
+                            let nx = (ax as isize + r_dx).clamp(0, WORLD_WIDTH as isize - 1) as usize;
+                            let ny = (ay as isize + r_dy).clamp(0, WORLD_HEIGHT as isize - 1) as usize;
+                            self.agents[idx].x = nx;
+                            self.agents[idx].y = ny;
+                        }
+                    }
                 }
                 ActionChoice::MoveToNearest(filter) => {
                     let target_pos = {
@@ -207,6 +227,12 @@ impl SimulationEngine {
                     if let Some((tx, ty)) = target_pos {
                         let agent = &mut self.agents[idx];
                         agent.step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                    } else {
+                        // Fallback: roam towards home altar if specific target filter not found
+                        let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                        if let Some((hx, hy)) = altar_target {
+                            self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
+                        }
                     }
                 }
                 ActionChoice::ForageFood => {
@@ -216,16 +242,21 @@ impl SimulationEngine {
                         tile.berry_amount -= 1;
                         let agent = &mut self.agents[idx];
                         agent.inventory.add(ItemId::Berry, 1);
-                        agent.hunger = (agent.hunger - 0.25).max(0.0);
+                        agent.hunger = (agent.hunger - 0.35).max(0.0);
                         agent.brain.neuromod.update(0.5, 1.0 - agent.hunger, false, false, 0.0);
                         agent.brain.memory.record_observation("Foraged delicious wild berries.");
                     } else if tile.grain_amount > 0 {
                         tile.grain_amount -= 1;
                         let agent = &mut self.agents[idx];
                         agent.inventory.add(ItemId::Grain, 1);
-                        agent.hunger = (agent.hunger - 0.15).max(0.0);
+                        agent.hunger = (agent.hunger - 0.25).max(0.0);
                         agent.brain.neuromod.update(0.3, 1.0 - agent.hunger, false, false, 0.0);
                         agent.brain.memory.record_observation("Harvested wild grain.");
+                    } else {
+                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::FoodSource);
+                        if let Some((tx, ty)) = target {
+                            self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                        }
                     }
                 }
                 ActionChoice::DrinkWater => {
@@ -244,10 +275,26 @@ impl SimulationEngine {
                         if has_water { break; }
                     }
                     if has_water {
-                        let agent = &mut self.agents[idx];
-                        agent.thirst = (agent.thirst - 0.50).max(0.0);
-                        agent.brain.neuromod.update(0.4, 1.0 - agent.thirst, false, false, 0.0);
-                        agent.brain.memory.record_observation("Drank cold, clean river water.");
+                        let should_step_home = {
+                            let agent = &mut self.agents[idx];
+                            agent.thirst = (agent.thirst - 0.65).max(0.0);
+                            agent.brain.neuromod.update(0.4, 1.0 - agent.thirst, false, false, 0.0);
+                            agent.brain.memory.record_observation("Drank cold, clean river water.");
+                            agent.thirst < 0.25
+                        };
+
+                        // Once thirst is satisfied, step away from riverbank towards home settlement
+                        if should_step_home {
+                            let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                            if let Some((hx, hy)) = altar_target {
+                                self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
+                            }
+                        }
+                    } else {
+                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::WaterSource);
+                        if let Some((tx, ty)) = target {
+                            self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                        }
                     }
                 }
                 ActionChoice::ChopWood => {
@@ -259,6 +306,16 @@ impl SimulationEngine {
                         agent.inventory.add(ItemId::Wood, 1);
                         agent.energy = (agent.energy - 0.03).max(0.0);
                         agent.brain.neuromod.update(0.3, 0.5, false, false, 0.0);
+                    } else {
+                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Tree);
+                        if let Some((tx, ty)) = target {
+                            self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                        } else {
+                            let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                            if let Some((hx, hy)) = altar_target {
+                                self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
+                            }
+                        }
                     }
                 }
                 ActionChoice::MineStone => {
@@ -270,6 +327,11 @@ impl SimulationEngine {
                         agent.inventory.add(ItemId::Stone, 1);
                         agent.energy = (agent.energy - 0.04).max(0.0);
                         agent.brain.neuromod.update(0.3, 0.5, false, false, 0.0);
+                    } else {
+                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::StoneRock);
+                        if let Some((tx, ty)) = target {
+                            self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                        }
                     }
                 }
                 ActionChoice::MineIron => {
@@ -287,6 +349,55 @@ impl SimulationEngine {
                             vec!["Iron".into(), "Crafting".into()],
                             7.5,
                         );
+                    } else {
+                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::IronVein);
+                        if let Some((tx, ty)) = target {
+                            self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                        }
+                    }
+                }
+                ActionChoice::BuildShelter => {
+                    let (ax, ay, a_name) = {
+                        let a = &self.agents[idx];
+                        (a.x, a.y, a.name.clone())
+                    };
+                    let tile = self.world.tile_at_mut(ax, ay);
+                    if tile.structure.is_none() && !tile.has_fresh_water {
+                        let agent = &mut self.agents[idx];
+                        if agent.inventory.count(ItemId::Wood) >= 2 && agent.inventory.count(ItemId::Stone) >= 1 {
+                            agent.inventory.remove(ItemId::Wood, 2);
+                            agent.inventory.remove(ItemId::Stone, 1);
+                            tile.structure = Some(PlacedStructure {
+                                kind: StructureKind::StoneCabin,
+                                owner_id: Some(agent.id),
+                                health: 120.0,
+                                max_health: 120.0,
+                            });
+                            agent.brain.neuromod.update(0.9, 0.8, false, false, 0.1);
+                            agent.brain.memory.log_episodic_event(
+                                current_tick,
+                                "Constructed a sturdy Stone Cabin! Village territory expanded.",
+                                vec!["Building".into(), "Settlement".into()],
+                                8.5,
+                            );
+                            self.log_event(format!("🏡 {} built a new Stone Cabin at ({}, {})!", a_name, ax, ay));
+                        } else if agent.inventory.count(ItemId::Wood) >= 1 {
+                            agent.inventory.remove(ItemId::Wood, 1);
+                            tile.structure = Some(PlacedStructure {
+                                kind: StructureKind::Campfire,
+                                owner_id: Some(agent.id),
+                                health: 60.0,
+                                max_health: 60.0,
+                            });
+                            agent.warmth = (agent.warmth + 0.3).min(1.0);
+                            agent.brain.neuromod.update(0.5, 0.6, false, false, 0.0);
+                            self.log_event(format!("🔥 {} lit a warm Campfire at ({}, {})!", a_name, ax, ay));
+                        }
+                    } else {
+                        let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                        if let Some((hx, hy)) = altar_target {
+                            self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
+                        }
                     }
                 }
                 ActionChoice::CraftTool => {
@@ -350,6 +461,11 @@ impl SimulationEngine {
                                 self.agents[idx].children_count += 1;
                                 self.agents[m_idx].children_count += 1;
                             }
+                        }
+                    } else {
+                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::PotentialMate);
+                        if let Some((tx, ty)) = target {
+                            self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                         }
                     }
                 }
@@ -426,7 +542,10 @@ impl SimulationEngine {
             self.births_total += 1;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = self.akashic_core.maybe_awaken_echo();
-            let mut baby = Agent::new(id, name.clone(), race, x, y, archetype, echo);
+            // Slight offset on land to prevent single-tile clumping
+            let spawn_x = (x + 1).min(WORLD_WIDTH - 2);
+            let spawn_y = y;
+            let mut baby = Agent::new(id, name.clone(), race, spawn_x, spawn_y, archetype, echo);
             baby.brain.genome = genome;
             baby.inventory.add(ItemId::Berry, 5);
             baby.inventory.add(ItemId::Wood, 2);
@@ -467,9 +586,17 @@ impl SimulationEngine {
                 let ax = agent.x as f32;
                 let ay = agent.y as f32;
                 for altar in &world.altars {
+                    let matches_faction = match (agent.race, altar.deity) {
+                        (CivilizationRace::SolarTerran, DeityAlignment::SolarPlayerGod) => true,
+                        (CivilizationRace::ChthonicLunarian, DeityAlignment::LunarShadowWeaver) => true,
+                        _ => false,
+                    };
                     let dx = altar.x as f32 - ax;
                     let dy = altar.y as f32 - ay;
-                    let d_sq = dx * dx + dy * dy;
+                    let mut d_sq = dx * dx + dy * dy;
+                    if !matches_faction {
+                        d_sq += 40000.0; // Strongly prefer own faction's altar
+                    }
                     if d_sq < best_dist_sq {
                         best_dist_sq = d_sq;
                         best = Some((altar.x, altar.y));
@@ -561,6 +688,62 @@ impl SimulationEngine {
                 }
                 best
             }
+            EntityFilter::StoneRock => {
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
+                let r = 36isize;
+                let min_x = (ax - r).clamp(0, (world.width - 1) as isize) as usize;
+                let max_x = (ax + r).clamp(0, (world.width - 1) as isize) as usize;
+                let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
+                let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
+
+                let mut best = None;
+                let mut best_dist_sq = 999999;
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
+                        let t = world.tile_at(x, y);
+                        if t.stone_amount > 0 || t.flint_amount > 0 {
+                            let dx = x as isize - ax;
+                            let dy = y as isize - ay;
+                            let d_sq = dx * dx + dy * dy;
+                            if d_sq < best_dist_sq {
+                                best_dist_sq = d_sq;
+                                best = Some((x, y));
+                                if d_sq <= 4 { return best; }
+                            }
+                        }
+                    }
+                }
+                best
+            }
+            EntityFilter::IronVein => {
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
+                let r = 36isize;
+                let min_x = (ax - r).clamp(0, (world.width - 1) as isize) as usize;
+                let max_x = (ax + r).clamp(0, (world.width - 1) as isize) as usize;
+                let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
+                let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
+
+                let mut best = None;
+                let mut best_dist_sq = 999999;
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
+                        let t = world.tile_at(x, y);
+                        if t.iron_ore_amount > 0 {
+                            let dx = x as isize - ax;
+                            let dy = y as isize - ay;
+                            let d_sq = dx * dx + dy * dy;
+                            if d_sq < best_dist_sq {
+                                best_dist_sq = d_sq;
+                                best = Some((x, y));
+                                if d_sq <= 4 { return best; }
+                            }
+                        }
+                    }
+                }
+                best
+            }
             EntityFilter::PotentialMate => {
                 let mut best = None;
                 let mut best_dist_sq = 999999;
@@ -574,6 +757,52 @@ impl SimulationEngine {
                         if d_sq < best_dist_sq {
                             best_dist_sq = d_sq;
                             best = Some((other.x, other.y));
+                        }
+                    }
+                }
+                best
+            }
+            EntityFilter::FriendlyNPC => {
+                let mut best = None;
+                let mut best_dist_sq = 999999;
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
+                for other in agents {
+                    if other.id != agent.id && other.is_alive && other.race == agent.race {
+                        let dx = other.x as isize - ax;
+                        let dy = other.y as isize - ay;
+                        let d_sq = dx * dx + dy * dy;
+                        if d_sq < best_dist_sq {
+                            best_dist_sq = d_sq;
+                            best = Some((other.x, other.y));
+                        }
+                    }
+                }
+                best
+            }
+            EntityFilter::Campfire => {
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
+                let r = 36isize;
+                let min_x = (ax - r).clamp(0, (world.width - 1) as isize) as usize;
+                let max_x = (ax + r).clamp(0, (world.width - 1) as isize) as usize;
+                let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
+                let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
+
+                let mut best = None;
+                let mut best_dist_sq = 999999;
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
+                        let t = world.tile_at(x, y);
+                        if t.structure.is_some() {
+                            let dx = x as isize - ax;
+                            let dy = y as isize - ay;
+                            let d_sq = dx * dx + dy * dy;
+                            if d_sq < best_dist_sq {
+                                best_dist_sq = d_sq;
+                                best = Some((x, y));
+                                if d_sq <= 4 { return best; }
+                            }
                         }
                     }
                 }

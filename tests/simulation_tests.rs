@@ -128,3 +128,24 @@ fn test_simulation_engine_ticks() {
     assert_eq!(engine.world.gaia.world_tick, 10);
     assert!(!engine.event_log.is_empty(), "Events must be logged");
 }
+
+#[test]
+fn test_settlement_dispersion_and_movement() {
+    let mut engine = SimulationEngine::new();
+    let initial_count = engine.agents.len();
+    assert_eq!(initial_count, 16);
+
+    // Simulate 60 ticks
+    for _ in 0..60 {
+        engine.tick();
+    }
+
+    // Agents must remain alive and thrive
+    let alive_count = engine.agents.iter().filter(|a| a.is_alive).count();
+    assert!(alive_count >= 16, "Population must survive and not collapse");
+
+    // Coordinates should not all be identical (no single-tile black hole)
+    let first_pos = (engine.agents[0].x, engine.agents[0].y);
+    let all_same = engine.agents.iter().all(|a| (a.x, a.y) == first_pos);
+    assert!(!all_same, "Agents must disperse across the continent, not stack on a single tile");
+}

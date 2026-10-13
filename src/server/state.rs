@@ -10,7 +10,7 @@ use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
 use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
 use super::god_powers::DivineInterventionKind;
-use super::protocol::{AgentSummary, DemographicsTelemetry, PlacedStructureSummary, SelectedAgentDetail, TerraformBrush, WorldStateTelemetry};
+use super::protocol::{AgentActivitySummary, AgentSummary, DemographicsTelemetry, PlacedStructureSummary, SelectedAgentDetail, TerraformBrush, WorldStateTelemetry};
 
 pub struct SimulationEngine {
     pub world: WorldGrid,
@@ -197,8 +197,36 @@ impl SimulationEngine {
             match action {
                 ActionChoice::IdleRest => {
                     let (ax, ay, a_id, a_energy, a_hunger, a_thirst) = {
+                        let tile = self.world.tile_at(self.agents[idx].x, self.agents[idx].y);
+                        let is_sheltered = if let Some(ref s) = tile.structure {
+                            let a = &mut self.agents[idx];
+                            match s.kind {
+                                StructureKind::StoneCabin => {
+                                    a.warmth = (a.warmth + 0.40).min(1.0);
+                                    a.energy = (a.energy + 0.15).min(1.0);
+                                    a.health = (a.health + 2.0).min(100.0);
+                                    true
+                                }
+                                StructureKind::WoodCottage => {
+                                    a.warmth = (a.warmth + 0.35).min(1.0);
+                                    a.energy = (a.energy + 0.12).min(1.0);
+                                    a.health = (a.health + 1.5).min(100.0);
+                                    true
+                                }
+                                StructureKind::Campfire => {
+                                    a.warmth = (a.warmth + 0.45).min(1.0);
+                                    a.energy = (a.energy + 0.08).min(1.0);
+                                    true
+                                }
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        };
                         let a = &mut self.agents[idx];
-                        a.energy = (a.energy + 0.06).min(1.0);
+                        if !is_sheltered {
+                            a.energy = (a.energy + 0.06).min(1.0);
+                        }
                         a.brain.neuromod.update(0.1, 1.0 - a.hunger, false, false, 0.0);
                         (a.x, a.y, a.id, a.energy, a.hunger, a.thirst)
                     };
@@ -337,7 +365,45 @@ impl SimulationEngine {
                 ActionChoice::MineIron => {
                     let (ax, ay) = (self.agents[idx].x, self.agents[idx].y);
                     let tile = self.world.tile_at_mut(ax, ay);
-                    if tile.iron_ore_amount > 0 {
+                    if tile.gold_ore_amount > 0 {
+                        tile.gold_ore_amount -= 1;
+                        let agent = &mut self.agents[idx];
+                        agent.inventory.add(ItemId::GoldOre, 1);
+                        agent.energy = (agent.energy - 0.07).max(0.0);
+                        agent.brain.neuromod.update(0.85, 0.6, false, false, 0.15);
+                        agent.brain.memory.log_episodic_event(
+                            current_tick,
+                            "Struck a glittering gold vein in the mountains! Extracted raw gold.",
+                            vec!["Gold".into(), "Discovery".into(), "Wealth".into()],
+                            9.0,
+                        );
+                        let newly_unlocked = match agent.race {
+                            CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(25),
+                            CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(25),
+                        };
+                        for msg in newly_unlocked {
+                            self.log_event(msg);
+                        }
+                    } else if tile.mithril_amount > 0 {
+                        tile.mithril_amount -= 1;
+                        let agent = &mut self.agents[idx];
+                        agent.inventory.add(ItemId::MithrilOre, 1);
+                        agent.energy = (agent.energy - 0.08).max(0.0);
+                        agent.brain.neuromod.update(0.95, 0.7, false, false, 0.2);
+                        agent.brain.memory.log_episodic_event(
+                            current_tick,
+                            "Unearthed rare glowing Mithril crystals radiating magical energy!",
+                            vec!["Mithril".into(), "Arcane".into(), "Discovery".into()],
+                            10.0,
+                        );
+                        let newly_unlocked = match agent.race {
+                            CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(35),
+                            CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(35),
+                        };
+                        for msg in newly_unlocked {
+                            self.log_event(msg);
+                        }
+                    } else if tile.iron_ore_amount > 0 {
                         tile.iron_ore_amount -= 1;
                         let agent = &mut self.agents[idx];
                         agent.inventory.add(ItemId::IronOre, 1);
@@ -349,6 +415,13 @@ impl SimulationEngine {
                             vec!["Iron".into(), "Crafting".into()],
                             7.5,
                         );
+                        let newly_unlocked = match agent.race {
+                            CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(15),
+                            CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(15),
+                        };
+                        for msg in newly_unlocked {
+                            self.log_event(msg);
+                        }
                     } else {
                         let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::IronVein);
                         if let Some((tx, ty)) = target {
@@ -357,9 +430,9 @@ impl SimulationEngine {
                     }
                 }
                 ActionChoice::BuildShelter => {
-                    let (ax, ay, a_name) = {
+                    let (ax, ay, a_name, a_race) = {
                         let a = &self.agents[idx];
-                        (a.x, a.y, a.name.clone())
+                        (a.x, a.y, a.name.clone(), a.race)
                     };
                     let tile = self.world.tile_at_mut(ax, ay);
                     if tile.structure.is_none() && !tile.has_fresh_water {
@@ -381,6 +454,13 @@ impl SimulationEngine {
                                 8.5,
                             );
                             self.log_event(format!("🏡 {} built a new Stone Cabin at ({}, {})!", a_name, ax, ay));
+                            let newly_unlocked = match a_race {
+                                CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(30),
+                                CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(30),
+                            };
+                            for msg in newly_unlocked {
+                                self.log_event(msg);
+                            }
                         } else if agent.inventory.count(ItemId::Wood) >= 1 {
                             agent.inventory.remove(ItemId::Wood, 1);
                             tile.structure = Some(PlacedStructure {
@@ -392,6 +472,13 @@ impl SimulationEngine {
                             agent.warmth = (agent.warmth + 0.3).min(1.0);
                             agent.brain.neuromod.update(0.5, 0.6, false, false, 0.0);
                             self.log_event(format!("🔥 {} lit a warm Campfire at ({}, {})!", a_name, ax, ay));
+                            let newly_unlocked = match a_race {
+                                CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(10),
+                                CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(10),
+                            };
+                            for msg in newly_unlocked {
+                                self.log_event(msg);
+                            }
                         }
                     } else {
                         let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
@@ -730,7 +817,7 @@ impl SimulationEngine {
                 for y in min_y..=max_y {
                     for x in min_x..=max_x {
                         let t = world.tile_at(x, y);
-                        if t.iron_ore_amount > 0 {
+                        if t.iron_ore_amount > 0 || t.gold_ore_amount > 0 || t.mithril_amount > 0 {
                             let dx = x as isize - ax;
                             let dy = y as isize - ay;
                             let d_sq = dx * dx + dy * dy;
@@ -814,6 +901,35 @@ impl SimulationEngine {
 
     /// God Terraforming Brush tool: alters terrain and resources across a radius
     pub fn terraform_area(&mut self, center_x: usize, center_y: usize, brush: TerraformBrush, radius: usize) {
+        // Direct architectural structure placement at clicked tile
+        match brush {
+            TerraformBrush::BuildCabin
+            | TerraformBrush::BuildCottage
+            | TerraformBrush::BuildCampfire
+            | TerraformBrush::BuildGranary
+            | TerraformBrush::BuildWatchtower
+            | TerraformBrush::BuildMineShaft => {
+                let kind = match brush {
+                    TerraformBrush::BuildCabin => StructureKind::StoneCabin,
+                    TerraformBrush::BuildCottage => StructureKind::WoodCottage,
+                    TerraformBrush::BuildCampfire => StructureKind::Campfire,
+                    TerraformBrush::BuildGranary => StructureKind::Granary,
+                    TerraformBrush::BuildWatchtower => StructureKind::Watchtower,
+                    TerraformBrush::BuildMineShaft => StructureKind::MineShaft,
+                    _ => unreachable!(),
+                };
+                let tile = self.world.tile_at_mut(center_x, center_y);
+                tile.structure = Some(PlacedStructure::new(kind));
+                self.modified_tiles.push((center_x, center_y, tile.biome));
+                self.log_event(format!(
+                    "ARCHITECTURE: Divine mandate erected {} at ({}, {}).",
+                    kind.display_name(), center_x, center_y
+                ));
+                return;
+            }
+            _ => {}
+        }
+
         let min_x = center_x.saturating_sub(radius);
         let max_x = (center_x + radius).min(WORLD_WIDTH - 1);
         let min_y = center_y.saturating_sub(radius);
@@ -860,11 +976,20 @@ impl SimulationEngine {
                         tile.iron_ore_amount += 35;
                         tile.stone_amount += 20;
                     }
+                    TerraformBrush::EnrichGoldVein => {
+                        tile.gold_ore_amount += 30;
+                        tile.stone_amount += 15;
+                    }
+                    TerraformBrush::EnrichMithrilVein => {
+                        tile.mithril_amount += 25;
+                        tile.mana_density = 1.0;
+                    }
                     TerraformBrush::ClearLand => {
                         tile.biome = BiomeType::SunlitPlains;
                         tile.structure = None;
                         tile.elevation = 0.40;
                     }
+                    _ => {}
                 }
                 self.modified_tiles.push((x, y, tile.biome));
             }
@@ -1085,6 +1210,33 @@ impl SimulationEngine {
             })
         });
 
+        let activities: Vec<AgentActivitySummary> = self
+            .agents
+            .iter()
+            .map(|a| {
+                let emotion = if a.brain.neuromod.dopamine > 0.7 {
+                    "Inspired"
+                } else if a.brain.neuromod.noradrenaline > 0.6 {
+                    "Vigilant"
+                } else if a.brain.neuromod.serotonin > 0.7 {
+                    "Content"
+                } else if a.brain.neuromod.serotonin < 0.3 {
+                    "Distressed"
+                } else {
+                    "Calm"
+                };
+                AgentActivitySummary {
+                    tick: self.world.gaia.world_tick,
+                    agent_id: a.id,
+                    agent_name: a.name.clone(),
+                    race: a.race,
+                    activity: format!("{:?} - {}", a.brain.last_action, a.brain.current_thought),
+                    location: (a.x, a.y),
+                    emotion: emotion.to_string(),
+                }
+            })
+            .collect();
+
         WorldStateTelemetry {
             world_tick: self.world.gaia.world_tick,
             speed_multiplier: self.speed_multiplier,
@@ -1102,6 +1254,9 @@ impl SimulationEngine {
             event_log: self.event_log.clone(),
             selected_agent: selected_agent_detail,
             modified_tiles: self.modified_tiles.clone(),
+            activities,
+            terran_culture: self.civilizations.terran_culture.clone(),
+            lunar_culture: self.civilizations.lunar_culture.clone(),
         }
     }
 }

@@ -92,6 +92,7 @@
 
     <!-- Top Right Quick Camera Tools -->
     <div class="hud-right">
+      <button id="btn-codex" class="btn-hud-action codex-btn" onclick="toggleCodexModal()" title="Knowledge & Activities Codex">🧠 Codex & Activities</button>
       <button class="btn-hud-action" onclick="zoomIn()" title="Zoom In (+)">🔍+</button>
       <button class="btn-hud-action" onclick="zoomOut()" title="Zoom Out (-)">🔍-</button>
       <button class="btn-hud-action" onclick="resetCamera()" title="Reset Camera View">🎯</button>
@@ -110,6 +111,10 @@
         <button id="tab-cat-nature" class="wb-tab-btn active" onclick="switchCategory('nature')" title="Drawing, Terrain & Seeds">
           <span class="tab-glyph">🌍</span>
           <span class="tab-label">World & Nature</span>
+        </button>
+        <button id="tab-cat-architecture" class="wb-tab-btn" onclick="switchCategory('architecture')" title="Architecture, Buildings & Settlements">
+          <span class="tab-glyph">🏗️</span>
+          <span class="tab-label">Architecture</span>
         </button>
         <button id="tab-cat-civilization" class="wb-tab-btn" onclick="switchCategory('civilization')" title="Civilizations, Races & Drops">
           <span class="tab-glyph">👑</span>
@@ -161,9 +166,53 @@
             <span class="tool-ico">⛏️</span>
             <span class="tool-name">Iron Vein</span>
           </button>
+          <button class="wb-tool-btn" data-tool="brush-gold" onclick="selectGodTool('brush-gold', 'Enrich Gold Vein', 'Seed glittering gold ore deposits in mountain rocks')">
+            <span class="tool-ico">🪙</span>
+            <span class="tool-name">Gold Vein</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="brush-mithril" onclick="selectGodTool('brush-mithril', 'Enrich Mithril Vein', 'Infuse rare glowing mithril crystals with magical energy')">
+            <span class="tool-ico">💎</span>
+            <span class="tool-name">Mithril Vein</span>
+          </button>
           <button class="wb-tool-btn" data-tool="brush-clear" onclick="selectGodTool('brush-clear', 'Sponge / Cleanse', 'Erase terrain features and clear scorched land')">
             <span class="tool-ico">🧽</span>
             <span class="tool-name">Sponge</span>
+          </button>
+        </div>
+
+        <!-- Sub-Tray 1b: Architecture & Buildings -->
+        <div id="sub-tray-architecture" class="wb-sub-tray">
+          <button class="wb-tool-btn" data-tool="build-cabin" onclick="selectGodTool('build-cabin', 'Stone Cabin', 'Erect a sturdy permanent Stone Cabin residence (capacity 4)')">
+            <span class="tool-ico">🏡</span>
+            <span class="tool-name">Stone Cabin</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="build-cottage" onclick="selectGodTool('build-cottage', 'Wood Cottage', 'Construct a cozy thatched Wood Cottage (capacity 2)')">
+            <span class="tool-ico">🛖</span>
+            <span class="tool-name">Wood Cottage</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="build-campfire" onclick="selectGodTool('build-campfire', 'Campfire Hearth', 'Light a communal warmth campfire for travelers & cooking')">
+            <span class="tool-ico">🔥</span>
+            <span class="tool-name">Campfire</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="build-granary" onclick="selectGodTool('build-granary', 'Granary Silo', 'Build a communal grain stockpile silo against winter blizzards')">
+            <span class="tool-ico">🌾</span>
+            <span class="tool-name">Granary</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="build-watchtower" onclick="selectGodTool('build-watchtower', 'Guard Watchtower', 'Raise a tall fortified watchtower overlooking the valley')">
+            <span class="tool-ico">🗼</span>
+            <span class="tool-name">Watchtower</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="build-mineshaft" onclick="selectGodTool('build-mineshaft', 'Mountain Mine Shaft', 'Excavate a deep timbered mine entrance into the mountain')">
+            <span class="tool-ico">⛏️</span>
+            <span class="tool-name">Mine Shaft</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="brush-gold" onclick="selectGodTool('brush-gold', 'Enrich Gold Vein', 'Seed glittering gold ore deposits in mountain rocks')">
+            <span class="tool-ico">🪙</span>
+            <span class="tool-name">Gold Vein</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="brush-mithril" onclick="selectGodTool('brush-mithril', 'Enrich Mithril Vein', 'Infuse rare glowing mithril crystals with magical energy')">
+            <span class="tool-ico">💎</span>
+            <span class="tool-name">Mithril Vein</span>
           </button>
         </div>
 
@@ -464,9 +513,80 @@
     </div>
   </aside>
 
+  <!-- =========================================================
+       KNOWLEDGE & ACTIVITY CODEX MODAL WINDOW
+  ========================================================= -->
+  <aside id="modal-codex" class="wb-modal-card hidden codex-window">
+    <div class="modal-header">
+      <div class="name-row">
+        <h2>🧠 CIVILIZATIONAL KNOWLEDGE & ACTIVITY CODEX</h2>
+      </div>
+      <button class="btn-close-modal" onclick="closeCodexModal()">✖</button>
+    </div>
+
+    <div class="pantheon-tabs-nav">
+      <button id="codex-tab-btn-act" class="ai-tab-btn active" onclick="switchCodexTab('activities')">📡 Live Activity Stream</button>
+      <button id="codex-tab-btn-tech" class="ai-tab-btn" onclick="switchCodexTab('tech')">🏛️ Cultural Tech Tree</button>
+      <button id="codex-tab-btn-disc" class="ai-tab-btn" onclick="switchCodexTab('discoveries')">💎 Mountain Ores & Lore</button>
+    </div>
+
+    <!-- Pane 1: Live Activity Stream -->
+    <div id="codex-pane-activities" class="ai-pane active">
+      <div class="codex-filter-bar">
+        <span class="codex-filter-label">Filter:</span>
+        <button id="filter-act-all" class="btn-filter-pill active" onclick="filterCodexActivities('all')">All</button>
+        <button id="filter-act-terran" class="btn-filter-pill" onclick="filterCodexActivities('SolarTerran')">☀️ Solar Terrans</button>
+        <button id="filter-act-lunar" class="btn-filter-pill" onclick="filterCodexActivities('ChthonicLunarian')">🌙 Lunarians</button>
+      </div>
+      <div id="codex-activity-stream" class="activity-scroll"></div>
+    </div>
+
+    <!-- Pane 2: Civilizational Tech Tree -->
+    <div id="codex-pane-tech" class="ai-pane">
+      <div class="tech-tree-header">
+        <div class="civ-tech-summary solar">
+          <h4>☀️ Kingdom of Solaria</h4>
+          <div class="tech-points"><span id="solaria-kp">0</span> KP Accumulation</div>
+          <div class="tech-research">Active Horizon: <span id="solaria-research">Primitive Toolcraft</span></div>
+        </div>
+        <div class="civ-tech-summary lunar">
+          <h4>🌙 Lunar Sovereignty</h4>
+          <div class="tech-points"><span id="lunar-kp">0</span> KP Accumulation</div>
+          <div class="tech-research">Active Horizon: <span id="lunar-research">Primitive Toolcraft</span></div>
+        </div>
+      </div>
+      <div id="tech-tree-grid" class="tech-grid"></div>
+    </div>
+
+    <!-- Pane 3: Mountain Ores & Discoveries Archive -->
+    <div id="codex-pane-discoveries" class="ai-pane">
+      <div class="ores-lore-grid">
+        <div class="ore-card iron">
+          <div class="ore-header"><span class="ore-icon">⛏️</span> <h4>Ironcrag Iron Ore</h4></div>
+          <p>Durable metallic deposits found throughout mountain crags. Mined to forge iron pickaxes, stone cabin reinforcement, and defensive implements.</p>
+          <div class="ore-stats">Hardness: Medium | Discovered In: Mountain Crags</div>
+        </div>
+        <div class="ore-card gold">
+          <div class="ore-header"><span class="ore-icon">🪙</span> <h4>Auric Gold Veins</h4></div>
+          <p>Glittering deep gold veins in the high peaks. Mined to mint Solarian gold coins, enhancing commercial trade, dowries, and civilizational wealth.</p>
+          <div class="ore-stats">Hardness: Precious | Discovered In: Deep Mountain Peaks</div>
+        </div>
+        <div class="ore-card mithril">
+          <div class="ore-header"><span class="ore-icon">💎</span> <h4>Leyline Mithril Crystals</h4></div>
+          <p>Legendary glowing arcane crystalline veins. Resonates with cosmic leyline energy, allowing agents to weave and rewrite their behavioral AST code.</p>
+          <div class="ore-stats">Hardness: Mythic | Discovered In: Mystic Leyline Caverns</div>
+        </div>
+      </div>
+      <div class="discoveries-archive-box">
+        <h4>📜 Recorded Civilizational Discoveries</h4>
+        <div id="codex-discoveries-list" class="discoveries-scroll"></div>
+      </div>
+    </div>
+  </aside>
+
   <!-- Floating Toast Notification -->
   <div id="tool-toast" class="wb-toast hidden"></div>
 
-  <script src="app.js?v=roam60fps"></script>
+  <script src="app.js?v=codex60fps"></script>
 </body>
 </html>

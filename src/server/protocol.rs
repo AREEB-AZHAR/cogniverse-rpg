@@ -10,6 +10,8 @@ use super::super::brain::ast::BehavioralGenome;
 use super::super::brain::neuromod::NeuromodulationState;
 use super::super::brain::memory::EpisodicMemory;
 
+use super::super::factions::CivilizationCulture;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TerraformBrush {
     RaiseMountain,
@@ -18,6 +20,14 @@ pub enum TerraformBrush {
     FertilizePlains,
     InfuseLeylineRuins,
     EnrichIronVein,
+    EnrichGoldVein,
+    EnrichMithrilVein,
+    BuildCabin,
+    BuildCottage,
+    BuildCampfire,
+    BuildGranary,
+    BuildWatchtower,
+    BuildMineShaft,
     ClearLand,
 }
 
@@ -120,6 +130,17 @@ pub struct SelectedAgentDetail {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AgentActivitySummary {
+    pub tick: u64,
+    pub agent_id: usize,
+    pub agent_name: String,
+    pub race: CivilizationRace,
+    pub activity: String,
+    pub location: (usize, usize),
+    pub emotion: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WorldStateTelemetry {
     pub world_tick: u64,
     pub speed_multiplier: f32,
@@ -137,4 +158,8 @@ pub struct WorldStateTelemetry {
     pub event_log: Vec<String>,
     pub selected_agent: Option<SelectedAgentDetail>,
     pub modified_tiles: Vec<(usize, usize, BiomeType)>,
+    pub activities: Vec<AgentActivitySummary>,
+    pub terran_culture: CivilizationCulture,
+    pub lunar_culture: CivilizationCulture,
 }
+

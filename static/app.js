@@ -64,50 +64,126 @@ function paintTileToBuffer(bCtx, x, y, biome) {
   const isCoast = biome === 'SandyCoast';
 
   if (biome === 'DeepOcean') {
-    bCtx.fillStyle = '#0a2d54';
+    bCtx.fillStyle = '#08203e';
     bCtx.fillRect(px, py, tilePx, tilePx);
+    if ((x + y) % 6 === 0) {
+      bCtx.fillStyle = '#0f3869';
+      bCtx.fillRect(px + 2, py + 3, 4, 1);
+    }
   } else if (isWater) {
-    bCtx.fillStyle = '#10528e';
+    // Crystal Riverlands
+    bCtx.fillStyle = '#0284c7';
     bCtx.fillRect(px, py, tilePx, tilePx);
+    bCtx.fillStyle = '#7dd3fc';
+    bCtx.fillRect(px + ((x * 3 + y * 7) % (tilePx - 4)), py + ((y * 5) % (tilePx - 2)), 3, 1);
+    bCtx.fillStyle = '#0369a1';
+    bCtx.fillRect(px + 1, py + tilePx - 2, tilePx - 2, 1);
   } else if (isCoast) {
-    bCtx.fillStyle = '#d4b16a';
+    bCtx.fillStyle = '#eab308';
     bCtx.fillRect(px, py, tilePx, tilePx);
+    bCtx.fillStyle = '#ca8a04';
+    bCtx.fillRect(px + 2, py + 2, tilePx - 4, tilePx - 4);
+    if ((x + y * 2) % 5 === 0) {
+      bCtx.fillStyle = '#fef08a';
+      bCtx.fillRect(px + 4, py + 5, 2, 2);
+    }
   } else if (isMountain) {
-    bCtx.fillStyle = '#52525b';
+    // Rugged granite crag base
+    bCtx.fillStyle = '#475569';
     bCtx.fillRect(px, py, tilePx, tilePx);
-    // Snow caps
-    bCtx.fillStyle = '#e2e8f0';
+    bCtx.fillStyle = '#334155';
     bCtx.beginPath();
-    bCtx.moveTo(px + tilePx / 2, py + 1);
-    bCtx.lineTo(px + tilePx - 2, py + 4);
-    bCtx.lineTo(px + 2, py + 4);
+    bCtx.moveTo(px, py + tilePx);
+    bCtx.lineTo(px + tilePx * 0.5, py + tilePx * 0.4);
+    bCtx.lineTo(px + tilePx, py + tilePx);
     bCtx.closePath();
     bCtx.fill();
+
+    // Snow capped ridge
+    bCtx.fillStyle = '#f8fafc';
+    bCtx.beginPath();
+    bCtx.moveTo(px + tilePx * 0.5, py + 1);
+    bCtx.lineTo(px + tilePx - 2, py + 5);
+    bCtx.lineTo(px + tilePx * 0.5, py + 4);
+    bCtx.lineTo(px + 2, py + 5);
+    bCtx.closePath();
+    bCtx.fill();
+
+    // Prominent Mountain Ore Veins (Gold, Mithril, Iron)
+    const oreHash = (x * 37 + y * 53) % 19;
+    if (oreHash === 0 || oreHash === 1) {
+      // Glittering Auric Gold Vein (Bright gold sparkles)
+      bCtx.fillStyle = '#eab308';
+      bCtx.fillRect(px + 3, py + 7, 3, 3);
+      bCtx.fillStyle = '#facc15';
+      bCtx.fillRect(px + 4, py + 6, 2, 4);
+      bCtx.fillStyle = '#fef08a';
+      bCtx.fillRect(px + 7, py + 8, 2, 2);
+      bCtx.fillStyle = '#ffffff';
+      bCtx.fillRect(px + 4, py + 7, 1, 1);
+    } else if (oreHash === 2 || oreHash === 3) {
+      // Mystic Leyline Mithril Vein (Radiant Cyan & Violet Crystals)
+      bCtx.fillStyle = '#06b6d4';
+      bCtx.fillRect(px + 4, py + 7, 3, 4);
+      bCtx.fillStyle = '#67e8f9';
+      bCtx.fillRect(px + 5, py + 6, 2, 3);
+      bCtx.fillStyle = '#c084fc';
+      bCtx.fillRect(px + 8, py + 8, 2, 3);
+      bCtx.fillStyle = '#ffffff';
+      bCtx.fillRect(px + 5, py + 7, 1, 1);
+    } else if (oreHash === 4 || oreHash === 5 || oreHash === 6) {
+      // Ironcrag Iron Ore Vein (Copper / Rust metallic deposits)
+      bCtx.fillStyle = '#9a3412';
+      bCtx.fillRect(px + 3, py + 7, 4, 3);
+      bCtx.fillStyle = '#ea580c';
+      bCtx.fillRect(px + 4, py + 8, 3, 2);
+      bCtx.fillStyle = '#fed7aa';
+      bCtx.fillRect(px + 5, py + 7, 1, 2);
+    }
   } else if (isRuins) {
-    bCtx.fillStyle = '#3b0764';
+    bCtx.fillStyle = '#2e1065';
     bCtx.fillRect(px, py, tilePx, tilePx);
-    bCtx.fillStyle = 'rgba(192, 132, 252, 0.55)';
-    bCtx.fillRect(px + 3, py + 3, tilePx - 6, tilePx - 6);
+    bCtx.fillStyle = '#1e1b4b';
+    bCtx.fillRect(px + 1, py + 1, tilePx - 2, tilePx - 2);
+    bCtx.fillStyle = '#c084fc';
+    bCtx.fillRect(px + 3, py + 3, tilePx - 6, 1);
+    bCtx.fillRect(px + tilePx * 0.5 - 1, py + 3, 2, tilePx - 6);
+    bCtx.fillStyle = '#f472b6';
+    bCtx.fillRect(px + 4, py + 6, 2, 2);
   } else if (isForest) {
-    bCtx.fillStyle = '#164e24';
+    bCtx.fillStyle = '#14532d';
     bCtx.fillRect(px, py, tilePx, tilePx);
-    // Pixel tree canopy
-    bCtx.fillStyle = '#227838';
+    bCtx.fillStyle = '#052e16';
+    bCtx.beginPath();
+    bCtx.arc(px + tilePx * 0.5, py + tilePx * 0.55, tilePx * 0.42, 0, Math.PI * 2);
+    bCtx.fill();
+    bCtx.fillStyle = '#15803d';
     bCtx.beginPath();
     bCtx.arc(px + tilePx * 0.5, py + tilePx * 0.42, tilePx * 0.38, 0, Math.PI * 2);
+    bCtx.fill();
+    bCtx.fillStyle = '#22c55e';
+    bCtx.beginPath();
+    bCtx.arc(px + tilePx * 0.45, py + tilePx * 0.35, tilePx * 0.22, 0, Math.PI * 2);
     bCtx.fill();
     bCtx.fillStyle = '#78350f';
     bCtx.fillRect(px + tilePx * 0.45, py + tilePx * 0.72, 2, 3);
   } else {
     // Sunlit Plains
-    bCtx.fillStyle = '#3d7826';
+    bCtx.fillStyle = '#3f8022';
     bCtx.fillRect(px, py, tilePx, tilePx);
-    if ((x + y * 3) % 11 === 0) {
+    bCtx.fillStyle = '#4ade80';
+    if ((x + y) % 3 === 0) {
+      bCtx.fillRect(px + 3, py + 4, 1, 3);
+      bCtx.fillRect(px + 8, py + 7, 1, 2);
+    }
+    if ((x * 3 + y * 7) % 11 === 0) {
       bCtx.fillStyle = '#fbbf24';
-      bCtx.fillRect(px + 3, py + 3, 2, 2);
-    } else if ((x * 2 + y) % 13 === 0) {
+      bCtx.fillRect(px + 4, py + 3, 2, 3);
+      bCtx.fillStyle = '#f59e0b';
+      bCtx.fillRect(px + 4, py + 6, 1, 2);
+    } else if ((x * 5 + y * 13) % 17 === 0) {
       bCtx.fillStyle = '#f43f5e';
-      bCtx.fillRect(px + 8, py + 6, 2, 2);
+      bCtx.fillRect(px + 7, py + 6, 2, 2);
     }
   }
 }
@@ -272,6 +348,7 @@ function switchCategory(cat) {
   if (tray) tray.classList.add('active');
 
   if (cat === 'nature') selectGodTool('brush-plains', 'Plains', 'Fertilize meadow plains');
+  else if (cat === 'architecture') selectGodTool('build-cabin', 'Stone Cabin', 'Erect a sturdy permanent Stone Cabin residence (capacity 4)');
   else if (cat === 'civilization') selectGodTool('spawn-solar', 'Spawn Solar Terran', 'Drop a human Solar Terran pioneer');
   else if (cat === 'creatures') selectGodTool('spawn-deer', 'Spawn Deer', 'Drop an herbivorous forest deer');
   else if (cat === 'cataclysms') selectGodTool('smite-lightning', 'Lightning Smite', 'Strike targeted tile with divine lightning');
@@ -424,7 +501,28 @@ container.addEventListener('contextmenu', (e) => e.preventDefault());
 function handleMapAction(tx, ty) {
   if (tx < 0 || tx >= WORLD_SIZE || ty < 0 || ty >= WORLD_SIZE) return;
 
-  // 1. Terraforming Brushes
+  // 1a. Architecture Building Placement Tools
+  if (activeTool.startsWith('build-')) {
+    let brushType = 'BuildCabin';
+    if (activeTool === 'build-cottage') brushType = 'BuildCottage';
+    else if (activeTool === 'build-campfire') brushType = 'BuildCampfire';
+    else if (activeTool === 'build-granary') brushType = 'BuildGranary';
+    else if (activeTool === 'build-watchtower') brushType = 'BuildWatchtower';
+    else if (activeTool === 'build-mineshaft') brushType = 'BuildMineShaft';
+
+    playSound('click');
+    sendMsg({
+      type: 'TerraformArea',
+      brush: brushType,
+      center_x: tx,
+      center_y: ty,
+      radius: 1,
+    });
+    showToast(`🏗️ Erected ${brushType} at (${tx}, ${ty})`);
+    return;
+  }
+
+  // 1b. Terraforming & Ore Brushes
   if (activeTool.startsWith('brush-')) {
     let brushType = 'FertilizePlains';
     let biomeKey = 'SunlitPlains';
@@ -446,6 +544,12 @@ function handleMapAction(tx, ty) {
       biomeKey = 'AncientLeylineRuins';
     } else if (activeTool === 'brush-iron') {
       brushType = 'EnrichIronVein';
+      biomeKey = 'IroncragMountains';
+    } else if (activeTool === 'brush-gold') {
+      brushType = 'EnrichGoldVein';
+      biomeKey = 'IroncragMountains';
+    } else if (activeTool === 'brush-mithril') {
+      brushType = 'EnrichMithrilVein';
       biomeKey = 'IroncragMountains';
     } else if (activeTool === 'brush-clear') {
       brushType = 'ClearLand';
@@ -658,6 +762,15 @@ function renderTelemetry(data) {
     renderCovenants(data.active_covenants);
     renderAltars(data.altars);
     renderChronicle(data.event_log);
+
+    // 7. Knowledge & Activity Codex
+    if (data.activities) {
+      renderCodexActivities(data.activities);
+    }
+    if (data.terran_culture || data.lunar_culture) {
+      renderCodexTechTree(data.terran_culture, data.lunar_culture);
+      renderCodexDiscoveries(data.terran_culture, data.lunar_culture);
+    }
   } catch (err) {
     console.error('Telemetry render error:', err);
   }
@@ -743,26 +856,37 @@ function drawWorldMap(data) {
     }
   }
 
-  // 4. Placed Village Structures (Cabins, Granaries, Campfires)
+  // 4. Placed Village Structures (Cabins, Cottages, Granaries, Campfires, Watchtowers, Mine Shafts)
   if (data.structures) {
     for (const s of data.structures) {
       const px = s.x * tilePx;
       const py = s.y * tilePx;
 
       if (s.kind === 'Campfire') {
-        // Crackling campfire
+        // Communal Fire Pit & Hearth
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.arc(px + tilePx / 2, py + tilePx / 2 + 3, 5, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = '#78350f';
-        ctx.fillRect(px + 3, py + 10, tilePx - 6, 4);
+        ctx.fillRect(px + 3, py + 9, tilePx - 6, 3);
 
         const flicker = Math.sin(time * 0.02 + s.x) * 2;
-        ctx.fillStyle = '#f97316';
+        ctx.fillStyle = '#ea580c';
         ctx.beginPath();
         ctx.arc(px + tilePx / 2, py + tilePx / 2, 4 + flicker, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#fef08a';
+        ctx.fillStyle = '#facc15';
         ctx.beginPath();
-        ctx.arc(px + tilePx / 2, py + tilePx / 2 - 1, 2, 0, Math.PI * 2);
+        ctx.arc(px + tilePx / 2, py + tilePx / 2 - 1, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Warm ambient fire glow
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.15)';
+        ctx.beginPath();
+        ctx.arc(px + tilePx / 2, py + tilePx / 2, tilePx * 1.8, 0, Math.PI * 2);
         ctx.fill();
 
         // Emit smoke particle occasionally
@@ -775,20 +899,99 @@ function drawWorldMap(data) {
           });
         }
       } else if (s.kind === 'StoneCabin') {
-        // Cozy stone cabin
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(px + 2, py + 4, tilePx - 4, tilePx - 5);
-        // Roof
+        // Sturdy Stone Cabin residence
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(px + 1, py + 4, tilePx - 2, tilePx - 4);
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(px + 2, py + 5, tilePx - 4, tilePx - 6);
+
+        // Pitched Red Shingle Roof
         ctx.fillStyle = '#991b1b';
         ctx.beginPath();
         ctx.moveTo(px + tilePx / 2, py);
+        ctx.lineTo(px + tilePx + 1, py + 6);
+        ctx.lineTo(px - 1, py + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Chimney & Smoke
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(px + tilePx - 4, py + 1, 3, 4);
+        if (Math.random() < 0.05) {
+          smokeParticles.push({
+            x: px + tilePx - 3,
+            y: py,
+            alpha: 0.5,
+            size: 2,
+          });
+        }
+
+        // Glowing Window & Arched Door
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(px + 3, py + 8, 3, 3);
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 8, py + 8, 3, tilePx - 8);
+      } else if (s.kind === 'WoodCottage') {
+        // Thatched Wood Cottage
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 2, py + 5, tilePx - 4, tilePx - 5);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(px + 3, py + 6, tilePx - 6, tilePx - 7);
+
+        // Thatched Straw Conical Roof
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.moveTo(px + tilePx / 2, py + 1);
         ctx.lineTo(px + tilePx, py + 6);
         ctx.lineTo(px, py + 6);
         ctx.closePath();
         ctx.fill();
-        // Warm window & door
-        ctx.fillStyle = '#fef08a';
-        ctx.fillRect(px + 7, py + 9, 4, 6);
+
+        // Door
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(px + 5, py + 8, 4, tilePx - 8);
+      } else if (s.kind === 'Granary') {
+        // Communal Granary Silo on Stilts
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 3, py + 9, 2, 5);
+        ctx.fillRect(px + tilePx - 5, py + 9, 2, 5);
+
+        // Silo Barrel Body
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(px + 2, py + 4, tilePx - 4, 6);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(px + 3, py + 5, tilePx - 6, 4);
+
+        // Conical Straw Roof
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.moveTo(px + tilePx / 2, py);
+        ctx.lineTo(px + tilePx, py + 4);
+        ctx.lineTo(px, py + 4);
+        ctx.closePath();
+        ctx.fill();
+      } else if (s.kind === 'Watchtower') {
+        // Fortified Guard Watchtower
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(px + 3, py + 4, tilePx - 6, tilePx - 4);
+        // Lookout deck
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(px + 1, py + 2, tilePx - 2, 3);
+        // Banner
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillRect(px + tilePx / 2, py - 2, 4, 3);
+      } else if (s.kind === 'MineShaft') {
+        // Mountain Mine Shaft
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(px + 2, py + 4, tilePx - 4, tilePx - 4);
+        // Timber support beams
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 1, py + 3, 3, tilePx - 3);
+        ctx.fillRect(px + tilePx - 4, py + 3, 3, tilePx - 3);
+        ctx.fillRect(px + 1, py + 2, tilePx - 2, 3);
+        // Minecart rail
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(px + 4, py + tilePx - 2, tilePx - 8, 2);
       } else if (s.kind === 'LeanTo') {
         ctx.fillStyle = '#92400e';
         ctx.beginPath();
@@ -1300,6 +1503,176 @@ function triggerBabel() {
       intervention: 'TowerOfBabel'
     });
     showToast('🌀 Tower of Babel initiated!');
+  }
+}
+
+// ----------------------------------------------------------------------------
+// KNOWLEDGE & ACTIVITY CODEX CONTROLLERS
+// ----------------------------------------------------------------------------
+let codexRaceFilter = 'all';
+
+function toggleCodexModal() {
+  playSound('click');
+  const modal = document.getElementById('modal-codex');
+  if (!modal) return;
+  if (modal.classList.contains('hidden')) {
+    modal.classList.remove('hidden');
+    if (currentTelemetry) {
+      if (currentTelemetry.activities) renderCodexActivities(currentTelemetry.activities);
+      if (currentTelemetry.terran_culture || currentTelemetry.lunar_culture) {
+        renderCodexTechTree(currentTelemetry.terran_culture, currentTelemetry.lunar_culture);
+        renderCodexDiscoveries(currentTelemetry.terran_culture, currentTelemetry.lunar_culture);
+      }
+    }
+  } else {
+    modal.classList.add('hidden');
+  }
+}
+
+function closeCodexModal() {
+  playSound('click');
+  const modal = document.getElementById('modal-codex');
+  if (modal) modal.classList.add('hidden');
+}
+
+function switchCodexTab(tab) {
+  playSound('click');
+  document.querySelectorAll('#modal-codex .ai-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#modal-codex .ai-pane').forEach(p => p.classList.remove('active'));
+
+  if (tab === 'activities') {
+    const btn = document.getElementById('codex-tab-btn-act');
+    const pane = document.getElementById('codex-pane-activities');
+    if (btn) btn.classList.add('active');
+    if (pane) pane.classList.add('active');
+  } else if (tab === 'tech') {
+    const btn = document.getElementById('codex-tab-btn-tech');
+    const pane = document.getElementById('codex-pane-tech');
+    if (btn) btn.classList.add('active');
+    if (pane) pane.classList.add('active');
+  } else if (tab === 'discoveries') {
+    const btn = document.getElementById('codex-tab-btn-disc');
+    const pane = document.getElementById('codex-pane-discoveries');
+    if (btn) btn.classList.add('active');
+    if (pane) pane.classList.add('active');
+  }
+}
+
+function filterCodexActivities(race) {
+  playSound('click');
+  codexRaceFilter = race;
+  document.querySelectorAll('.codex-filter-bar .btn-filter-pill').forEach(b => b.classList.remove('active'));
+  if (race === 'all') {
+    const b = document.getElementById('filter-act-all');
+    if (b) b.classList.add('active');
+  } else if (race === 'SolarTerran') {
+    const b = document.getElementById('filter-act-terran');
+    if (b) b.classList.add('active');
+  } else if (race === 'ChthonicLunarian') {
+    const b = document.getElementById('filter-act-lunar');
+    if (b) b.classList.add('active');
+  }
+
+  if (currentTelemetry && currentTelemetry.activities) {
+    renderCodexActivities(currentTelemetry.activities);
+  }
+}
+
+function renderCodexActivities(activities) {
+  const stream = document.getElementById('codex-activity-stream');
+  if (!stream || !activities) return;
+  stream.innerHTML = '';
+
+  const filtered = activities.filter(a => codexRaceFilter === 'all' || a.race === codexRaceFilter);
+
+  if (filtered.length === 0) {
+    stream.innerHTML = '<span class="text-dim" style="font-size:0.7rem;padding:8px">No activities recorded for this filter.</span>';
+    return;
+  }
+
+  for (const act of filtered) {
+    const isSolar = act.race === 'SolarTerran';
+    const row = document.createElement('div');
+    row.className = `activity-row ${isSolar ? 'terran' : 'lunar'}`;
+
+    const emotionClass = act.emotion ? act.emotion.toLowerCase() : 'calm';
+    const raceGlyph = isSolar ? '☀️' : '🌙';
+
+    row.innerHTML = `
+      <div class="act-head">
+        <span class="act-name">${raceGlyph} ${act.agent_name} <span class="act-loc">(${act.location[0]}, ${act.location[1]})</span></span>
+        <span class="act-badge ${emotionClass}">${act.emotion}</span>
+      </div>
+      <div class="act-body">${act.activity}</div>
+    `;
+    stream.appendChild(row);
+  }
+}
+
+function renderCodexTechTree(terranCulture, lunarCulture) {
+  if (terranCulture) {
+    const solKp = document.getElementById('solaria-kp');
+    const solRes = document.getElementById('solaria-research');
+    if (solKp) solKp.textContent = terranCulture.knowledge_points;
+    if (solRes) solRes.textContent = terranCulture.active_research;
+  }
+  if (lunarCulture) {
+    const lunKp = document.getElementById('lunar-kp');
+    const lunRes = document.getElementById('lunar-research');
+    if (lunKp) lunKp.textContent = lunarCulture.knowledge_points;
+    if (lunRes) lunRes.textContent = lunarCulture.active_research;
+  }
+
+  const grid = document.getElementById('tech-tree-grid');
+  if (!grid || !terranCulture || !terranCulture.technologies) return;
+  grid.innerHTML = '';
+
+  for (const tech of terranCulture.technologies) {
+    const card = document.createElement('div');
+    card.className = `tech-card ${tech.is_unlocked ? 'unlocked' : ''}`;
+
+    const statusBadge = tech.is_unlocked
+      ? '<span class="tech-status-badge unlocked">Mastered ✨</span>'
+      : `<span class="tech-status-badge locked">${terranCulture.knowledge_points}/${tech.knowledge_required} KP</span>`;
+
+    card.innerHTML = `
+      <div class="tech-card-head">
+        <div class="tech-card-title">
+          <span>${tech.icon}</span>
+          <span>${tech.name}</span>
+        </div>
+        <span class="tech-tier-badge">Tier ${tech.tier}</span>
+      </div>
+      <div class="tech-desc">${tech.description}</div>
+      <div class="tech-effect">Effect: ${tech.effect}</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:2px">${statusBadge}</div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+function renderCodexDiscoveries(terranCulture, lunarCulture) {
+  const list = document.getElementById('codex-discoveries-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const discoveries = [];
+  if (terranCulture && terranCulture.discoveries) {
+    for (const d of terranCulture.discoveries) discoveries.push(`☀️ [Solaria] ${d}`);
+  }
+  if (lunarCulture && lunarCulture.discoveries) {
+    for (const d of lunarCulture.discoveries) discoveries.push(`🌙 [Lunar] ${d}`);
+  }
+
+  if (discoveries.length === 0) {
+    list.innerHTML = '<span class="text-dim" style="font-size:0.68rem;padding:6px">Exploration underway. Mine ores or erect cabins to record historical milestones!</span>';
+    return;
+  }
+
+  for (const d of discoveries) {
+    const el = document.createElement('div');
+    el.textContent = d;
+    list.appendChild(el);
   }
 }
 

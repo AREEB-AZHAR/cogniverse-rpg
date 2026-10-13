@@ -108,6 +108,59 @@ impl WorldGrid {
             max_health: 500.0,
         });
 
+        // Seed initial village buildings for Solar Terrans (Village of Solaria)
+        let solar_buildings = [
+            (36, 84, StructureKind::Campfire, 80.0),
+            (35, 86, StructureKind::StoneCabin, 150.0),
+            (39, 83, StructureKind::WoodCottage, 100.0),
+            (41, 87, StructureKind::Granary, 120.0),
+        ];
+        for (bx, by, kind, hp) in solar_buildings {
+            let idx = by * width + bx;
+            tiles[idx].structure = Some(PlacedStructure {
+                kind,
+                owner_id: None,
+                health: hp,
+                max_health: hp,
+            });
+        }
+
+        // Seed initial village buildings for Chthonic Lunarians (Shadow Hold)
+        let lunar_buildings = [
+            (90, 32, StructureKind::Campfire, 80.0),
+            (89, 34, StructureKind::StoneCabin, 150.0),
+            (93, 31, StructureKind::WoodCottage, 100.0),
+            (95, 36, StructureKind::MineShaft, 140.0),
+        ];
+        for (bx, by, kind, hp) in lunar_buildings {
+            let idx = by * width + bx;
+            tiles[idx].structure = Some(PlacedStructure {
+                kind,
+                owner_id: None,
+                health: hp,
+                max_health: hp,
+            });
+        }
+
+        // Enrich specific mountain tiles with concentrated ore veins
+        for t in tiles.iter_mut() {
+            if t.biome == BiomeType::IroncragMountains {
+                if (t.x + t.y * 7) % 11 == 0 {
+                    t.iron_ore_amount += 45; // Rich Iron Deposit
+                }
+                if (t.x * 3 + t.y) % 17 == 0 {
+                    t.gold_ore_amount += 35; // Vein of Gold
+                }
+                if (t.x * 5 + t.y * 2) % 23 == 0 {
+                    t.mithril_amount += 30; // Mithril Gem Pocket
+                }
+            } else if t.biome == BiomeType::AncientLeylineRuins {
+                if (t.x + t.y) % 7 == 0 {
+                    t.mithril_amount += 35;
+                }
+            }
+        }
+
         altars.push(solar_altar);
         altars.push(lunar_altar);
 

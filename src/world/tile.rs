@@ -67,6 +67,8 @@ pub struct Tile {
     pub stone_amount: u32,
     pub flint_amount: u32,
     pub iron_ore_amount: u32,
+    pub gold_ore_amount: u32,
+    pub mithril_amount: u32,
     pub grain_amount: u32,
     pub berry_amount: u32,
     pub has_fresh_water: bool,
@@ -79,11 +81,55 @@ pub struct Tile {
 pub enum StructureKind {
     Campfire,
     LeanTo,
+    WoodCottage,
     StoneCabin,
     Granary,
+    Watchtower,
+    MineShaft,
     SolarAltar,
     LunarAltar,
     StoneWall,
+}
+
+impl StructureKind {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            StructureKind::Campfire => "Campfire",
+            StructureKind::LeanTo => "Lean-To Shelter",
+            StructureKind::WoodCottage => "Wood Cottage",
+            StructureKind::StoneCabin => "Stone Cabin",
+            StructureKind::Granary => "Granary Silo",
+            StructureKind::Watchtower => "Guard Watchtower",
+            StructureKind::MineShaft => "Mountain Mine Shaft",
+            StructureKind::SolarAltar => "Golden Sun Altar",
+            StructureKind::LunarAltar => "Obsidian Moon Altar",
+            StructureKind::StoneWall => "Fortified Stone Wall",
+        }
+    }
+
+    pub fn housing_capacity(&self) -> usize {
+        match self {
+            StructureKind::StoneCabin => 4,
+            StructureKind::WoodCottage => 2,
+            StructureKind::LeanTo => 1,
+            _ => 0,
+        }
+    }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            StructureKind::Campfire => "🔥",
+            StructureKind::LeanTo => "⛺",
+            StructureKind::WoodCottage => "🛖",
+            StructureKind::StoneCabin => "🏡",
+            StructureKind::Granary => "🌾",
+            StructureKind::Watchtower => "🗼",
+            StructureKind::MineShaft => "⛏️",
+            StructureKind::SolarAltar => "☀️",
+            StructureKind::LunarAltar => "🌙",
+            StructureKind::StoneWall => "🧱",
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -92,6 +138,28 @@ pub struct PlacedStructure {
     pub owner_id: Option<usize>,
     pub health: f32,
     pub max_health: f32,
+}
+
+impl PlacedStructure {
+    pub fn new(kind: StructureKind) -> Self {
+        let max_hp = match kind {
+            StructureKind::StoneCabin => 120.0,
+            StructureKind::WoodCottage => 90.0,
+            StructureKind::Granary => 100.0,
+            StructureKind::Watchtower => 150.0,
+            StructureKind::MineShaft => 200.0,
+            StructureKind::Campfire => 60.0,
+            StructureKind::LeanTo => 40.0,
+            StructureKind::SolarAltar | StructureKind::LunarAltar => 500.0,
+            StructureKind::StoneWall => 250.0,
+        };
+        Self {
+            kind,
+            owner_id: None,
+            health: max_hp,
+            max_health: max_hp,
+        }
+    }
 }
 
 impl Tile {
@@ -121,6 +189,8 @@ impl Tile {
             stone_amount: 0,
             flint_amount: 0,
             iron_ore_amount: 0,
+            gold_ore_amount: 0,
+            mithril_amount: 0,
             grain_amount: 0,
             berry_amount: 0,
             has_fresh_water: false,
@@ -149,15 +219,18 @@ impl Tile {
                 tile.stone_amount = 6;
             }
             BiomeType::IroncragMountains => {
-                tile.stone_amount = 40;
-                tile.flint_amount = 15;
-                tile.iron_ore_amount = 25;
+                tile.stone_amount = 45;
+                tile.flint_amount = 18;
+                tile.iron_ore_amount = 30;
+                tile.gold_ore_amount = 14;
                 tile.wood_amount = 2;
             }
             BiomeType::AncientLeylineRuins => {
-                tile.stone_amount = 20;
+                tile.stone_amount = 25;
                 tile.flint_amount = 10;
                 tile.iron_ore_amount = 5;
+                tile.gold_ore_amount = 8;
+                tile.mithril_amount = 20;
             }
         }
 

@@ -843,8 +843,21 @@ html, body {
 }
 
 /* =========================================================
-   PANTHEON & COVENANTS MODAL WINDOW
+   MODAL WINDOW CARDS (PANTHEON & CODEX)
 ========================================================= */
+.wb-modal-card {
+  position: absolute;
+  background: linear-gradient(180deg, #1e2638 0%, #141926 100%);
+  border: 3px solid #4a5a7f;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), inset 0 2px 0 rgba(255, 255, 255, 0.15);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn 0.18s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
 .pantheon-window {
   top: 70px;
   left: 20px;
@@ -956,3 +969,306 @@ html, body {
 }
 
 .hidden { display: none !important; }
+
+/* =========================================================
+   CODEX & ACTIVITIES WINDOW STYLES
+========================================================= */
+.btn-hud-action.codex-btn {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border: 1px solid #a855f7;
+  color: #fff;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+}
+
+.btn-hud-action.codex-btn:hover {
+  background: linear-gradient(135deg, #6366f1, #9333ea);
+  border-color: #facc15;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.4);
+}
+
+.codex-window {
+  top: 70px;
+  left: 20px;
+  width: 500px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.codex-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.codex-filter-label {
+  font-size: 0.68rem;
+  color: var(--wb-text-dim);
+  font-weight: 700;
+}
+
+.btn-filter-pill {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-filter-pill.active {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #fff;
+  font-weight: 700;
+}
+
+.activity-scroll {
+  padding: 8px 12px;
+  max-height: 380px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activity-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid #64748b;
+  padding: 6px 8px;
+  border-radius: 0 6px 6px 0;
+  transition: background 0.15s ease;
+}
+
+.activity-row.terran { border-left-color: var(--wb-gold); }
+.activity-row.lunar { border-left-color: var(--wb-violet); }
+
+.activity-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.act-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.act-name {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: #f1f5f9;
+}
+
+.act-badge {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.act-badge.inspired { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+.act-badge.content { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+.act-badge.vigilant { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6; }
+.act-badge.distressed { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+.act-badge.calm { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid #64748b; }
+
+.act-body {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.25;
+}
+
+.act-loc {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: #64748b;
+}
+
+/* Tech Tree Styles */
+.tech-tree-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.civ-tech-summary {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.civ-tech-summary.solar { border-top: 2px solid var(--wb-gold); }
+.civ-tech-summary.lunar { border-top: 2px solid var(--wb-violet); }
+.civ-tech-summary h4 { font-size: 0.72rem; margin-bottom: 2px; }
+.tech-points { font-size: 0.68rem; font-weight: 700; color: #f59e0b; }
+.tech-research { font-size: 0.62rem; color: #94a3b8; }
+
+.tech-grid {
+  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.tech-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tech-card.unlocked {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.tech-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tech-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.tech-tier-badge {
+  font-size: 0.58rem;
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.tech-status-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.tech-status-badge.unlocked {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid #22c55e;
+}
+
+.tech-status-badge.locked {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  border: 1px solid #475569;
+}
+
+.tech-desc {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  line-height: 1.25;
+}
+
+.tech-effect {
+  font-size: 0.63rem;
+  color: #38bdf8;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.08);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+/* Mountain Ores & Discoveries */
+.ores-lore-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.ore-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.ore-card.iron { border-left: 3px solid #ea580c; }
+.ore-card.gold { border-left: 3px solid #eab308; }
+.ore-card.mithril { border-left: 3px solid #06b6d4; }
+
+.ore-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.ore-header h4 {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.ore-card p {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.ore-stats {
+  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  color: #38bdf8;
+}
+
+.discoveries-archive-box {
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.discoveries-archive-box h4 {
+  font-size: 0.72rem;
+  margin-bottom: 6px;
+  color: var(--wb-gold);
+}
+
+.discoveries-scroll {
+  max-height: 140px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.discoveries-scroll div {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 2px solid #38bdf8;
+  padding: 4px 6px;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.68rem;
+  color: #cbd5e1;
+}
+

@@ -13,8 +13,20 @@
 
 ## 📸 WorldBox-Inspired God Admin Console
 
+![Architecture Buildings & Mountain Ore Veins](screenshots/worldbox_buildings_and_ores.png)
+*Live 2D Procedural Matrix (**128x128 Grand Continental Archipelago - 16,384 tiles**) showcasing defined, distinguishable pixel biomes, permanent village structures (**Stone Cabins with pitched roofs and chimneys, Thatched Cottages, Campfires, Granaries, Watchtowers, and Mountain Mine Shafts**), and discoverable mountain ore veins (**Glittering Auric Gold, Radiant Cyan Mithril, and Metallic Copper Iron**).*
+
+![Knowledge & Activities Codex - Live Activity Stream](screenshots/codex_live_activities.png)
+*Dedicated **🧠 Knowledge & Activities Codex Modal** featuring a real-time Live Activity Stream tracking agent coordinates, behavioral actions, inner monologue thoughts, and Kenji Doya emotional states (`Inspired`, `Content`, `Vigilant`, `Distressed`, `Calm`).*
+
+![Civilizational Cultural Tech Tree](screenshots/codex_cultural_tech_tree.png)
+*8-Tier Civilizational Technology Progression Tree (**Primitive Toolcraft, Fire Mastery & Hearth, Stone Masonry, Granary & Agriculture, Iron Metallurgy, Gold Currency & Commerce, Sacred Theocracy, Arcane Code Weaving**) driven by autonomous knowledge point accrual from mining and building.*
+
+![Mountain Ores & Discoveries Lore](screenshots/codex_mountain_ores_lore.png)
+*Mountain Ores & Discoveries Archive detailing geological properties, hardness ratings, and historical civilizational milestones recorded by exploring pioneers.*
+
 ![Settlement Anchoring & 84 Citizens Flourishing](screenshots/worldbox_roaming_population_boom.png)
-*Live 2D Procedural Matrix (**128x128 Grand Continental Archipelago - 16,384 tiles**) running at **5x Sonic Speed** at **Tick 2,346 (Year 3, Month 6)**. Demonstrates complete resolution of riverbank clumping with thriving settlement anchoring: **👥 84 citizens, 👶 89 births / 💀 5 deaths, 🧬 Generation 15**. Terrans and Lunarians maintain fluid movement between their home altars, harvesting grounds, and freshwater rivers.*
+*Live 2D Procedural Matrix running at **5x Sonic Speed** at **Tick 2,346 (Year 3, Month 6)**. Demonstrates complete resolution of riverbank clumping with thriving settlement anchoring: **👥 84 citizens, 👶 89 births / 💀 5 deaths, 🧬 Generation 15**.*
 
 ![60 FPS Flourishing Population & Territorial Expansion](screenshots/worldbox_60fps_population_growth.png)
 *Early demographic growth phase with expanding territorial borders (`☀️ Kingdom of Solaria` golden realm vs `🌙 Lunar Sovereignty` violet realm).*
@@ -108,16 +120,48 @@ Transform the physical world in real-time using God Brushes with `●1`, `●3`,
 * **⛰️ Mountain Brush**: Raise rocky Ironcrag peaks rich in stone, flint, and iron ore veins.
 * **🔮 Leyline Ruins**: Infuse ancient arcane leyline monoliths radiating high mana density.
 * **⛏️ Enrich Iron**: Concentrate rich underground iron deposits into existing rock formations.
+* **🪙 Enrich Gold**: Seed glittering auric gold veins into mountain peaks.
+* **💎 Enrich Mithril**: Infuse rare glowing cyan/purple mithril crystal veins.
 * **🧹 Clear Land**: Cleanse scorched terrain and clear obsolete structures.
 
-### 5. WorldBox Character Sheet Inspector
+### 5. Dedicated Architecture God Tools & Living Housing System
+A dedicated **"🏗️ Architecture"** God category in the bottom power dock grants full creative control over civilizational construction, while autonomous agents naturally erect and inhabit shelters:
+* **🏡 Stone Cabin**: Durable masonry residence housing up to **4 citizens**. Resting inside provides $+0.40$ warmth, $+0.15$ energy/tick, and natural health regeneration ($+2.0$ HP/tick).
+* **🛖 Wood Cottage**: Cozy timber-log cottage with thatched straw roof housing **2 citizens**. Provides $+0.35$ warmth and $+0.12$ energy/tick.
+* **🔥 Campfire Hearth**: Communal stone fire pit providing $+0.45$ warmth and thermal safety during nighttime freezes and blizzards.
+* **🌾 Granary Silo**: Elevated wooden grain silo on stilts that stockpiles food rations for entire villages to survive long winters.
+* **🗼 Guard Watchtower**: Fortified observation tower with high timber battlements and a royal banner overlooking kingdom borders.
+* **⛏️ Mountain Mine Shaft**: Timbered underground cavern entrance enabling deep mineral extraction from the Ironcrag mountains.
+
+### 6. Mountain Ore Discovery & Civilizational Tech Progression
+* **Visible, Sparkling Ore Deposits**:
+  - **⛏️ Ironcrag Iron Ore**: Metallic copper/rust ore flecks mined to forge pickaxes and weapons ($+15$ Knowledge Points).
+  - **🪙 Auric Gold Veins**: Glittering yellow and amber gold nuggets mined to mint kingdom currency ($+25$ Knowledge Points).
+  - **💎 Leyline Mithril Crystals**: Rare radiant cyan & violet crystalline veins resonating with cosmic mana ($+35$ Knowledge Points).
+* **Episodic Discovery Logging**: Whenever agents explore mountains and unearth an ore vein, they record an episodic memory milestone and award civilizational Knowledge Points (KP).
+
+### 7. 🧠 Civilizational Knowledge & Activity Codex
+Accessible via the dedicated top HUD button **`🧠 Codex & Activities`**, opening a tabbed codex window:
+* **📡 Live Activity Stream**: Real-time ticker showing every citizen's current action, inner thoughts, grid coordinates, and emotional state (`Inspired`, `Content`, `Vigilant`, `Distressed`, `Calm`). Filterable by **All**, **☀️ Solar Terrans**, or **🌙 Lunarians**.
+* **🏛️ Cultural Technology Tree**: Displays 8 unlockable civilizational breakthroughs with progress bars and Knowledge Point requirements:
+  1. *Primitive Toolcraft* (Tier 1, 25 KP): $+50\%$ wood and foraging speed.
+  2. *Fire Mastery & Hearth* (Tier 1, 50 KP): Enables Campfire construction and thermal protection.
+  3. *Stone Masonry* (Tier 2, 100 KP): Enables permanent Stone Cabins ($+4$ population capacity).
+  4. *Granary & Agriculture* (Tier 2, 180 KP): Granary silos preserve food across blizzards.
+  5. *Iron Metallurgy* (Tier 3, 280 KP): Unlocks forged iron pickaxes and tools.
+  6. *Gold Currency & Commerce* (Tier 3, 400 KP): Minting gold coins enables market trading and dowries.
+  7. *Sacred Theocracy* (Tier 4, 550 KP): $+100\%$ divine blessing potency from altar offerings.
+  8. *Arcane Code Weaving* (Tier 4, 750 KP): Infusing mithril crystals allows agents to autonomously rewrite their decision code AST.
+* **💎 Mountain Ores & Lore Archive**: Geological compendium detailing ore hardness and recording civilizational breakthroughs.
+
+### 8. WorldBox Character Sheet Inspector
 Click any character or use the "Inspect" tool to open a detailed WorldBox character sheet:
 * **⭐ Favorite Star Button**: Star your favorite agents to track them; enable camera follow to watch them live as they go about their daily life.
 * **WorldBox Trait Badges**: Dynamic traits derived from behavior, heritage, and genetics (e.g. `👑 Leader`, `🌟 Genius`, `⚔️ Strong`, `✦ Swift`, `✦ Deceitful`, `🕊️ Pacifist`, `🔮 Wise`, `💰 Greedy`).
 * **💭 Live Inner Monologue**: Unfiltered stream of consciousness reflecting their current needs, fears, and plans.
 * **Vitals & RPG Stats**: Health, Energy, Hunger, Piety, Attack, Defense, Speed, and Intelligence.
 * **Kenji Doya Neuromodulator Gauges**: Real-time biological cognition (Dopamine, Serotonin, Noradrenaline).
-* **Inventory & Gear**: Visible items carried in the agent's pack (e.g. `Wild Berry x5`, `Wood x2`, `Iron Ore`).
+* **Inventory & Gear**: Visible items carried in the agent's pack (e.g. `Wild Berry x5`, `Wood x2`, `Iron Ore`, `Gold Ore`, `Mithril Ore`).
 * **Ancestral Lineage & Echo**: Heritage details from deceased legendary ancestors enshrined in the Akashic Core.
 * **Darwin-Gödel AST Genome**: Full code tree inspection showing the exact self-rewritten logic steering the NPC.
 * **Direct God Actions**: `💬 Whisper`, `✨ Bless Piety`, `💚 Heal`, and `⚡ Smite`.
@@ -212,7 +256,7 @@ Open **`http://localhost:3000`** in any web browser to enter the live WorldBox G
 ```bash
 cargo test
 ```
-Executes 6 unit & integration tests covering AST gas metering, Darwin-Gödel mutations, Kenji Doya neuromodulation, altar offerings, and covenant fulfillment.
+Executes 9 unit & integration tests covering AST gas metering, Darwin-Gödel mutations, Kenji Doya neuromodulation, altar offerings, covenant fulfillment, multi-generational population dispersion, architecture placement, ore vein enrichment, and cultural technology progression.
 
 ---
 

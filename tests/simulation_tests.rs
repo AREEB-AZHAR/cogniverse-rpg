@@ -149,3 +149,44 @@ fn test_settlement_dispersion_and_movement() {
     let all_same = engine.agents.iter().all(|a| (a.x, a.y) == first_pos);
     assert!(!all_same, "Agents must disperse across the continent, not stack on a single tile");
 }
+
+#[test]
+fn test_architecture_placement_and_ore_enrichment() {
+    use cogniverse_rpg::server::protocol::TerraformBrush;
+    use cogniverse_rpg::world::tile::StructureKind;
+
+    let mut engine = SimulationEngine::new();
+    
+    // Erect a stone cabin via God brush
+    engine.terraform_area(50, 50, TerraformBrush::BuildCabin, 1);
+    let tile = engine.world.tile_at(50, 50);
+    assert!(tile.structure.is_some());
+    assert_eq!(tile.structure.as_ref().unwrap().kind, StructureKind::StoneCabin);
+
+    // Enrich gold vein
+    let initial_gold = engine.world.tile_at(60, 60).gold_ore_amount;
+    engine.terraform_area(60, 60, TerraformBrush::EnrichGoldVein, 1);
+    assert!(engine.world.tile_at(60, 60).gold_ore_amount > initial_gold);
+
+    // Verify structures in telemetry
+    let telemetry = engine.generate_telemetry();
+    assert!(telemetry.structures.iter().any(|s| s.x == 50 && s.y == 50 && s.kind == StructureKind::StoneCabin));
+}
+
+#[test]
+fn test_cultural_technology_progression() {
+    let mut engine = SimulationEngine::new();
+    assert_eq!(engine.civilizations.terran_culture.knowledge_points, 0);
+
+    // Add 120 knowledge points (should unlock Primitive Toolcraft, Fire Mastery, Stone Masonry)
+    let unlocks = engine.civilizations.terran_culture.add_knowledge(120);
+    assert!(unlocks.len() >= 3);
+    assert!(engine.civilizations.terran_culture.technologies[0].is_unlocked); // Primitive Toolcraft (25 KP)
+    assert!(engine.civilizations.terran_culture.technologies[1].is_unlocked); // Fire Mastery (50 KP)
+    assert!(engine.civilizations.terran_culture.technologies[2].is_unlocked); // Stone Masonry (100 KP)
+
+    let telemetry = engine.generate_telemetry();
+    assert_eq!(telemetry.terran_culture.knowledge_points, 120);
+    assert!(!telemetry.activities.is_empty(), "Activities telemetry must be populated");
+}
+

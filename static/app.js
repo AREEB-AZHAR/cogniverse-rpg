@@ -20,6 +20,109 @@ const toastEl = document.getElementById('tool-toast');
 const WORLD_SIZE = 128;
 const TILE_PX = 14; // Base pixel size per tile for 128x128 grand continent
 
+// Offscreen Terrain Buffer for Buttery-Smooth 60 FPS
+const terrainCanvas = document.createElement('canvas');
+terrainCanvas.width = WORLD_SIZE * TILE_PX;
+terrainCanvas.height = WORLD_SIZE * TILE_PX;
+const terrainCtx = terrainCanvas.getContext('2d');
+let isTerrainBufferBuilt = false;
+
+function getProceduralBiome(x, y) {
+  const fx = x / WORLD_SIZE;
+  const fy = y / WORLD_SIZE;
+
+  // Great Continental River System
+  const riverCenter = 56.0 + Math.sin(y * 0.08) * 14.0 + Math.cos(y * 0.22) * 5.0;
+  const distToRiver = Math.abs(x - riverCenter);
+
+  // Northeastern Mountain Tributary
+  const tributaryCenter = 86.0 - Math.sin((y - 15.0) * 0.12) * 16.0;
+  const isTributary = y > 15 && y < 65 && Math.abs(x - tributaryCenter) <= 2.2;
+
+  // Oceanic Margins encircling continent
+  const isOcean = x < 8 || x >= WORLD_SIZE - 8 || y < 8 || y >= WORLD_SIZE - 8;
+  const isCoast = !isOcean && (x < 11 || x >= WORLD_SIZE - 11 || y < 11 || y >= WORLD_SIZE - 11);
+
+  if (isOcean) return 'DeepOcean';
+  if (distToRiver <= 2.8 || isTributary) return 'CrystalRiverlands';
+  if (isCoast || distToRiver <= 4.2 || (y > 14 && y < 66 && Math.abs(x - tributaryCenter) <= 3.4)) return 'SandyCoast';
+  if (fx > 0.60 && fy < 0.50) return 'IroncragMountains';
+  if (Math.hypot(fx - 0.48, fy - 0.50) < 0.10) return 'AncientLeylineRuins';
+  if ((fx < 0.45 && fy < 0.68) || (fx < 0.38 && fy > 0.65)) return 'WhisperingForest';
+  return 'SunlitPlains';
+}
+
+function paintTileToBuffer(bCtx, x, y, biome) {
+  const px = x * TILE_PX;
+  const py = y * TILE_PX;
+  const tilePx = TILE_PX;
+
+  const isWater = biome === 'DeepOcean' || biome.includes('River') || biome.includes('Ocean');
+  const isMountain = biome.includes('Mountain');
+  const isForest = biome.includes('Forest');
+  const isRuins = biome.includes('Ruins');
+  const isCoast = biome === 'SandyCoast';
+
+  if (biome === 'DeepOcean') {
+    bCtx.fillStyle = '#0a2d54';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+  } else if (isWater) {
+    bCtx.fillStyle = '#10528e';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+  } else if (isCoast) {
+    bCtx.fillStyle = '#d4b16a';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+  } else if (isMountain) {
+    bCtx.fillStyle = '#52525b';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    // Snow caps
+    bCtx.fillStyle = '#e2e8f0';
+    bCtx.beginPath();
+    bCtx.moveTo(px + tilePx / 2, py + 1);
+    bCtx.lineTo(px + tilePx - 2, py + 4);
+    bCtx.lineTo(px + 2, py + 4);
+    bCtx.closePath();
+    bCtx.fill();
+  } else if (isRuins) {
+    bCtx.fillStyle = '#3b0764';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    bCtx.fillStyle = 'rgba(192, 132, 252, 0.55)';
+    bCtx.fillRect(px + 3, py + 3, tilePx - 6, tilePx - 6);
+  } else if (isForest) {
+    bCtx.fillStyle = '#164e24';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    // Pixel tree canopy
+    bCtx.fillStyle = '#227838';
+    bCtx.beginPath();
+    bCtx.arc(px + tilePx * 0.5, py + tilePx * 0.42, tilePx * 0.38, 0, Math.PI * 2);
+    bCtx.fill();
+    bCtx.fillStyle = '#78350f';
+    bCtx.fillRect(px + tilePx * 0.45, py + tilePx * 0.72, 2, 3);
+  } else {
+    // Sunlit Plains
+    bCtx.fillStyle = '#3d7826';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    if ((x + y * 3) % 11 === 0) {
+      bCtx.fillStyle = '#fbbf24';
+      bCtx.fillRect(px + 3, py + 3, 2, 2);
+    } else if ((x * 2 + y) % 13 === 0) {
+      bCtx.fillStyle = '#f43f5e';
+      bCtx.fillRect(px + 8, py + 6, 2, 2);
+    }
+  }
+}
+
+function buildTerrainBuffer() {
+  for (let y = 0; y < WORLD_SIZE; y++) {
+    for (let x = 0; x < WORLD_SIZE; x++) {
+      const override = terraformedTiles.get(`${x},${y}`);
+      const biome = override || getProceduralBiome(x, y);
+      paintTileToBuffer(terrainCtx, x, y, biome);
+    }
+  }
+  isTerrainBufferBuilt = true;
+}
+
 // Camera Matrix
 const camera = {
   x: 0,
@@ -357,6 +460,7 @@ function handleMapAction(tx, ty) {
         const py = ty + dy;
         if (px >= 0 && px < WORLD_SIZE && py >= 0 && py < WORLD_SIZE) {
           terraformedTiles.set(`${px},${py}`, biomeKey);
+          paintTileToBuffer(terrainCtx, px, py, biomeKey);
         }
       }
     }
@@ -501,10 +605,11 @@ function centerCameraOn(wx, wy) {
 // ----------------------------------------------------------------------------
 function renderTelemetry(data) {
   try {
-    // 1. Sync modified tiles
+    // 1. Sync modified tiles to offscreen buffer
     if (data.modified_tiles && Array.isArray(data.modified_tiles)) {
       for (const [x, y, biome] of data.modified_tiles) {
         terraformedTiles.set(`${x},${y}`, biome);
+        paintTileToBuffer(terrainCtx, x, y, biome);
       }
     }
 
@@ -544,10 +649,7 @@ function renderTelemetry(data) {
       }
     }
 
-    // 4. Render World Map
-    drawWorldMap(data);
-
-    // 5. Render Character Sheet Details if open
+    // 4. Render Character Sheet Details if open
     if (data.selected_agent) {
       updateCharacterSheet(data.selected_agent);
     }
@@ -565,6 +667,10 @@ function renderTelemetry(data) {
 // LIVING 2D WORLD MAP RENDERER (WORLDBOX VISUALS)
 // ----------------------------------------------------------------------------
 function drawWorldMap(data) {
+  if (!isTerrainBufferBuilt) {
+    buildTerrainBuffer();
+  }
+
   ctx.save();
   ctx.fillStyle = '#061c33';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -583,126 +689,13 @@ function drawWorldMap(data) {
 
   // Animated ocean wave lines outside continent
   ctx.fillStyle = 'rgba(16, 82, 142, 0.28)';
-  for (let oy = -36; oy < WORLD_SIZE + 36; oy += 5) {
+  for (let oy = -36; oy < WORLD_SIZE + 36; oy += 6) {
     const waveOffset = Math.sin(time * 0.0018 + oy * 0.35) * 6;
     ctx.fillRect(-oceanMargin, oy * tilePx + waveOffset, WORLD_SIZE * tilePx + oceanMargin * 2, 2);
   }
 
-  // 1. Procedural Terrain & Layered WorldBox Biomes (128x128 Continental Archipelago)
-  for (let y = 0; y < WORLD_SIZE; y++) {
-    for (let x = 0; x < WORLD_SIZE; x++) {
-      let biome = 'SunlitPlains';
-      let isWater = false;
-      let isMountain = false;
-      let isForest = false;
-      let isRuins = false;
-      let isDeepOcean = false;
-
-      const override = terraformedTiles.get(`${x},${y}`);
-      if (override) {
-        biome = override;
-        if (biome.includes('River') || biome.includes('Ocean')) isWater = true;
-        else if (biome.includes('Mountain')) isMountain = true;
-        else if (biome.includes('Forest')) isForest = true;
-        else if (biome.includes('Ruins')) isRuins = true;
-      } else {
-        const fx = x / WORLD_SIZE;
-        const fy = y / WORLD_SIZE;
-
-        // Great Continental River System
-        const riverCenter = 56.0 + Math.sin(y * 0.08) * 14.0 + Math.cos(y * 0.22) * 5.0;
-        const distToRiver = Math.abs(x - riverCenter);
-
-        // Northeastern Mountain Tributary
-        const tributaryCenter = 86.0 - Math.sin((y - 15.0) * 0.12) * 16.0;
-        const isTributary = y > 15 && y < 65 && Math.abs(x - tributaryCenter) <= 2.2;
-
-        // Oceanic Margins encircling continent
-        const isOcean = x < 8 || x >= WORLD_SIZE - 8 || y < 8 || y >= WORLD_SIZE - 8;
-        const isCoast = !isOcean && (x < 11 || x >= WORLD_SIZE - 11 || y < 11 || y >= WORLD_SIZE - 11);
-
-        if (isOcean) {
-          isDeepOcean = true;
-          isWater = true;
-        } else if (distToRiver <= 2.8 || isTributary) {
-          biome = 'CrystalRiverlands';
-          isWater = true;
-        } else if (isCoast || distToRiver <= 4.2 || (y > 14 && y < 66 && Math.abs(x - tributaryCenter) <= 3.4)) {
-          biome = 'SandyCoast';
-        } else if (fx > 0.60 && fy < 0.50) {
-          biome = 'IroncragMountains';
-          isMountain = true;
-        } else if (Math.hypot(fx - 0.48, fy - 0.50) < 0.10) {
-          biome = 'AncientLeylineRuins';
-          isRuins = true;
-        } else if ((fx < 0.45 && fy < 0.68) || (fx < 0.38 && fy > 0.65)) {
-          biome = 'WhisperingForest';
-          isForest = true;
-        } else {
-          biome = 'SunlitPlains';
-        }
-      }
-
-      const px = x * tilePx;
-      const py = y * tilePx;
-
-      // Base Biome Fill
-      if (isDeepOcean) {
-        ctx.fillStyle = '#0a2d54'; // Deep ocean shelf
-        ctx.fillRect(px, py, tilePx, tilePx);
-      } else if (isWater) {
-        ctx.fillStyle = '#10528e'; // WorldBox River & Bay Water
-        ctx.fillRect(px, py, tilePx, tilePx);
-        // Coastline wave shimmer
-        if (Math.sin(time * 0.003 + x * 0.4 + y * 0.4) > 0.65) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-          ctx.fillRect(px + 2, py + 2, tilePx - 4, 2);
-        }
-      } else if (biome === 'SandyCoast') {
-        ctx.fillStyle = '#d4b16a'; // Warm shoreline sand
-        ctx.fillRect(px, py, tilePx, tilePx);
-      } else if (isMountain) {
-        ctx.fillStyle = '#52525b'; // Mountain base
-        ctx.fillRect(px, py, tilePx, tilePx);
-        // Snow caps & rocky facets
-        ctx.fillStyle = '#e2e8f0';
-        ctx.beginPath();
-        ctx.moveTo(px + tilePx / 2, py + 1);
-        ctx.lineTo(px + tilePx - 2, py + 4);
-        ctx.lineTo(px + 2, py + 4);
-        ctx.closePath();
-        ctx.fill();
-      } else if (isRuins) {
-        ctx.fillStyle = '#3b0764'; // Obsidian ruins floor
-        ctx.fillRect(px, py, tilePx, tilePx);
-        // Arcane glowing rune
-        ctx.fillStyle = 'rgba(192, 132, 252, 0.55)';
-        ctx.fillRect(px + 3, py + 3, tilePx - 6, tilePx - 6);
-      } else if (isForest) {
-        ctx.fillStyle = '#164e24'; // Forest floor
-        ctx.fillRect(px, py, tilePx, tilePx);
-        // Distinct pixel tree canopy
-        ctx.fillStyle = '#227838';
-        ctx.beginPath();
-        ctx.arc(px + tilePx * 0.5, py + tilePx * 0.42, tilePx * 0.38, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#78350f';
-        ctx.fillRect(px + tilePx * 0.45, py + tilePx * 0.72, 2, 3); // trunk
-      } else {
-        // Lush Meadow Plains
-        ctx.fillStyle = '#3d7826';
-        ctx.fillRect(px, py, tilePx, tilePx);
-        // Subtle wildflower dots
-        if ((x + y * 3) % 11 === 0) {
-          ctx.fillStyle = '#fbbf24'; // yellow buttercup
-          ctx.fillRect(px + 3, py + 3, 2, 2);
-        } else if ((x * 2 + y) % 13 === 0) {
-          ctx.fillStyle = '#f43f5e'; // red poppy
-          ctx.fillRect(px + 8, py + 6, 2, 2);
-        }
-      }
-    }
-  }
+  // 1. Blit cached 128x128 grand continent from offscreen buffer (1 single lightning-fast GPU draw call!)
+  ctx.drawImage(terrainCanvas, 0, 0);
 
   // 2. Kingdom Territorial Borders (WorldBox Signature Feature)
   if (showKingdomBorders) {
@@ -1311,10 +1304,22 @@ function triggerBabel() {
 }
 
 // ----------------------------------------------------------------------------
+// CONTINUOUS 60 FPS GAME & RENDER LOOP
+// ----------------------------------------------------------------------------
+function gameLoop() {
+  if (currentTelemetry) {
+    drawWorldMap(currentTelemetry);
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+// ----------------------------------------------------------------------------
 // INITIALIZATION
 // ----------------------------------------------------------------------------
 window.addEventListener('load', () => {
   resizeCanvas();
+  buildTerrainBuffer();
   centerCamera();
   connectWebSocket();
+  requestAnimationFrame(gameLoop);
 });

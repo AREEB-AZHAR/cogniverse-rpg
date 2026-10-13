@@ -13,11 +13,38 @@
 
 ## 📸 WorldBox-Inspired God Admin Console
 
+![60 FPS Flourishing Population & Territorial Expansion](screenshots/worldbox_60fps_population_growth.png)
+*Live 2D Procedural Matrix (**128x128 Grand Continental Archipelago - 16,384 tiles**) running at a silky-smooth **60 FPS** at **5x Sonic Speed**. Shows thriving demographic growth (**👥 23 citizens, 0 deaths 💀, Gen 3**), expanding territorial borders (`☀️ Kingdom of Solaria` golden realm vs `🌙 Lunar Sovereignty` violet realm), and active civilization mechanics.*
+
 ![128x128 Grand Continental Realm](screenshots/worldbox_128x128_grand_view.png)
-*Live 2D Procedural Matrix (**128x128 Grand Continental Archipelago - 16,384 tiles**) with boundless deep ocean backdrop, dual winding rivers (Great Crystal River + Mountain Tributary), sandy coastal shelves, Ironcrag Mountain Spine, Whispering Redwood Forest, Ancient Leyline Ruins, and autonomous Kingdom territorial borders (`☀️ Kingdom of Solaria` vs `🌙 Lunar Sovereignty`).*
+*Detailed bird's eye view with boundless deep ocean backdrop, dual winding rivers (Great Crystal River + Mountain Tributary), sandy coastal shelves, Ironcrag Mountain Spine, Whispering Redwood Forest, Ancient Leyline Ruins, and autonomous settlements.*
 
 ![Authentic WorldBox Character Sheet](screenshots/worldbox_character_sheet.png)
 *Authentic WorldBox Character Sheet Modal featuring character portrait, noble titles (`Chieftain`, `HereticRebel`), kingdom affiliation, favorite star (⭐), core RPG stats matrix (`HP`, `ATK`, `DEF`, `SPD`, `INT`, `DIP`, `AGE`, `OFF`, `KILLS`), WorldBox Trait Badges (`✦ Deceitful`, `✦ Swift`, `✦ Strong`), tabbed cognition (Inner Monologue, Kenji Doya Neuromodulators, Darwin-Gödel AST, Akashic Lineage), inventory items, and God powers (`💬 Whisper`, `✨ Bless`, `💚 Heal`, `⚡ Smite`).*
+
+---
+
+## ⚡ 60 FPS Performance Optimization & Thriving Population Dynamics
+
+### 1. Offscreen Terrain Buffer (Zero-Lag 60 FPS Rendering)
+* **The Root Cause**: On a $128 \times 128$ map, iterating through all 16,384 tiles and executing individual Canvas 2D calls (`fillRect`, `arc`, `lineTo`) every tick created over **45,000 draw calls per frame**, causing extreme frontend stutter and dropped frames.
+* **The Solution**:
+  - Implemented an offscreen caching canvas buffer (`terrainCanvas` at $1792 \times 1792$ resolution) that draws base terrain once on startup.
+  - The main viewport renders base terrain with **a single blit call** (`ctx.drawImage(terrainCanvas, 0, 0)`).
+  - Subsequent terrain alterations (e.g., God brushes, wildfires) update the offscreen buffer incrementally via a differential `modified_tiles` stream.
+  - Replaced synchronous canvas redrawing with a decoupled `requestAnimationFrame(gameLoop)` loop, ensuring silky-smooth 60 FPS panning, zooming, and animation regardless of server tick frequency.
+
+### 2. Autonomous Nutrition & Thriving Population Growth
+* **The Root Cause of Stagnant Population**:
+  1. *Backpack Starvation*: Agents gathered berries and grain into their backpacks, but lacked an autonomous consumption instinct, starving to death while carrying full rations.
+  2. *Riverbank Hydration*: Agents were only able to drink when standing directly on water tiles; moving adjacent to riverbanks failed the water check, causing dehydration.
+  3. *Excessive Decay & High Courtship Barriers*: High metabolic hunger decay ($0.0018/\text{tick}$) kept hunger levels above the strict $0.50$ courtship threshold.
+* **The Solution**:
+  - **Auto-Consumption**: Implemented autonomous consumption in `tick_vitals`: any agent with $\text{hunger} > 0.45$ automatically eats berries or grain from their inventory.
+  - **Bank Hydration Radius**: Allowed drinking when water or river is within $\le 2$ tiles, enabling safe hydration from riverbanks.
+  - **Balanced Metabolic Decay**: Adjusted hunger decay to $0.0008/\text{tick}$ and thirst to $0.0010/\text{tick}$; reduced deprivation damage from instant death ($1.2/\text{tick}$) to gradual attrition ($0.25/\text{tick}$), with natural HP regeneration when nourished.
+  - **Courtship Range & Population Cap**: Lowered the courtship attraction barrier to $0.45$, expanded mate discovery range to $6$ tiles, increased civilization carrying capacity cap to $160$ (from $40$), and provisioned newborns with starting food rations ($5$ berries, $2$ wood) for a strong survival headstart.
+  - **Result**: Immediate, multi-generational population boom (**from 16 to 23+ citizens, 0 deaths, Gen 3** reached within 500 ticks at 5x speed).
 
 ---
 

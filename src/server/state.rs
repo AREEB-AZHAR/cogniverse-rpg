@@ -230,10 +230,22 @@ impl SimulationEngine {
                 }
                 ActionChoice::DrinkWater => {
                     let (ax, ay) = (self.agents[idx].x, self.agents[idx].y);
-                    let has_water = self.world.tile_at(ax, ay).has_fresh_water;
+                    // Check if standing on fresh water OR adjacent to fresh water within 2 tiles
+                    let mut has_water = false;
+                    for dy in -2..=2 {
+                        for dx in -2..=2 {
+                            let qx = (ax as isize + dx).clamp(0, WORLD_WIDTH as isize - 1) as usize;
+                            let qy = (ay as isize + dy).clamp(0, WORLD_HEIGHT as isize - 1) as usize;
+                            if self.world.tile_at(qx, qy).has_fresh_water {
+                                has_water = true;
+                                break;
+                            }
+                        }
+                        if has_water { break; }
+                    }
                     if has_water {
                         let agent = &mut self.agents[idx];
-                        agent.thirst = (agent.thirst - 0.4).max(0.0);
+                        agent.thirst = (agent.thirst - 0.50).max(0.0);
                         agent.brain.neuromod.update(0.4, 1.0 - agent.thirst, false, false, 0.0);
                         agent.brain.memory.record_observation("Drank cold, clean river water.");
                     }
@@ -302,7 +314,7 @@ impl SimulationEngine {
                     for (other_idx, other) in self.agents.iter().enumerate() {
                         if other_idx != idx && other.is_alive && other.race == a_race {
                             let d = (other.x as isize - ax as isize).abs() + (other.y as isize - ay as isize).abs();
-                            if d <= 3 {
+                            if d <= 6 {
                                 mate_idx = Some(other_idx);
                                 break;
                             }
@@ -317,13 +329,13 @@ impl SimulationEngine {
                             a_health,
                         );
 
-                        if attraction > 0.55 {
+                        if attraction > 0.45 {
                             self.agents[idx].social_need = (self.agents[idx].social_need - 0.5).max(0.0);
                             self.agents[m_idx].social_need = (self.agents[m_idx].social_need - 0.5).max(0.0);
                             self.agents[idx].partner_id = Some(self.agents[m_idx].id);
                             self.agents[m_idx].partner_id = Some(self.agents[idx].id);
 
-                            if self.agents[idx].hunger < 0.5 && self.agents[m_idx].hunger < 0.5 && self.agents.len() < 40 {
+                            if self.agents[idx].hunger < 0.70 && self.agents[m_idx].hunger < 0.70 && self.agents.len() < 160 {
                                 let child_genome = ReproductionManager::create_child_genome(
                                     &self.agents[idx].brain.genome,
                                     &self.agents[m_idx].brain.genome,
@@ -416,6 +428,8 @@ impl SimulationEngine {
             let echo = self.akashic_core.maybe_awaken_echo();
             let mut baby = Agent::new(id, name.clone(), race, x, y, archetype, echo);
             baby.brain.genome = genome;
+            baby.inventory.add(ItemId::Berry, 5);
+            baby.inventory.add(ItemId::Wood, 2);
             self.log_event(format!("A new child has been born: {}! Inherited genetic AST.", name));
             self.agents.push(baby);
         }
@@ -449,27 +463,42 @@ impl SimulationEngine {
         match filter {
             EntityFilter::Altar => {
                 let mut best = None;
-                let mut best_dist = 999.0;
+                let mut best_dist_sq = 999999.0;
+                let ax = agent.x as f32;
+                let ay = agent.y as f32;
                 for altar in &world.altars {
-                    let d = (altar.x as f32 - agent.x as f32).hypot(altar.y as f32 - agent.y as f32);
-                    if d < best_dist {
-                        best_dist = d;
+                    let dx = altar.x as f32 - ax;
+                    let dy = altar.y as f32 - ay;
+                    let d_sq = dx * dx + dy * dy;
+                    if d_sq < best_dist_sq {
+                        best_dist_sq = d_sq;
                         best = Some((altar.x, altar.y));
                     }
                 }
                 best
             }
             EntityFilter::FoodSource => {
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
+                let r = 36isize;
+                let min_x = (ax - r).clamp(0, (world.width - 1) as isize) as usize;
+                let max_x = (ax + r).clamp(0, (world.width - 1) as isize) as usize;
+                let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
+                let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
+
                 let mut best = None;
-                let mut best_dist = 999.0;
-                for y in 0..world.height {
-                    for x in 0..world.width {
+                let mut best_dist_sq = 999999;
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
                         let t = world.tile_at(x, y);
                         if t.berry_amount > 0 || t.grain_amount > 0 {
-                            let d = (x as f32 - agent.x as f32).hypot(y as f32 - agent.y as f32);
-                            if d < best_dist {
-                                best_dist = d;
+                            let dx = x as isize - ax;
+                            let dy = y as isize - ay;
+                            let d_sq = dx * dx + dy * dy;
+                            if d_sq < best_dist_sq {
+                                best_dist_sq = d_sq;
                                 best = Some((x, y));
+                                if d_sq <= 4 { return best; }
                             }
                         }
                     }
@@ -477,16 +506,27 @@ impl SimulationEngine {
                 best
             }
             EntityFilter::WaterSource => {
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
+                let r = 36isize;
+                let min_x = (ax - r).clamp(0, (world.width - 1) as isize) as usize;
+                let max_x = (ax + r).clamp(0, (world.width - 1) as isize) as usize;
+                let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
+                let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
+
                 let mut best = None;
-                let mut best_dist = 999.0;
-                for y in 0..world.height {
-                    for x in 0..world.width {
+                let mut best_dist_sq = 999999;
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
                         let t = world.tile_at(x, y);
                         if t.has_fresh_water {
-                            let d = (x as f32 - agent.x as f32).hypot(y as f32 - agent.y as f32);
-                            if d < best_dist {
-                                best_dist = d;
+                            let dx = x as isize - ax;
+                            let dy = y as isize - ay;
+                            let d_sq = dx * dx + dy * dy;
+                            if d_sq < best_dist_sq {
+                                best_dist_sq = d_sq;
                                 best = Some((x, y));
+                                if d_sq <= 4 { return best; }
                             }
                         }
                     }
@@ -494,16 +534,27 @@ impl SimulationEngine {
                 best
             }
             EntityFilter::Tree => {
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
+                let r = 32isize;
+                let min_x = (ax - r).clamp(0, (world.width - 1) as isize) as usize;
+                let max_x = (ax + r).clamp(0, (world.width - 1) as isize) as usize;
+                let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
+                let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
+
                 let mut best = None;
-                let mut best_dist = 999.0;
-                for y in 0..world.height {
-                    for x in 0..world.width {
+                let mut best_dist_sq = 999999;
+                for y in min_y..=max_y {
+                    for x in min_x..=max_x {
                         let t = world.tile_at(x, y);
                         if t.wood_amount > 0 {
-                            let d = (x as f32 - agent.x as f32).hypot(y as f32 - agent.y as f32);
-                            if d < best_dist {
-                                best_dist = d;
+                            let dx = x as isize - ax;
+                            let dy = y as isize - ay;
+                            let d_sq = dx * dx + dy * dy;
+                            if d_sq < best_dist_sq {
+                                best_dist_sq = d_sq;
                                 best = Some((x, y));
+                                if d_sq <= 4 { return best; }
                             }
                         }
                     }
@@ -512,12 +563,16 @@ impl SimulationEngine {
             }
             EntityFilter::PotentialMate => {
                 let mut best = None;
-                let mut best_dist = 999.0;
+                let mut best_dist_sq = 999999;
+                let ax = agent.x as isize;
+                let ay = agent.y as isize;
                 for other in agents {
                     if other.id != agent.id && other.is_alive && other.race == agent.race {
-                        let d = (other.x as f32 - agent.x as f32).hypot(other.y as f32 - agent.y as f32);
-                        if d < best_dist {
-                            best_dist = d;
+                        let dx = other.x as isize - ax;
+                        let dy = other.y as isize - ay;
+                        let d_sq = dx * dx + dy * dy;
+                        if d_sq < best_dist_sq {
+                            best_dist_sq = d_sq;
                             best = Some((other.x, other.y));
                         }
                     }

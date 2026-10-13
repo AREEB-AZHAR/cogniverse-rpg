@@ -161,41 +161,50 @@ impl Agent {
         let ax = self.x as f32;
         let ay = self.y as f32;
 
-        let mut min_food = 999.0;
-        let mut min_water = 999.0;
-        let mut min_tree = 999.0;
-        let mut min_stone = 999.0;
-        let mut min_iron = 999.0;
         let mut min_altar = 999.0;
 
-        // Search within a radius of 12 tiles for performance
-        let min_x = self.x.saturating_sub(12);
-        let max_x = (self.x + 12).min(world.width - 1);
-        let min_y = self.y.saturating_sub(12);
-        let max_y = (self.y + 12).min(world.height - 1);
+        // Search within a radius of 28 tiles for grand 128x128 continent
+        let min_x = self.x.saturating_sub(28);
+        let max_x = (self.x + 28).min(world.width - 1);
+        let min_y = self.y.saturating_sub(28);
+        let max_y = (self.y + 28).min(world.height - 1);
+
+        let mut min_food_sq = 999999.0;
+        let mut min_water_sq = 999999.0;
+        let mut min_tree_sq = 999999.0;
+        let mut min_stone_sq = 999999.0;
+        let mut min_iron_sq = 999999.0;
 
         for y in min_y..=max_y {
             for x in min_x..=max_x {
                 let tile = world.tile_at(x, y);
-                let d = (x as f32 - ax).hypot(y as f32 - ay);
+                let dx = x as f32 - ax;
+                let dy = y as f32 - ay;
+                let d_sq = dx * dx + dy * dy;
 
-                if (tile.berry_amount > 0 || tile.grain_amount > 0) && d < min_food {
-                    min_food = d;
+                if (tile.berry_amount > 0 || tile.grain_amount > 0) && d_sq < min_food_sq {
+                    min_food_sq = d_sq;
                 }
-                if tile.has_fresh_water && d < min_water {
-                    min_water = d;
+                if tile.has_fresh_water && d_sq < min_water_sq {
+                    min_water_sq = d_sq;
                 }
-                if tile.wood_amount > 0 && d < min_tree {
-                    min_tree = d;
+                if tile.wood_amount > 0 && d_sq < min_tree_sq {
+                    min_tree_sq = d_sq;
                 }
-                if (tile.stone_amount > 0 || tile.flint_amount > 0) && d < min_stone {
-                    min_stone = d;
+                if (tile.stone_amount > 0 || tile.flint_amount > 0) && d_sq < min_stone_sq {
+                    min_stone_sq = d_sq;
                 }
-                if tile.iron_ore_amount > 0 && d < min_iron {
-                    min_iron = d;
+                if tile.iron_ore_amount > 0 && d_sq < min_iron_sq {
+                    min_iron_sq = d_sq;
                 }
             }
         }
+
+        let min_food = min_food_sq.sqrt();
+        let min_water = min_water_sq.sqrt();
+        let min_tree = min_tree_sq.sqrt();
+        let min_stone = min_stone_sq.sqrt();
+        let min_iron = min_iron_sq.sqrt();
 
         // Check nearest altar
         for altar in &world.altars {
@@ -234,28 +243,43 @@ impl Agent {
         }
 
         self.age_ticks += 1;
-        self.hunger = (self.hunger + 0.0018).min(1.0);
-        self.thirst = (self.thirst + 0.0022).min(1.0);
-        self.social_need = (self.social_need + 0.001).min(1.0);
+        self.hunger = (self.hunger + 0.0008).min(1.0);
+        self.thirst = (self.thirst + 0.0010).min(1.0);
+        self.social_need = (self.social_need + 0.0006).min(1.0);
+
+        // Auto-consume food from inventory if hungry
+        if self.hunger > 0.45 {
+            if self.inventory.count(ItemId::Berry) > 0 {
+                self.inventory.remove(ItemId::Berry, 1);
+                self.hunger = (self.hunger - 0.40).max(0.0);
+                self.brain.neuromod.update(0.3, 1.0 - self.hunger, false, false, 0.0);
+            } else if self.inventory.count(ItemId::Grain) > 0 {
+                self.inventory.remove(ItemId::Grain, 1);
+                self.hunger = (self.hunger - 0.30).max(0.0);
+                self.brain.neuromod.update(0.2, 1.0 - self.hunger, false, false, 0.0);
+            }
+        }
 
         // Environmental thermal balance
         let ambient_temp = current_tile.temperature + current_weather_temp_delta;
-        if ambient_temp < 10.0 {
-            self.warmth = (self.warmth - 0.003).max(0.0);
+        if ambient_temp < 8.0 {
+            self.warmth = (self.warmth - 0.0015).max(0.0);
         } else if ambient_temp > 28.0 {
             self.warmth = (self.warmth + 0.002).min(1.0);
+        } else {
+            self.warmth = (self.warmth + 0.001).min(1.0);
         }
 
-        // Damage from extreme deprivation
+        // Damage only from critical deprivation (gradual, not instant death)
         let mut damage = 0.0;
-        if self.hunger > 0.95 {
-            damage += 0.8;
+        if self.hunger > 0.96 {
+            damage += 0.25;
         }
-        if self.thirst > 0.95 {
-            damage += 1.2;
+        if self.thirst > 0.96 {
+            damage += 0.35;
         }
-        if self.warmth < 0.10 {
-            damage += 0.9; // Hypothermia
+        if self.warmth < 0.05 {
+            damage += 0.25; // Hypothermia
         }
 
         if damage > 0.0 {
@@ -264,9 +288,9 @@ impl Agent {
                 self.health = 0.0;
                 self.is_alive = false;
             }
-        } else if self.hunger < 0.3 && self.thirst < 0.3 && self.warmth > 0.5 {
+        } else if self.hunger < 0.6 && self.thirst < 0.6 {
             // Natural regeneration when satisfied
-            self.health = (self.health + 0.4).min(self.max_health);
+            self.health = (self.health + 0.5).min(self.max_health);
         }
     }
 

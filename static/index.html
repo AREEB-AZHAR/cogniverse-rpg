@@ -3,147 +3,302 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Genesis Cogniverse - Pantheon God Admin Console</title>
+  <title>Genesis Cogniverse - WorldBox God Admin Console</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="worldbox-theme">
   <div class="pantheon-layout">
-    <!-- Top Bar: Chronos Time Engine & Divine Telemetry -->
+    <!-- Top Bar: Demographics & Macro-Metrics & Chronos Time Engine -->
     <header class="top-nav glass-panel">
       <div class="brand">
         <div class="brand-glyph">✦</div>
         <div>
           <h1>GENESIS COGNIVERSE</h1>
-          <span class="sub-brand">AUTONOMOUS NEURO-SYMBOLIC RPG MATRIX</span>
+          <span class="sub-brand">WORLDBOX GOD PANTHEON MATRIX</span>
         </div>
       </div>
 
+      <!-- Chronos Time Engine -->
       <div class="chronos-bar">
-        <span class="chronos-label">CHRONOS TIME ENGINE:</span>
+        <span class="chronos-label">CHRONOS:</span>
         <div class="speed-buttons">
-          <button id="btn-pause" class="btn-time" onclick="setSpeed(0)">PAUSE (0x)</button>
-          <button id="btn-1x" class="btn-time active" onclick="setSpeed(1)">1x</button>
-          <button id="btn-10x" class="btn-time" onclick="setSpeed(10)">10x</button>
-          <button id="btn-100x" class="btn-time" onclick="setSpeed(100)">100x</button>
-          <button id="btn-turbo" class="btn-time turbo" onclick="setSpeed(1000)">⚡ TURBO</button>
-          <button id="btn-step" class="btn-time" onclick="stepTick()">STEP</button>
+          <button id="btn-pause" class="btn-time" onclick="setSpeed(0)" title="Pause Simulation">⏸️ PAUSE</button>
+          <button id="btn-1x" class="btn-time active" onclick="setSpeed(1)" title="1x Real-time">1x</button>
+          <button id="btn-10x" class="btn-time" onclick="setSpeed(10)" title="10x Fast">10x</button>
+          <button id="btn-100x" class="btn-time" onclick="setSpeed(100)" title="100x Hyper">100x</button>
+          <button id="btn-turbo" class="btn-time turbo" onclick="setSpeed(1000)" title="1000x Turbo Epoch">⚡ TURBO</button>
+          <button id="btn-step" class="btn-time" onclick="stepTick()" title="Advance 1 Tick">⏭️ STEP</button>
         </div>
       </div>
 
-      <div class="world-vitals">
-        <div class="vital-pill">
-          <span class="pill-label">TICKS</span>
-          <span id="metric-tick" class="pill-value">0</span>
+      <!-- Macro Demographics Bar (WorldBox Style) -->
+      <div class="macro-demographics-bar">
+        <div class="vital-pill" title="Total World Population">
+          <span class="pill-label">POP</span>
+          <span id="metric-pop-total" class="pill-value text-gold">16</span>
         </div>
-        <div class="vital-pill">
-          <span class="pill-label">WEATHER</span>
-          <span id="metric-weather" class="pill-value">Clear Sun</span>
+        <div class="vital-pill" title="Solar Terrans vs Chthonic Lunarians">
+          <span class="pill-label">FACTIONS</span>
+          <span id="metric-factions" class="pill-value"><span class="text-gold">☀️ 8</span> / <span class="text-violet">🌙 8</span></span>
         </div>
-        <div class="vital-pill">
-          <span class="pill-label">TEMP OFFSET</span>
-          <span id="metric-temp" class="pill-value">+0.0°C</span>
+        <div class="vital-pill" title="Autonomous Wildlife">
+          <span class="pill-label">FAUNA</span>
+          <span id="metric-wildlife" class="pill-value text-cyan">🦌 18</span>
         </div>
-        <div class="vital-pill">
-          <span class="pill-label">TERRANS / LUNARIANS</span>
-          <span id="metric-pop" class="pill-value">8 / 8</span>
+        <div class="vital-pill" title="Births & Deaths Total">
+          <span class="pill-label">BIRTH/DEATH</span>
+          <span id="metric-birth-death" class="pill-value">👶 <span id="val-births">0</span> | 💀 <span id="val-deaths">0</span></span>
+        </div>
+        <div class="vital-pill" title="Maximum Generation Mutated">
+          <span class="pill-label">MAX GEN</span>
+          <span id="metric-max-gen" class="pill-value text-green">🧬 Gen 1</span>
+        </div>
+        <div class="vital-pill" title="Average Health & Hunger Across Population">
+          <span class="pill-label">AVG VITALS</span>
+          <span id="metric-avg-vitals" class="pill-value">❤️ <span id="val-avg-hp">100%</span> | 🍞 <span id="val-avg-hunger">15%</span></span>
+        </div>
+        <div class="vital-pill" title="Average Piety & Devotion">
+          <span class="pill-label">DEVOTION</span>
+          <span id="metric-avg-piety" class="pill-value text-gold">🙏 <span id="val-avg-piety">60%</span></span>
+        </div>
+        <div class="vital-pill" title="Total Civilizational Wealth">
+          <span class="pill-label">WEALTH</span>
+          <span id="metric-wealth" class="pill-value text-amber">🪙 <span id="val-wealth">120</span></span>
+        </div>
+        <div class="vital-pill" title="Current Weather & Day/Night Phase">
+          <span class="pill-label">ENVIRONMENT</span>
+          <span id="metric-environment" class="pill-value">☀️ Day | Clear Sun</span>
         </div>
       </div>
     </header>
 
-    <!-- Main Content Grid -->
+    <!-- Main Workspace -->
     <main class="main-workspace">
-      <!-- Left Column: World Canvas & Divine Interventions -->
+      <!-- Left / Center Viewport Column: World Canvas & Camera & Bottom WorldBox God Bar -->
       <section class="viewport-column">
         <div class="canvas-card glass-panel">
-          <div class="card-header">
-            <h2>WORLD MATRIX (64x64 PROCEDURAL GRID)</h2>
+          <!-- Canvas Top Controls -->
+          <div class="canvas-header-bar">
+            <div class="header-title-group">
+              <h2>PROCEDURAL WORLD MATRIX (64x64 GRID)</h2>
+              <span id="camera-coords-label" class="coords-badge">X: 32 Y: 32 | Zoom: 1.0x</span>
+            </div>
+            
+            <!-- Zoom & Camera Toolbar -->
+            <div class="camera-controls">
+              <button class="btn-cam" onclick="zoomIn()" title="Zoom In (+)">➕</button>
+              <button class="btn-cam" onclick="zoomOut()" title="Zoom Out (-)">➖</button>
+              <button class="btn-cam" onclick="resetCamera()" title="Reset Pan & Zoom">🎯 Reset</button>
+              <button id="btn-follow-toggle" class="btn-cam" onclick="toggleFollowSelected()" title="Lock / Follow Selected Character">🔭 Follow Off</button>
+            </div>
+
             <div class="map-legend">
               <span class="legend-item"><span class="dot gold"></span> Terrans</span>
               <span class="legend-item"><span class="dot violet"></span> Lunarians</span>
-              <span class="legend-item"><span class="dot red"></span> Wildlife</span>
+              <span class="legend-item"><span class="dot deer"></span> Wildlife</span>
+              <span class="legend-item"><span class="dot cabin"></span> Cabins</span>
+              <span class="legend-item"><span class="dot campfire"></span> Fires</span>
               <span class="legend-item"><span class="dot sun-altar"></span> Sun Altar</span>
               <span class="legend-item"><span class="dot moon-altar"></span> Moon Altar</span>
             </div>
           </div>
-          <div class="canvas-wrapper">
+
+          <!-- Canvas Interactive Viewport with Pan & Zoom -->
+          <div class="canvas-viewport" id="canvas-viewport">
             <canvas id="world-canvas" width="640" height="640"></canvas>
             <div id="hover-tooltip" class="canvas-tooltip hidden"></div>
+            <!-- Active Tool Notification Toast -->
+            <div id="tool-toast" class="tool-toast hidden">Brush: Plains (1x1)</div>
           </div>
-        </div>
 
-        <!-- Divine Intervention Toolbar -->
-        <div class="powers-card glass-panel">
-          <div class="card-header">
-            <h3>DIVINE PANTHEON INTERVENTIONS</h3>
-            <span class="badge-tag">GOD POWERS</span>
-          </div>
-          <div class="powers-grid">
-            <button class="btn-power" onclick="promptDivineWhisper()">
-              <span class="power-icon">🕊️</span>
-              <span class="power-name">Divine Whisper</span>
-              <span class="power-desc">Telepathic thought injection</span>
-            </button>
-            <button class="btn-power" onclick="triggerManna()">
-              <span class="power-icon">🍞</span>
-              <span class="power-name">Manna Drop</span>
-              <span class="power-desc">Spawn harvest stockpile</span>
-            </button>
-            <button class="btn-power" onclick="triggerSmite()">
-              <span class="power-icon">⚡</span>
-              <span class="power-name">Wrathful Smite</span>
-              <span class="power-desc">Strike targeted coords</span>
-            </button>
-            <button class="btn-power" onclick="triggerBabel()">
-              <span class="power-icon">🌀</span>
-              <span class="power-name">Tower of Babel</span>
-              <span class="power-desc">Scramble dialect trees</span>
-            </button>
-            <button class="btn-power" onclick="triggerGenesisSpark()">
-              <span class="power-icon">🧬</span>
-              <span class="power-name">Genesis Spark</span>
-              <span class="power-desc">Force evolutionary epoch</span>
-            </button>
+          <!-- WORLDBOX BOTTOM GOD POWER BAR -->
+          <div class="worldbox-godbar glass-panel">
+            <!-- Category Tabs (WorldBox Style) -->
+            <div class="godbar-category-tabs">
+              <button id="cat-tab-nature" class="cat-tab active" onclick="setGodCategory('nature')">
+                <span class="tab-icon">🌿</span> Nature & Terrain
+              </button>
+              <button id="cat-tab-civilization" class="cat-tab" onclick="setGodCategory('civilization')">
+                <span class="tab-icon">👑</span> Civilization & Life
+              </button>
+              <button id="cat-tab-powers" class="cat-tab" onclick="setGodCategory('powers')">
+                <span class="tab-icon">⚡</span> Divine Cataclysms
+              </button>
+              <button id="cat-tab-camera" class="cat-tab" onclick="setGodCategory('camera')">
+                <span class="tab-icon">🔍</span> Inspect & Navigate
+              </button>
+
+              <!-- Brush Size Selector -->
+              <div class="brush-size-group">
+                <span class="brush-label">BRUSH RADIUS:</span>
+                <button id="brush-r1" class="btn-brush active" onclick="setBrushRadius(1)">1x1</button>
+                <button id="brush-r2" class="btn-brush" onclick="setBrushRadius(2)">3x3</button>
+                <button id="brush-r3" class="btn-brush" onclick="setBrushRadius(3)">5x5</button>
+              </div>
+            </div>
+
+            <!-- Category Sub-Tool Trays -->
+            <div class="godbar-tools-container">
+              <!-- Tray 1: Nature & Terrain -->
+              <div id="tray-nature" class="tools-tray active">
+                <button class="btn-god-power active" data-tool="brush-plains" onclick="selectTool('brush-plains', 'Plains Brush (Click/Drag)')">
+                  <span class="power-ico">🌾</span>
+                  <span class="power-lbl">Plains</span>
+                </button>
+                <button class="btn-god-power" data-tool="brush-forest" onclick="selectTool('brush-forest', 'Whispering Forest Brush')">
+                  <span class="power-ico">🌲</span>
+                  <span class="power-lbl">Forest</span>
+                </button>
+                <button class="btn-god-power" data-tool="brush-river" onclick="selectTool('brush-river', 'Crystal River Brush')">
+                  <span class="power-ico">🌊</span>
+                  <span class="power-lbl">River</span>
+                </button>
+                <button class="btn-god-power" data-tool="brush-mountains" onclick="selectTool('brush-mountains', 'Ironcrag Mountains Brush')">
+                  <span class="power-ico">⛰️</span>
+                  <span class="power-lbl">Mountain</span>
+                </button>
+                <button class="btn-god-power" data-tool="brush-ruins" onclick="selectTool('brush-ruins', 'Leyline Ruins Brush')">
+                  <span class="power-ico">🔮</span>
+                  <span class="power-lbl">Leyline Ruins</span>
+                </button>
+                <button class="btn-god-power" data-tool="brush-iron" onclick="selectTool('brush-iron', 'Enrich Iron Veins')">
+                  <span class="power-ico">⛏️</span>
+                  <span class="power-lbl">Enrich Iron</span>
+                </button>
+                <button class="btn-god-power" data-tool="brush-clear" onclick="selectTool('brush-clear', 'Clear Terrain & Scrub')">
+                  <span class="power-ico">🧹</span>
+                  <span class="power-lbl">Clear Land</span>
+                </button>
+              </div>
+
+              <!-- Tray 2: Civilization & Life -->
+              <div id="tray-civilization" class="tools-tray">
+                <button class="btn-god-power" data-tool="spawn-solar" onclick="selectTool('spawn-solar', 'Spawn Solar Terran')">
+                  <span class="power-ico">☀️</span>
+                  <span class="power-lbl">Spawn Terran</span>
+                </button>
+                <button class="btn-god-power" data-tool="spawn-lunar" onclick="selectTool('spawn-lunar', 'Spawn Chthonic Lunarian')">
+                  <span class="power-ico">🌙</span>
+                  <span class="power-lbl">Spawn Lunari</span>
+                </button>
+                <button class="btn-god-power" onclick="promptDivineWhisper()">
+                  <span class="power-ico">🕊️</span>
+                  <span class="power-lbl">Divine Whisper</span>
+                </button>
+                <button class="btn-god-power" data-tool="manna-drop" onclick="selectTool('manna-drop', 'Manna Rain (Click Map)')">
+                  <span class="power-ico">🍞</span>
+                  <span class="power-lbl">Manna Rain</span>
+                </button>
+                <button class="btn-god-power" onclick="triggerGenesisSpark()">
+                  <span class="power-ico">🧬</span>
+                  <span class="power-lbl">Genesis Spark</span>
+                </button>
+              </div>
+
+              <!-- Tray 3: Divine Cataclysms & Miracles -->
+              <div id="tray-powers" class="tools-tray">
+                <button class="btn-god-power" data-tool="smite-lightning" onclick="selectTool('smite-lightning', 'Lightning Smite (Click Map)')">
+                  <span class="power-ico">⚡</span>
+                  <span class="power-lbl">Wrathful Smite</span>
+                </button>
+                <button class="btn-god-power" onclick="triggerBabel()">
+                  <span class="power-ico">🌀</span>
+                  <span class="power-lbl">Tower of Babel</span>
+                </button>
+                <button class="btn-god-power" onclick="setSpeed(1000)">
+                  <span class="power-ico">⏩</span>
+                  <span class="power-lbl">Hyper Epoch</span>
+                </button>
+              </div>
+
+              <!-- Tray 4: Camera & Inspection -->
+              <div id="tray-camera" class="tools-tray">
+                <button class="btn-god-power" data-tool="tool-inspect" onclick="selectTool('tool-inspect', 'Character Inspect Mode')">
+                  <span class="power-ico">👆</span>
+                  <span class="power-lbl">Inspect</span>
+                </button>
+                <button class="btn-god-power" data-tool="tool-pan" onclick="selectTool('tool-pan', 'Pan Camera (Drag to Move)')">
+                  <span class="power-ico">✋</span>
+                  <span class="power-lbl">Pan Camera</span>
+                </button>
+                <button class="btn-god-power" onclick="centerOnLeader()">
+                  <span class="power-ico">👑</span>
+                  <span class="power-lbl">Find Leader</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Center-Right Column: Deep Inspector, Covenants & Altars -->
+      <!-- Right Column: WorldBox Character Sheet Modal & Covenants & Altars -->
       <section class="intel-column">
-        <!-- Selected Agent Inspector -->
+        <!-- WORLDBOX CHARACTER SHEET CARD -->
         <div class="agent-card glass-panel">
-          <div class="card-header">
-            <div>
-              <h2 id="inspect-name">Select an Agent to Inspect</h2>
-              <span id="inspect-sub" class="text-dim">Click any gold or violet dot on the canvas</span>
+          <div class="card-header character-sheet-header">
+            <div class="character-identity">
+              <button id="btn-favorite-agent" class="btn-star" onclick="toggleFavoriteCurrentAgent()" title="Favorite / Track Agent">⭐</button>
+              <div class="identity-text">
+                <h2 id="inspect-name">Select an Agent to Inspect</h2>
+                <span id="inspect-sub" class="text-dim">Click any character on the map</span>
+              </div>
             </div>
-            <div id="inspect-archetype-badge" class="archetype-badge hidden">Sloth</div>
+            <div class="character-header-badges">
+              <div id="inspect-archetype-badge" class="archetype-badge hidden">Sloth</div>
+              <div id="inspect-faction-badge" class="faction-badge hidden">Solar Terran</div>
+            </div>
           </div>
 
           <div id="inspect-body" class="inspect-body hidden">
+            <!-- WorldBox Traits Grid -->
+            <div class="worldbox-traits-section">
+              <span class="panel-subtitle">WORLDBOX CHARACTER TRAITS</span>
+              <div id="inspect-traits-container" class="traits-container">
+                <span class="trait-badge">🌟 Genius</span>
+                <span class="trait-badge">👑 Natural Leader</span>
+                <span class="trait-badge">⚔️ Strong</span>
+              </div>
+            </div>
+
             <!-- Inner Monologue Bubble -->
             <div class="monologue-bubble">
-              <span class="monologue-tag">LIVE INNER MONOLOGUE:</span>
+              <span class="monologue-tag">💭 LIVE INNER MONOLOGUE:</span>
               <p id="inspect-monologue">"Thinking..."</p>
             </div>
 
-            <!-- Vitals & Neuromodulator Gauges -->
+            <!-- Vitals & Gauges -->
             <div class="gauges-grid">
               <div class="gauge-box">
-                <span class="gauge-title">HEALTH & ENERGY</span>
+                <div class="gauge-header-row">
+                  <span class="gauge-title">HEALTH</span>
+                  <span id="txt-val-health" class="gauge-num">100%</span>
+                </div>
                 <div class="meter-bar"><div id="bar-health" class="meter-fill green" style="width: 100%"></div></div>
+                <div class="gauge-header-row" style="margin-top: 6px;">
+                  <span class="gauge-title">ENERGY</span>
+                  <span id="txt-val-energy" class="gauge-num">80%</span>
+                </div>
                 <div class="meter-bar"><div id="bar-energy" class="meter-fill blue" style="width: 80%"></div></div>
               </div>
+
               <div class="gauge-box">
-                <span class="gauge-title">HUNGER & THIRST</span>
-                <div class="meter-bar"><div id="bar-hunger" class="meter-fill orange" style="width: 30%"></div></div>
-                <div class="meter-bar"><div id="bar-thirst" class="meter-fill cyan" style="width: 30%"></div></div>
+                <div class="gauge-header-row">
+                  <span class="gauge-title">HUNGER</span>
+                  <span id="txt-val-hunger" class="gauge-num">20%</span>
+                </div>
+                <div class="meter-bar"><div id="bar-hunger" class="meter-fill orange" style="width: 20%"></div></div>
+                <div class="gauge-header-row" style="margin-top: 6px;">
+                  <span class="gauge-title">PIETY / DEVOTION</span>
+                  <span id="txt-val-piety" class="gauge-num">65%</span>
+                </div>
+                <div class="meter-bar"><div id="bar-piety" class="meter-fill gold" style="width: 65%"></div></div>
               </div>
             </div>
 
-            <!-- Neuromodulation Tri-Gauge -->
+            <!-- Kenji Doya Real-Time Neuromodulation Tri-Gauge -->
             <div class="neuromod-panel">
               <span class="panel-subtitle">KENJI DOYA NEUROMODULATORS (REAL-TIME COGNITION)</span>
               <div class="neuromod-row">
@@ -175,23 +330,31 @@
               </div>
             </div>
 
-            <!-- Self-Rewritten AST Genome -->
+            <!-- Self-Rewritten Darwin-Gödel AST Genome -->
             <div class="ast-viewer">
               <div class="ast-header">
-                <span class="panel-subtitle">DARWIN-GÖDEL AST GENOME</span>
+                <span class="panel-subtitle">DARWIN-GÖDEL REWRITTEN AST GENOME</span>
                 <span id="inspect-gen" class="badge-tag">GEN: 1 | MUTATIONS: 0</span>
               </div>
               <pre id="inspect-ast" class="code-block"></pre>
             </div>
+
+            <!-- Direct God Actions on Character -->
+            <div class="character-actions-bar">
+              <button class="btn-char-action" onclick="whisperCurrentAgent()">💬 Whisper</button>
+              <button class="btn-char-action" onclick="blessCurrentAgent()">✨ Bless Piety</button>
+              <button class="btn-char-action" onclick="healCurrentAgent()">💚 Heal</button>
+              <button class="btn-char-action danger" onclick="smiteCurrentAgent()">⚡ Smite</button>
+            </div>
           </div>
         </div>
 
-        <!-- Divine Covenant Forge & Altar Sacrifices -->
+        <!-- Divine Covenant Forge, Altar Sacrifices & Logs -->
         <div class="covenant-card glass-panel">
           <div class="tabs-header">
             <button id="tab-cov-btn" class="tab-btn active" onclick="switchTab('covenants')">DIVINE COVENANTS</button>
             <button id="tab-alt-btn" class="tab-btn" onclick="switchTab('altars')">ALTAR SACRIFICES</button>
-            <button id="tab-log-btn" class="tab-btn" onclick="switchTab('events')">DIVINE EVENT LOG</button>
+            <button id="tab-log-btn" class="tab-btn" onclick="switchTab('events')">EVENT LOG</button>
           </div>
 
           <!-- Tab 1: Covenants Forge -->
@@ -203,7 +366,7 @@
                   <option value="StockpileGrain">Stockpile 30 Grain in Granary</option>
                   <option value="CraftIronTools">Forge 5 Iron Tools</option>
                   <option value="InscribeArcaneRunes">Inscribe 3 Arcane Runes</option>
-                  <option value="BuildTemple">Erect a Sacred Stone Temple</option>
+                  <option value="BuildTemple">Erect a Sacred Stone Cabin</option>
                 </select>
                 <select id="cov-reward">
                   <option value="RainOfManna">Reward: Rain of Manna</option>

@@ -117,6 +117,12 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                         ClientMessage::SelectAgent { agent_id } => {
                             engine.selected_agent_id = Some(agent_id);
                         }
+                        ClientMessage::TerraformArea { center_x, center_y, brush, radius } => {
+                            engine.terraform_area(center_x, center_y, brush, radius);
+                        }
+                        ClientMessage::SpawnAgentAt { race, x, y } => {
+                            engine.spawn_agent_at(race, x, y);
+                        }
                     }
                 }
             }

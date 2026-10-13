@@ -1,4 +1,5 @@
 use super::super::world::{WorldGrid, WORLD_WIDTH, WORLD_HEIGHT};
+use super::super::world::tile::BiomeType;
 use super::super::world::items::ItemId;
 use super::super::agent::{Agent, CivilizationRace};
 use super::super::brain::ast::{ActionChoice, EntityFilter};
@@ -8,7 +9,7 @@ use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
 use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
 use super::god_powers::DivineInterventionKind;
-use super::protocol::{AgentSummary, SelectedAgentDetail, WorldStateTelemetry};
+use super::protocol::{AgentSummary, DemographicsTelemetry, PlacedStructureSummary, SelectedAgentDetail, TerraformBrush, WorldStateTelemetry};
 
 pub struct SimulationEngine {
     pub world: WorldGrid,
@@ -22,6 +23,9 @@ pub struct SimulationEngine {
     pub event_log: Vec<String>,
     pub next_agent_id: usize,
     pub next_covenant_id: usize,
+    pub births_total: u64,
+    pub deaths_total: u64,
+    pub modified_tiles: Vec<(usize, usize, BiomeType)>,
 }
 
 impl SimulationEngine {
@@ -81,6 +85,9 @@ impl SimulationEngine {
             event_log,
             next_agent_id: next_id,
             next_covenant_id: 2,
+            births_total: 16,
+            deaths_total: 0,
+            modified_tiles: Vec::new(),
         }
     }
 
@@ -106,8 +113,29 @@ impl SimulationEngine {
             self.log_event(rival_msg);
         }
 
+        // 2b. Nomadic Migration Resurgence (resilience against extinction)
+        if terran_count == 0 {
+            let id = self.next_agent_id;
+            self.next_agent_id += 1;
+            self.births_total += 1;
+            let name = format!("Solar Pioneer #{}", id);
+            let echo = self.akashic_core.maybe_awaken_echo();
+            let pioneer = Agent::new(id, name.clone(), CivilizationRace::SolarTerran, 16, 20, AmbitionArchetype::CommunityBuilder, echo);
+            self.log_event(format!("A new nomadic tribe of Solar Terrans has arrived in the valley: {}!", name));
+            self.agents.push(pioneer);
+        }
+        if lunarian_count == 0 {
+            let id = self.next_agent_id;
+            self.next_agent_id += 1;
+            self.births_total += 1;
+            let name = format!("Lunar Exile #{}", id);
+            let echo = self.akashic_core.maybe_awaken_echo();
+            let pioneer = Agent::new(id, name.clone(), CivilizationRace::ChthonicLunarian, 48, 44, AmbitionArchetype::AsceticHermit, echo);
+            self.log_event(format!("A mysterious Chthonic Lunarian wanderer has emerged from the cavern ruins: {}!", name));
+            self.agents.push(pioneer);
+        }
+
         // 3. Pre-compute environmental sensory data and decide agent actions
-        // (Fast, cache-friendly iteration)
         let weather_delta = self.world.gaia.current_weather.temperature_delta();
         let mut actions_to_execute = Vec::with_capacity(self.agents.len());
 
@@ -116,7 +144,6 @@ impl SimulationEngine {
                 continue;
             }
 
-            // Tick physiological vitals
             let tile = self.world.tile_at(agent.x, agent.y);
             agent.tick_vitals(tile, weather_delta);
 
@@ -124,7 +151,6 @@ impl SimulationEngine {
                 continue;
             }
 
-            // Calculate sensory distances
             let distances = agent.compute_sensory_distances(&self.world);
             let has_fn = |item_name: &str| -> bool {
                 match item_name {
@@ -136,7 +162,6 @@ impl SimulationEngine {
                 }
             };
 
-            // Cognitive brain evaluates AST
             let chosen_action = agent.brain.decide_action(
                 agent.hunger,
                 agent.thirst,
@@ -293,14 +318,12 @@ impl SimulationEngine {
                         );
 
                         if attraction > 0.55 {
-                            // Successful courtship!
                             self.agents[idx].social_need = (self.agents[idx].social_need - 0.5).max(0.0);
                             self.agents[m_idx].social_need = (self.agents[m_idx].social_need - 0.5).max(0.0);
                             self.agents[idx].partner_id = Some(self.agents[m_idx].id);
                             self.agents[m_idx].partner_id = Some(self.agents[idx].id);
 
-                            // Reproduction if both well fed
-                            if self.agents[idx].hunger < 0.5 && self.agents[m_idx].hunger < 0.5 && self.agents.len() < 35 {
+                            if self.agents[idx].hunger < 0.5 && self.agents[m_idx].hunger < 0.5 && self.agents.len() < 40 {
                                 let child_genome = ReproductionManager::create_child_genome(
                                     &self.agents[idx].brain.genome,
                                     &self.agents[m_idx].brain.genome,
@@ -310,7 +333,7 @@ impl SimulationEngine {
                                     ax,
                                     ay,
                                     child_genome,
-                                    format!("Child of {} and {}", a_name, self.agents[m_idx].name),
+                                    format!("Child of {} & {}", a_name, self.agents[m_idx].name),
                                 ));
                                 self.agents[idx].children_count += 1;
                                 self.agents[m_idx].children_count += 1;
@@ -369,7 +392,6 @@ impl SimulationEngine {
             ));
 
             let mut completed_covenants = Vec::new();
-            // Advance covenant progress if applicable
             for cov in self.covenants.iter_mut() {
                 if cov.objective == QuestObjectiveType::PresentAltarOfferings {
                     if cov.advance(1) {
@@ -389,6 +411,7 @@ impl SimulationEngine {
         for (race, x, y, genome, name) in new_borns {
             let id = self.next_agent_id;
             self.next_agent_id += 1;
+            self.births_total += 1;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = self.akashic_core.maybe_awaken_echo();
             let mut baby = Agent::new(id, name.clone(), race, x, y, archetype, echo);
@@ -397,10 +420,11 @@ impl SimulationEngine {
             self.agents.push(baby);
         }
 
-        // Check deceased agents and commit legends to Akashic Core
+        // Check deceased agents
+        let mut dead_count = 0;
         for agent in self.agents.iter_mut() {
             if !agent.is_alive && agent.age_ticks > 0 {
-                // If they lived a long life, enshrine them into Akashic Core
+                dead_count += 1;
                 if agent.age_ticks > 400 {
                     self.akashic_core.record_legend(
                         agent.name.clone(),
@@ -409,11 +433,10 @@ impl SimulationEngine {
                         format!("Survived {} ticks and mastered the art of {}", agent.age_ticks, agent.brain.desire.archetype.display_name()),
                     );
                 }
-                agent.age_ticks = 0; // Mark processed
+                agent.age_ticks = 0;
             }
         }
-
-        // Remove dead agents (keep population clean)
+        self.deaths_total += dead_count;
         self.agents.retain(|a| a.is_alive);
     }
 
@@ -505,6 +528,88 @@ impl SimulationEngine {
         }
     }
 
+    /// God Terraforming Brush tool: alters terrain and resources across a radius
+    pub fn terraform_area(&mut self, center_x: usize, center_y: usize, brush: TerraformBrush, radius: usize) {
+        let min_x = center_x.saturating_sub(radius);
+        let max_x = (center_x + radius).min(WORLD_WIDTH - 1);
+        let min_y = center_y.saturating_sub(radius);
+        let max_y = (center_y + radius).min(WORLD_HEIGHT - 1);
+
+        for y in min_y..=max_y {
+            for x in min_x..=max_x {
+                let tile = self.world.tile_at_mut(x, y);
+                match brush {
+                    TerraformBrush::RaiseMountain => {
+                        tile.biome = BiomeType::IroncragMountains;
+                        tile.elevation = 0.85;
+                        tile.stone_amount += 30;
+                        tile.iron_ore_amount += 20;
+                        tile.flint_amount += 10;
+                    }
+                    TerraformBrush::CarveRiver => {
+                        tile.biome = BiomeType::CrystalRiverlands;
+                        tile.elevation = 0.20;
+                        tile.moisture = 1.0;
+                        tile.has_fresh_water = true;
+                    }
+                    TerraformBrush::PlantForest => {
+                        tile.biome = BiomeType::WhisperingForest;
+                        tile.elevation = 0.50;
+                        tile.moisture = 0.75;
+                        tile.wood_amount += 40;
+                        tile.berry_amount += 20;
+                    }
+                    TerraformBrush::FertilizePlains => {
+                        tile.biome = BiomeType::SunlitPlains;
+                        tile.elevation = 0.40;
+                        tile.moisture = 0.60;
+                        tile.grain_amount += 25;
+                        tile.berry_amount += 15;
+                    }
+                    TerraformBrush::InfuseLeylineRuins => {
+                        tile.biome = BiomeType::AncientLeylineRuins;
+                        tile.elevation = 0.65;
+                        tile.mana_density = 1.0;
+                        tile.stone_amount += 25;
+                    }
+                    TerraformBrush::EnrichIronVein => {
+                        tile.iron_ore_amount += 35;
+                        tile.stone_amount += 20;
+                    }
+                    TerraformBrush::ClearLand => {
+                        tile.biome = BiomeType::SunlitPlains;
+                        tile.structure = None;
+                        tile.elevation = 0.40;
+                    }
+                }
+                self.modified_tiles.push((x, y, tile.biome));
+            }
+        }
+
+        self.log_event(format!(
+            "TERRAFORMING: Applied {:?} around ({}, {}) with radius {}.",
+            brush, center_x, center_y, radius
+        ));
+    }
+
+    /// Divine Agent Genesis: spawns an agent on demand at coordinates
+    pub fn spawn_agent_at(&mut self, race: CivilizationRace, x: usize, y: usize) {
+        let id = self.next_agent_id;
+        self.next_agent_id += 1;
+        self.births_total += 1;
+
+        let name = match race {
+            CivilizationRace::SolarTerran => format!("Terran-{}", id),
+            CivilizationRace::ChthonicLunarian => format!("Lunarian-{}", id),
+        };
+
+        let archetype = AmbitionArchetype::random_archetype();
+        let echo = self.akashic_core.maybe_awaken_echo();
+        let agent = Agent::new(id, name.clone(), race, x.min(WORLD_WIDTH - 1), y.min(WORLD_HEIGHT - 1), archetype, echo);
+        self.agents.push(agent);
+        self.log_event(format!("DIVINE CREATION: Created new {} at ({}, {}).", name, x, y));
+    }
+
     /// Handles a God intervention from the Admin Console
     pub fn execute_intervention(&mut self, intervention: DivineInterventionKind) {
         match intervention {
@@ -550,7 +655,7 @@ impl SimulationEngine {
                     let d = (agent.x as isize - x as isize).abs() + (agent.y as isize - y as isize).abs();
                     if d <= 2 {
                         agent.health -= 45.0;
-                        agent.brain.neuromod.noradrenaline = 0.95; // Extreme fear
+                        agent.brain.neuromod.noradrenaline = 0.95;
                         agent.brain.memory.log_episodic_event(
                             self.world.gaia.world_tick,
                             "Struck by wrathful divine lightning bolt!",
@@ -579,25 +684,81 @@ impl SimulationEngine {
 
     /// Generates telemetry payload for the God Panel Web Console
     pub fn generate_telemetry(&self) -> WorldStateTelemetry {
+        let mut terran_count = 0;
+        let mut lunarian_count = 0;
+        let mut total_health = 0.0;
+        let mut total_hunger = 0.0;
+        let mut total_piety = 0.0;
+        let mut total_wealth = 0.0;
+        let mut max_gen = 1;
+
         let agent_summaries: Vec<AgentSummary> = self
             .agents
             .iter()
-            .map(|a| AgentSummary {
-                id: a.id,
-                name: a.name.clone(),
-                race: a.race,
-                x: a.x,
-                y: a.y,
-                health: a.health,
-                hunger: a.hunger,
-                energy: a.energy,
-                warmth: a.warmth,
-                archetype: a.brain.desire.archetype,
-                current_thought: a.brain.current_thought.clone(),
-                last_action: format!("{:?}", a.brain.last_action),
-                generation: a.brain.genome.generation,
+            .map(|a| {
+                if a.race == CivilizationRace::SolarTerran {
+                    terran_count += 1;
+                } else {
+                    lunarian_count += 1;
+                }
+                total_health += a.health;
+                total_hunger += a.hunger;
+                total_piety += a.brain.piety;
+                total_wealth += a.inventory.total_wealth();
+                if a.brain.genome.generation > max_gen {
+                    max_gen = a.brain.genome.generation;
+                }
+
+                AgentSummary {
+                    id: a.id,
+                    name: a.name.clone(),
+                    race: a.race,
+                    x: a.x,
+                    y: a.y,
+                    health: a.health,
+                    hunger: a.hunger,
+                    energy: a.energy,
+                    warmth: a.warmth,
+                    archetype: a.brain.desire.archetype,
+                    current_thought: a.brain.current_thought.clone(),
+                    last_action: format!("{:?}", a.brain.last_action),
+                    generation: a.brain.genome.generation,
+                    traits: a.traits.clone(),
+                }
             })
             .collect();
+
+        let total_pop = self.agents.len();
+        let avg_health = if total_pop > 0 { total_health / total_pop as f32 } else { 0.0 };
+        let avg_hunger = if total_pop > 0 { total_hunger / total_pop as f32 } else { 0.0 };
+        let avg_piety = if total_pop > 0 { total_piety / total_pop as f32 } else { 0.0 };
+
+        let demographics = DemographicsTelemetry {
+            total_population: total_pop,
+            terran_count,
+            lunarian_count,
+            wildlife_count: self.world.wildlife.len(),
+            births_total: self.births_total,
+            deaths_total: self.deaths_total,
+            max_generation: max_gen,
+            avg_health,
+            avg_hunger,
+            avg_piety,
+            total_circulating_wealth: total_wealth,
+        };
+
+        let mut structures = Vec::new();
+        for tile in &self.world.tiles {
+            if let Some(ref s) = tile.structure {
+                structures.push(PlacedStructureSummary {
+                    x: tile.x,
+                    y: tile.y,
+                    kind: s.kind,
+                    health: s.health,
+                    max_health: s.max_health,
+                });
+            }
+        }
 
         let selected_agent_detail = self.selected_agent_id.and_then(|id| {
             self.agents.iter().find(|a| a.id == id).map(|a| {
@@ -635,6 +796,7 @@ impl SimulationEngine {
                     partner_id: a.partner_id,
                     children_count: a.children_count,
                     ancestral_echo: a.ancestral_echo.as_ref().map(|e| format!("{}: {}", e.hero_name, e.gift_description)),
+                    traits: a.traits.clone(),
                 }
             })
         });
@@ -644,15 +806,18 @@ impl SimulationEngine {
             speed_multiplier: self.speed_multiplier,
             weather: self.world.gaia.current_weather,
             solar_intensity: self.world.gaia.solar_intensity,
+            is_daytime: self.world.gaia.is_daytime(),
             global_temperature_offset: self.world.gaia.global_temperature_offset,
+            demographics,
             agents: agent_summaries,
+            structures,
             altars: self.world.altars.clone(),
-            wildlife_count: self.world.wildlife.len(),
             active_covenants: self.covenants.clone(),
             rival_god_favor: self.civilizations.rival_god.shadow_favor_meter,
             rival_god_directive: self.civilizations.rival_god.active_directive.clone(),
             event_log: self.event_log.clone(),
             selected_agent: selected_agent_detail,
+            modified_tiles: self.modified_tiles.clone(),
         }
     }
 }

@@ -56,6 +56,7 @@ pub struct Agent {
     pub partner_id: Option<usize>,
     pub children_count: u32,
     pub ancestral_echo: Option<AncestralEcho>,
+    pub traits: Vec<String>,
     
     pub is_alive: bool,
     pub age_ticks: u64,
@@ -94,6 +95,42 @@ impl Agent {
         inventory.add(ItemId::Berry, 3);
         inventory.add(ItemId::Wood, 2);
 
+        let mut traits = Vec::new();
+        match archetype {
+            AmbitionArchetype::SlothHedonist => {
+                traits.push("Peaceful".into());
+                traits.push("Content".into());
+            }
+            AmbitionArchetype::PowerTyrant => {
+                traits.push("Ambitious".into());
+                traits.push("Strong".into());
+            }
+            AmbitionArchetype::WealthyMerchant => {
+                traits.push("Greedy".into());
+                traits.push("Wise".into());
+            }
+            AmbitionArchetype::RomanticPursuer => {
+                traits.push("Charming".into());
+                traits.push("Attractive".into());
+            }
+            AmbitionArchetype::AsceticHermit => {
+                traits.push("Wise".into());
+                traits.push("Immune".into());
+            }
+            AmbitionArchetype::ZealotPriest => {
+                traits.push("Blessed".into());
+                traits.push("Zealot".into());
+            }
+            AmbitionArchetype::HereticRebel => {
+                traits.push("Deceitful".into());
+                traits.push("Swift".into());
+            }
+            AmbitionArchetype::CommunityBuilder => {
+                traits.push("Leader".into());
+                traits.push("Genius".into());
+            }
+        }
+
         Self {
             id,
             name: name_str,
@@ -112,6 +149,7 @@ impl Agent {
             partner_id: None,
             children_count: 0,
             ancestral_echo,
+            traits,
             is_alive: true,
             age_ticks: 0,
         }

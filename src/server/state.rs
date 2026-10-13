@@ -35,22 +35,22 @@ impl SimulationEngine {
         let mut agents = Vec::new();
         let mut next_id = 1;
 
-        // Spawn initial Solar Terrans near Sun Altar (x: 24, y: 36)
+        // Spawn initial Solar Terrans near Sun Altar (x: 38, y: 86)
         let terran_names = ["Kael", "Lyra", "Orion", "Aria", "Darek", "Elora", "Theron", "Mira"];
         for (i, name) in terran_names.iter().enumerate() {
-            let x = 20 + (i * 2) % 10;
-            let y = 33 + (i * 3) % 8;
+            let x = 34 + (i * 2) % 10;
+            let y = 82 + (i * 3) % 8;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = akashic_core.maybe_awaken_echo();
             agents.push(Agent::new(next_id, *name, CivilizationRace::SolarTerran, x, y, archetype, echo));
             next_id += 1;
         }
 
-        // Spawn initial Chthonic Lunarians near Moon Altar (x: 48, y: 16)
+        // Spawn initial Chthonic Lunarians near Moon Altar (x: 92, y: 34)
         let lunar_names = ["Vane", "Nyx", "Malik", "Selene", "Corvus", "Morrigan", "Dusk", "Hesper"];
         for (i, name) in lunar_names.iter().enumerate() {
-            let x = 44 + (i * 2) % 10;
-            let y = 14 + (i * 3) % 8;
+            let x = 88 + (i * 2) % 10;
+            let y = 30 + (i * 3) % 8;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = akashic_core.maybe_awaken_echo();
             agents.push(Agent::new(next_id, *name, CivilizationRace::ChthonicLunarian, x, y, archetype, echo));
@@ -69,9 +69,9 @@ impl SimulationEngine {
         ));
 
         let mut event_log = Vec::new();
-        event_log.push("The Genesis Cogniverse has awakened! The world matrix is in harmony.".into());
-        event_log.push("Solar Terrans settled near the Golden Sun Altar (24, 36).".into());
-        event_log.push("Chthonic Lunarians established presence at the Obsidian Moon Altar (48, 16).".into());
+        event_log.push("The Genesis Cogniverse has awakened! The 128x128 grand continental world is alive.".into());
+        event_log.push("Solar Terrans settled near the Golden Sun Altar (38, 86).".into());
+        event_log.push("Chthonic Lunarians established presence at the Obsidian Moon Altar (92, 34).".into());
 
         Self {
             world,
@@ -120,7 +120,7 @@ impl SimulationEngine {
             self.births_total += 1;
             let name = format!("Solar Pioneer #{}", id);
             let echo = self.akashic_core.maybe_awaken_echo();
-            let pioneer = Agent::new(id, name.clone(), CivilizationRace::SolarTerran, 16, 20, AmbitionArchetype::CommunityBuilder, echo);
+            let pioneer = Agent::new(id, name.clone(), CivilizationRace::SolarTerran, 38, 86, AmbitionArchetype::CommunityBuilder, echo);
             self.log_event(format!("A new nomadic tribe of Solar Terrans has arrived in the valley: {}!", name));
             self.agents.push(pioneer);
         }
@@ -130,7 +130,7 @@ impl SimulationEngine {
             self.births_total += 1;
             let name = format!("Lunar Exile #{}", id);
             let echo = self.akashic_core.maybe_awaken_echo();
-            let pioneer = Agent::new(id, name.clone(), CivilizationRace::ChthonicLunarian, 48, 44, AmbitionArchetype::AsceticHermit, echo);
+            let pioneer = Agent::new(id, name.clone(), CivilizationRace::ChthonicLunarian, 92, 34, AmbitionArchetype::AsceticHermit, echo);
             self.log_event(format!("A mysterious Chthonic Lunarian wanderer has emerged from the cavern ruins: {}!", name));
             self.agents.push(pioneer);
         }

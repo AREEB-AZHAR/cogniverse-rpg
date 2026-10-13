@@ -10,8 +10,8 @@ use altar::{Altar, DeityAlignment};
 use ecology::GaiaEngine;
 use fauna::{AnimalSpecies, WildlifeEntity};
 
-pub const WORLD_WIDTH: usize = 64;
-pub const WORLD_HEIGHT: usize = 64;
+pub const WORLD_WIDTH: usize = 128;
+pub const WORLD_HEIGHT: usize = 128;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WorldGrid {
@@ -35,29 +35,36 @@ impl WorldGrid {
                 let fx = x as f32 / width as f32;
                 let fy = y as f32 / height as f32;
 
-                // Procedural biome layout:
-                // Crystal River: winding path x ~ 28 + 6*sin(y/8)
-                let river_center = 28.0 + (y as f32 * 0.15).sin() * 7.0;
+                // Great Continental River System:
+                // Main River flowing from north to south
+                let river_center = 56.0 + (y as f32 * 0.08).sin() * 14.0 + (y as f32 * 0.22).cos() * 5.0;
                 let dist_to_river = (x as f32 - river_center).abs();
 
-                let biome = if dist_to_river <= 2.2 {
+                // Tributary river flowing out of the northeastern mountains into the main river
+                let tributary_center = 86.0 - ((y as f32 - 15.0) * 0.12).sin() * 16.0;
+                let is_tributary = y > 15 && y < 65 && (x as f32 - tributary_center).abs() <= 2.2;
+
+                // Deep Oceanic Margins encircling the continent
+                let is_ocean = x < 8 || x >= width - 8 || y < 8 || y >= height - 8;
+
+                let biome = if is_ocean || dist_to_river <= 2.8 || is_tributary {
                     BiomeType::CrystalRiverlands
-                } else if fx > 0.65 && fy < 0.55 {
+                } else if fx > 0.60 && fy < 0.50 {
                     BiomeType::IroncragMountains
-                } else if (fx - 0.5).hypot(fy - 0.45) < 0.12 {
+                } else if (fx - 0.48).hypot(fy - 0.50) < 0.10 {
                     BiomeType::AncientLeylineRuins
-                } else if fx < 0.45 && fy < 0.70 {
+                } else if (fx < 0.45 && fy < 0.68) || (fx < 0.38 && fy > 0.65) {
                     BiomeType::WhisperingForest
                 } else {
                     BiomeType::SunlitPlains
                 };
 
                 let elevation = match biome {
-                    BiomeType::IroncragMountains => 0.85,
+                    BiomeType::IroncragMountains => 0.88,
                     BiomeType::AncientLeylineRuins => 0.65,
                     BiomeType::WhisperingForest => 0.50,
                     BiomeType::SunlitPlains => 0.40,
-                    BiomeType::CrystalRiverlands => 0.20,
+                    BiomeType::CrystalRiverlands => if is_ocean { 0.05 } else { 0.20 },
                 };
 
                 let moisture = match biome {
@@ -65,22 +72,22 @@ impl WorldGrid {
                     BiomeType::WhisperingForest => 0.75,
                     BiomeType::SunlitPlains => 0.60,
                     BiomeType::AncientLeylineRuins => 0.35,
-                    BiomeType::IroncragMountains => 0.25,
+                    BiomeType::IroncragMountains => 0.22,
                 };
 
                 tiles.push(Tile::new(x, y, biome, elevation, moisture));
             }
         }
 
-        // Initialize Altars
+        // Initialize Altars in grand continent
         let mut altars = Vec::new();
-        let solar_x = 24;
-        let solar_y = 36;
+        let solar_x = 38;
+        let solar_y = 86;
         let mut solar_altar = Altar::new(0, solar_x, solar_y, DeityAlignment::SolarPlayerGod, "The Golden Sun Altar");
         solar_altar.consecrated_level = 2;
         
-        let lunar_x = 48;
-        let lunar_y = 16;
+        let lunar_x = 92;
+        let lunar_y = 34;
         let mut lunar_altar = Altar::new(1, lunar_x, lunar_y, DeityAlignment::LunarShadowWeaver, "The Obsidian Moon Altar");
         lunar_altar.consecrated_level = 2;
 
@@ -104,31 +111,39 @@ impl WorldGrid {
         altars.push(solar_altar);
         altars.push(lunar_altar);
 
-        // Populate initial wildlife
+        // Populate initial wildlife across the 128x128 expanse
         let mut wildlife = Vec::new();
         let mut next_id = 1;
 
-        // Spawn deer in forest
-        for i in 0..12 {
-            let wx = 8 + (i * 3) % 20;
-            let wy = 10 + (i * 4) % 30;
+        // Spawn deer herds in the Whispering Forest
+        for i in 0..28 {
+            let wx = 14 + (i * 5) % 40;
+            let wy = 16 + (i * 7) % 65;
             wildlife.push(WildlifeEntity::new(next_id, AnimalSpecies::ForestDeer, wx, wy));
             next_id += 1;
         }
 
-        // Spawn wolves in mountains/forest borders
-        for i in 0..6 {
-            let wx = 35 + (i * 4) % 20;
-            let wy = 8 + (i * 3) % 20;
+        // Spawn dire wolves in mountain foothills
+        for i in 0..14 {
+            let wx = 75 + (i * 4) % 42;
+            let wy = 14 + (i * 6) % 40;
             wildlife.push(WildlifeEntity::new(next_id, AnimalSpecies::DireWolf, wx, wy));
             next_id += 1;
         }
 
         // Spawn rabbits in plains
-        for i in 0..16 {
-            let wx = 15 + (i * 3) % 40;
-            let wy = 38 + (i * 2) % 22;
+        for i in 0..36 {
+            let wx = 22 + (i * 7) % 80;
+            let wy = 60 + (i * 5) % 52;
             wildlife.push(WildlifeEntity::new(next_id, AnimalSpecies::Rabbit, wx, wy));
+            next_id += 1;
+        }
+
+        // Spawn mountain bears
+        for i in 0..12 {
+            let wx = 70 + (i * 5) % 45;
+            let wy = 20 + (i * 6) % 35;
+            wildlife.push(WildlifeEntity::new(next_id, AnimalSpecies::MountainBear, wx, wy));
             next_id += 1;
         }
 
@@ -171,14 +186,20 @@ impl WorldGrid {
         self.wildlife.retain(|a| a.is_alive);
 
         // Wildlife reproduction if population drops below carrying capacity
-        if self.wildlife.len() < 25 && self.gaia.world_tick % 100 == 0 {
+        if self.wildlife.len() < 60 && self.gaia.world_tick % 80 == 0 {
             use rand::Rng;
             let mut rng = rand::thread_rng();
-            let rx = rng.gen_range(5..w - 5);
-            let ry = rng.gen_range(5..h - 5);
+            let rx = rng.gen_range(12..w - 12);
+            let ry = rng.gen_range(12..h - 12);
             let id = self.next_entity_id;
             self.next_entity_id += 1;
-            self.wildlife.push(WildlifeEntity::new(id, AnimalSpecies::Rabbit, rx, ry));
+            let species = match rng.gen_range(0..4) {
+                0 => AnimalSpecies::Rabbit,
+                1 => AnimalSpecies::ForestDeer,
+                2 => AnimalSpecies::MountainBear,
+                _ => AnimalSpecies::DireWolf,
+            };
+            self.wildlife.push(WildlifeEntity::new(id, species, rx, ry));
         }
     }
 }

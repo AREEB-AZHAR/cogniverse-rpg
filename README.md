@@ -13,18 +13,37 @@
 
 ## 📸 WorldBox-Inspired God Admin Console
 
-![WorldBox God Admin Console](screenshots/worldbox_god_console.png)
-*Live 2D Procedural Matrix (64x64 grid) with interactive Pan & Zoom, WorldBox Bottom God Power Bar (Terrain Brushes, Civilization Spawners, Cataclysms, Camera Inspect), Top Macro Demographics Bar, Weather Particles (Rain/Snow/Thunder), Dynamic Day/Night Lighting with radial light cutouts around campfires & cabins, and WorldBox Character Sheet with Trait Badges, Favorite Star ⭐, Vitals, Inner Monologue, and Darwin-Gödel AST Genome.*
+![128x128 Grand Continental Realm](screenshots/worldbox_128x128_grand_view.png)
+*Live 2D Procedural Matrix (**128x128 Grand Continental Archipelago - 16,384 tiles**) with boundless deep ocean backdrop, dual winding rivers (Great Crystal River + Mountain Tributary), sandy coastal shelves, Ironcrag Mountain Spine, Whispering Redwood Forest, Ancient Leyline Ruins, and autonomous Kingdom territorial borders (`☀️ Kingdom of Solaria` vs `🌙 Lunar Sovereignty`).*
+
+![Authentic WorldBox Character Sheet](screenshots/worldbox_character_sheet.png)
+*Authentic WorldBox Character Sheet Modal featuring character portrait, noble titles (`Chieftain`, `HereticRebel`), kingdom affiliation, favorite star (⭐), core RPG stats matrix (`HP`, `ATK`, `DEF`, `SPD`, `INT`, `DIP`, `AGE`, `OFF`, `KILLS`), WorldBox Trait Badges (`✦ Deceitful`, `✦ Swift`, `✦ Strong`), tabbed cognition (Inner Monologue, Kenji Doya Neuromodulators, Darwin-Gödel AST, Akashic Lineage), inventory items, and God powers (`💬 Whisper`, `✨ Bless`, `💚 Heal`, `⚡ Smite`).*
 
 ---
 
-## 🌍 WorldBox Features & God Sandbox Controls
+## 🌍 WorldBox Features & Grand Continental Sandbox
 
-### 1. Macro Demographics & Civilization Metrics Bar
+### 1. 128x128 Grand Continental Archipelago (16,384 Tiles)
+* **4x Land Expanse**: Upgraded from an initial 64x64 prototype to a massive **$128 \times 128$ (16,384 tiles)** fantasy continent.
+* **Boundless Abyssal Ocean**: The world canvas renders an infinite deep ocean (`#061c33`) with animated wave shimmer lines, eliminating any void edges.
+* **Multi-Tiered Procedural Biomes**:
+  - **🌊 Deep Ocean Shelf**: Encircling oceanic borders.
+  - **🏖️ Sandy Coastlines**: Warm golden beach rims framing bays and estuaries.
+  - **🏞️ Dual River System**: The Great Crystal River traversing the continent from north to south, met by the rushing Mountain Tributary river flowing down from northeastern heights.
+  - **⛰️ Ironcrag Mountain Spine**: Imposing grey peaks capped with snow facets, rich in iron veins and cavern passages.
+  - **🌲 Whispering Redwood Forest**: Expansive ancient woodlands in the west teeming with game and timber.
+  - **🔮 Ancient Leyline Ruins**: Obsidian and purple mystical monoliths in the heart of the realm radiating high mana density.
+  - **🌾 Sunlit Plains**: Fertile meadow grasslands sprinkled with poppies and buttercups.
+* **Geopolitically Balanced Kingdoms**:
+  - `☀️ Kingdom of Solaria` settles in the southern fertile valley around the **Golden Sun Altar** at `(38, 86)`.
+  - `🌙 Lunar Sovereignty` establishes their cavern dominion around the **Obsidian Moon Altar** at `(92, 34)`.
+  - Kingdom territory borders are rendered with signature dashed borders and shaded influence areas.
+
+### 2. Macro Demographics & Civilization Metrics Bar
 Located at the very top of the God Console, providing real-time macro telemetry across the entire world:
 * **POP**: Total living sentient population in the simulation.
 * **FACTIONS**: Balance of power between `☀️ Solar Terrans` and `🌙 Chthonic Lunarians`.
-* **FAUNA**: Autonomous wildlife carrying capacity (Deer, Wolves, Boars, Rabbits).
+* **FAUNA**: Autonomous wildlife carrying capacity (Deer, Dire Wolves, Mountain Bears, Rabbits).
 * **BIRTH/DEATH**: Lifetime birth counter (👶) and death counter (💀).
 * **MAX GEN**: Maximum evolutionary generation reached through genetic Darwin-Gödel mutation.
 * **AVG VITALS**: Population-wide average health (❤️) and hunger (🍞) levels.
@@ -32,14 +51,14 @@ Located at the very top of the God Console, providing real-time macro telemetry 
 * **WEALTH**: Total circulating economic goods, tools, and ores (🪙).
 * **ENVIRONMENT**: Current thermodynamic day/night phase and dynamic weather conditions.
 
-### 2. Interactive World Matrix with Smooth Pan & Zoom
-* **Mouse-Wheel Zoom**: Seamlessly zoom in (up to 4.0x) and out (down to 0.5x) centered directly on the cursor.
-* **Click-and-Drag Pan**: Click and drag with the middle mouse button, right mouse button, or while holding Spacebar to explore the 64x64 procedural world.
+### 3. Interactive World Matrix with Smooth Pan & Zoom
+* **Mouse-Wheel Zoom**: Seamlessly zoom in (up to 5.0x) and out (down to 0.18x) centered directly on the cursor.
+* **Click-and-Drag Pan**: Click and drag with the middle mouse button, right mouse button, or while holding Spacebar to explore the 128x128 continent.
 * **Camera Toolbar**: Floating canvas overlay with `➕ Zoom In`, `➖ Zoom Out`, `🎯 Reset View`, and `🔭 Follow Character` mode.
 * **Find Leader Button**: Instantly locates the most senior elder or highest-piety civilizational leader and centers the camera on them.
 
-### 3. Dynamic Terraforming Brushes with Variable Radius
-Transform the physical world in real-time using God Brushes with `1x1`, `3x3`, and `5x5` radius sizing:
+### 4. Dynamic Terraforming Brushes with Variable Radius
+Transform the physical world in real-time using God Brushes with `●1`, `●3`, `●5`, and `●9` radius sizing:
 * **🌾 Plains Brush**: Fertilize lush grassland, planting wild grains and berries.
 * **🌲 Forest Brush**: Seed dense whispering woodland with harvestable timber and game.
 * **🌊 River Brush**: Carve freshwater rivers for drinking, irrigation, and hydration.
@@ -48,22 +67,17 @@ Transform the physical world in real-time using God Brushes with `1x1`, `3x3`, a
 * **⛏️ Enrich Iron**: Concentrate rich underground iron deposits into existing rock formations.
 * **🧹 Clear Land**: Cleanse scorched terrain and clear obsolete structures.
 
-### 4. WorldBox Character Sheet Inspector
+### 5. WorldBox Character Sheet Inspector
 Click any character or use the "Inspect" tool to open a detailed WorldBox character sheet:
 * **⭐ Favorite Star Button**: Star your favorite agents to track them; enable camera follow to watch them live as they go about their daily life.
-* **WorldBox Trait Badges**: Dynamic traits derived from behavior, heritage, and genetics (e.g. `👑 Leader`, `🌟 Genius`, `⚔️ Strong`, `✨ Charming`, `🕊️ Pacifist`, `🔮 Wise`, `💰 Greedy`).
+* **WorldBox Trait Badges**: Dynamic traits derived from behavior, heritage, and genetics (e.g. `👑 Leader`, `🌟 Genius`, `⚔️ Strong`, `✦ Swift`, `✦ Deceitful`, `🕊️ Pacifist`, `🔮 Wise`, `💰 Greedy`).
 * **💭 Live Inner Monologue**: Unfiltered stream of consciousness reflecting their current needs, fears, and plans.
-* **Vitals Meters**: Health, Energy, Hunger, and Piety percentages.
+* **Vitals & RPG Stats**: Health, Energy, Hunger, Piety, Attack, Defense, Speed, and Intelligence.
 * **Kenji Doya Neuromodulator Gauges**: Real-time biological cognition (Dopamine, Serotonin, Noradrenaline).
-* **Inventory & Gear**: Visible items carried in the agent's pack (e.g. `Wild Berry x8`, `Wood x2`, `Iron Ore`).
+* **Inventory & Gear**: Visible items carried in the agent's pack (e.g. `Wild Berry x5`, `Wood x2`, `Iron Ore`).
 * **Ancestral Lineage & Echo**: Heritage details from deceased legendary ancestors enshrined in the Akashic Core.
 * **Darwin-Gödel AST Genome**: Full code tree inspection showing the exact self-rewritten logic steering the NPC.
 * **Direct God Actions**: `💬 Whisper`, `✨ Bless Piety`, `💚 Heal`, and `⚡ Smite`.
-
-### 5. Atmospheric Weather & Dynamic Lighting
-* **Gentle Rain & Thunderstorms**: Animated falling raindrop streaks with ripple splashes and occasional dramatic lightning flashes that illuminate the world.
-* **Frost Breeze**: Drifting hexagonal snow crystal particles during cold snaps.
-* **Day & Night Cycles**: 1,000-tick orbital cycle with a rich navy darkness overlay during nighttime, illuminated by **soft radial glowing lights** around campfires, cabins, altars, and torches.
 
 ---
 

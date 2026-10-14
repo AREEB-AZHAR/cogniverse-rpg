@@ -3,12 +3,16 @@ pub mod items;
 pub mod altar;
 pub mod ecology;
 pub mod fauna;
+pub mod cellular;
+pub mod generation;
 
 use serde::{Deserialize, Serialize};
-use tile::{BiomeType, Tile, PlacedStructure, StructureKind};
-use altar::{Altar, DeityAlignment};
+use tile::{BiomeType, Tile};
+use altar::Altar;
 use ecology::GaiaEngine;
 use fauna::{AnimalSpecies, WildlifeEntity};
+use generation::MapGenerator;
+use cellular::CellularAutomataEngine;
 
 pub const WORLD_WIDTH: usize = 128;
 pub const WORLD_HEIGHT: usize = 128;
@@ -28,125 +32,15 @@ impl WorldGrid {
     pub fn new() -> Self {
         let width = WORLD_WIDTH;
         let height = WORLD_HEIGHT;
-        let mut tiles = Vec::with_capacity(width * height);
 
-        for y in 0..height {
-            for x in 0..width {
-                let fx = x as f32 / width as f32;
-                let fy = y as f32 / height as f32;
+        // Generate map with coherent fractal noise, elevation layers, and faction resource bases
+        let (mut tiles, altars) = MapGenerator::generate_world(width, height);
 
-                // Great Continental River System:
-                // Main River flowing from north to south
-                let river_center = 56.0 + (y as f32 * 0.08).sin() * 14.0 + (y as f32 * 0.22).cos() * 5.0;
-                let dist_to_river = (x as f32 - river_center).abs();
-
-                // Tributary river flowing out of the northeastern mountains into the main river
-                let tributary_center = 86.0 - ((y as f32 - 15.0) * 0.12).sin() * 16.0;
-                let is_tributary = y > 15 && y < 65 && (x as f32 - tributary_center).abs() <= 2.2;
-
-                // Deep Oceanic Margins encircling the continent
-                let is_ocean = x < 8 || x >= width - 8 || y < 8 || y >= height - 8;
-
-                let biome = if is_ocean || dist_to_river <= 2.8 || is_tributary {
-                    BiomeType::CrystalRiverlands
-                } else if fx > 0.60 && fy < 0.50 {
-                    BiomeType::IroncragMountains
-                } else if (fx - 0.48).hypot(fy - 0.50) < 0.10 {
-                    BiomeType::AncientLeylineRuins
-                } else if (fx < 0.45 && fy < 0.68) || (fx < 0.38 && fy > 0.65) {
-                    BiomeType::WhisperingForest
-                } else {
-                    BiomeType::SunlitPlains
-                };
-
-                let elevation = match biome {
-                    BiomeType::IroncragMountains => 0.88,
-                    BiomeType::AncientLeylineRuins => 0.65,
-                    BiomeType::WhisperingForest => 0.50,
-                    BiomeType::SunlitPlains => 0.40,
-                    BiomeType::CrystalRiverlands => if is_ocean { 0.05 } else { 0.20 },
-                };
-
-                let moisture = match biome {
-                    BiomeType::CrystalRiverlands => 1.0,
-                    BiomeType::WhisperingForest => 0.75,
-                    BiomeType::SunlitPlains => 0.60,
-                    BiomeType::AncientLeylineRuins => 0.35,
-                    BiomeType::IroncragMountains => 0.22,
-                };
-
-                tiles.push(Tile::new(x, y, biome, elevation, moisture));
-            }
-        }
-
-        // Initialize Altars in grand continent
-        let mut altars = Vec::new();
-        let solar_x = 38;
-        let solar_y = 86;
-        let mut solar_altar = Altar::new(0, solar_x, solar_y, DeityAlignment::SolarPlayerGod, "The Golden Sun Altar");
-        solar_altar.consecrated_level = 2;
-        
-        let lunar_x = 92;
-        let lunar_y = 34;
-        let mut lunar_altar = Altar::new(1, lunar_x, lunar_y, DeityAlignment::LunarShadowWeaver, "The Obsidian Moon Altar");
-        lunar_altar.consecrated_level = 2;
-
-        // Place altar structures on tiles
-        let solar_idx = solar_y * width + solar_x;
-        tiles[solar_idx].structure = Some(PlacedStructure {
-            kind: StructureKind::SolarAltar,
-            owner_id: None,
-            health: 500.0,
-            max_health: 500.0,
-        });
-
-        let lunar_idx = lunar_y * width + lunar_x;
-        tiles[lunar_idx].structure = Some(PlacedStructure {
-            kind: StructureKind::LunarAltar,
-            owner_id: None,
-            health: 500.0,
-            max_health: 500.0,
-        });
-
-        // Seed initial village buildings for Solar Terrans (Village of Solaria)
-        let solar_buildings = [
-            (36, 84, StructureKind::Campfire, 80.0),
-            (35, 86, StructureKind::StoneCabin, 150.0),
-            (39, 83, StructureKind::WoodCottage, 100.0),
-            (41, 87, StructureKind::Granary, 120.0),
-        ];
-        for (bx, by, kind, hp) in solar_buildings {
-            let idx = by * width + bx;
-            tiles[idx].structure = Some(PlacedStructure {
-                kind,
-                owner_id: None,
-                health: hp,
-                max_health: hp,
-            });
-        }
-
-        // Seed initial village buildings for Chthonic Lunarians (Shadow Hold)
-        let lunar_buildings = [
-            (90, 32, StructureKind::Campfire, 80.0),
-            (89, 34, StructureKind::StoneCabin, 150.0),
-            (93, 31, StructureKind::WoodCottage, 100.0),
-            (95, 36, StructureKind::MineShaft, 140.0),
-        ];
-        for (bx, by, kind, hp) in lunar_buildings {
-            let idx = by * width + bx;
-            tiles[idx].structure = Some(PlacedStructure {
-                kind,
-                owner_id: None,
-                health: hp,
-                max_health: hp,
-            });
-        }
-
-        // Enrich specific mountain tiles with concentrated ore veins
+        // Enrich mineral deposits
         for t in tiles.iter_mut() {
             if t.biome == BiomeType::IroncragMountains {
-                if (t.x + t.y * 7) % 11 == 0 {
-                    t.iron_ore_amount += 45; // Rich Iron Deposit
+                if (t.x + t.y) % 11 == 0 {
+                    t.iron_ore_amount += 40; // Dense Iron Outcrop
                 }
                 if (t.x * 3 + t.y) % 17 == 0 {
                     t.gold_ore_amount += 35; // Vein of Gold
@@ -160,9 +54,6 @@ impl WorldGrid {
                 }
             }
         }
-
-        altars.push(solar_altar);
-        altars.push(lunar_altar);
 
         // Populate initial wildlife across the 128x128 expanse
         let mut wildlife = Vec::new();
@@ -222,6 +113,16 @@ impl WorldGrid {
         let y = y.min(self.height - 1);
         let idx = y * self.width + x;
         &mut self.tiles[idx]
+    }
+
+    pub fn tick_cellular(&mut self) -> Vec<(usize, usize)> {
+        CellularAutomataEngine::tick(
+            &mut self.tiles,
+            self.width,
+            self.height,
+            self.gaia.global_temperature_offset,
+            self.gaia.world_tick,
+        )
     }
 
     pub fn tick(&mut self) {

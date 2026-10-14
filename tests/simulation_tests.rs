@@ -259,4 +259,190 @@ fn test_worldbox_architecture_and_divine_powers() {
     assert_eq!(engine.civilizations.diplomacy, cogniverse_rpg::factions::DiplomaticStatus::CommercialAlliance);
 }
 
+#[test]
+fn test_lunar_people_do_not_wander_to_origin() {
+    use cogniverse_rpg::agent::CivilizationRace;
+
+    let mut engine = SimulationEngine::new();
+
+    // Verify initial positions of Lunarians are near mountain stronghold (92, 34)
+    let initial_lunarians: Vec<_> = engine.agents.iter()
+        .filter(|a| a.race == CivilizationRace::ChthonicLunarian)
+        .map(|a| (a.id, a.x, a.y))
+        .collect();
+    assert!(!initial_lunarians.is_empty(), "Must have initial Lunarian agents");
+
+    for (_id, x, y) in &initial_lunarians {
+        assert!(*x >= 80 && *x <= 105, "Initial Lunarians must be in northeastern mountains, got ({}, {})", x, y);
+        assert!(*y >= 20 && *y <= 50, "Initial Lunarians must be in northeastern mountains, got ({}, {})", x, y);
+    }
+
+    // Run 150 simulation ticks
+    for _ in 0..150 {
+        engine.tick();
+    }
+
+    // Check all Lunarians: NONE should be at (0, 0) or stuck in the deep northwest ocean
+    let mut lunarian_count = 0;
+    for a in &engine.agents {
+        if a.race == CivilizationRace::ChthonicLunarian {
+            lunarian_count += 1;
+            assert!(
+                !(a.x == 0 && a.y == 0),
+                "Lunarian {} must NOT be at (0, 0)! Position: ({}, {})",
+                a.name, a.x, a.y
+            );
+            assert!(
+                !(a.x < 8 && a.y < 8),
+                "Lunarian {} must NOT wander to deep northwest ocean! Position: ({}, {})",
+                a.name, a.x, a.y
+            );
+            // Verify they maintain territorial proximity to food/water in eastern continent
+            assert!(
+                a.x >= 50,
+                "Lunarians should stay in the eastern mountain/foothills realm, got ({}, {})",
+                a.x, a.y
+            );
+        }
+    }
+    assert!(lunarian_count > 0, "Lunarians must remain alive and active");
+}
+
+#[test]
+fn test_worldbox_cellular_fire_spread_and_ash() {
+    use cogniverse_rpg::world::tile::{ElevationLayer, BiomeType};
+
+    let mut engine = SimulationEngine::new();
+
+    // Set up flammable forest on dry soil at (50, 50) and (51, 50)
+    engine.world.tile_at_mut(50, 50).elevation_layer = ElevationLayer::SoilLow;
+    engine.world.tile_at_mut(50, 50).biome = BiomeType::WhisperingForest;
+    engine.world.tile_at_mut(50, 50).wood_amount = 8;
+    engine.world.tile_at_mut(50, 50).moisture = 0.1;
+
+    engine.world.tile_at_mut(51, 50).elevation_layer = ElevationLayer::SoilLow;
+    engine.world.tile_at_mut(51, 50).biome = BiomeType::WhisperingForest;
+    engine.world.tile_at_mut(51, 50).wood_amount = 8;
+    engine.world.tile_at_mut(51, 50).moisture = 0.1;
+
+    // Ignite wildfire on tile (50, 50)
+    engine.world.tile_at_mut(50, 50).is_on_fire = true;
+    engine.world.tile_at_mut(50, 50).fire_ticks = 4;
+
+    // Tick cellular dynamics several times
+    for _ in 0..12 {
+        engine.world.tick_cellular();
+    }
+
+    // Fire should have spread to neighbor or original tile decayed to ash
+    let t0 = engine.world.tile_at(50, 50);
+    let t1 = engine.world.tile_at(51, 50);
+    assert!(
+        t0.burned_stages > 0 || t1.is_on_fire || t1.burned_stages > 0,
+        "Wildfire cellular engine must spread or burn wood to ash"
+    );
+}
+
+#[test]
+fn test_worldbox_cellular_lava_and_basalt_solidification() {
+    use cogniverse_rpg::world::tile::{ElevationLayer, BiomeType};
+
+    let mut engine = SimulationEngine::new();
+
+    // Place water at (60, 61) and lava at (60, 60)
+    engine.world.tile_at_mut(60, 61).elevation = 0.2;
+    engine.world.tile_at_mut(60, 61).elevation_layer = ElevationLayer::CloseOcean;
+    engine.world.tile_at_mut(60, 61).biome = BiomeType::CrystalRiverlands;
+    engine.world.tile_at_mut(60, 60).elevation = 0.85;
+    engine.world.tile_at_mut(60, 60).elevation_layer = ElevationLayer::Hills;
+    engine.world.tile_at_mut(60, 60).lava_level = 3;
+
+    // Tick cellular dynamics
+    for _ in 0..6 {
+        engine.world.tick_cellular();
+    }
+
+    // Lava flowing into water must solidify into rock/hills (Basalt formation)
+    let t_water = engine.world.tile_at(60, 61);
+    assert!(
+        t_water.elevation_layer >= ElevationLayer::Hills || t_water.biome == BiomeType::IroncragMountains,
+        "Lava meeting water must solidify into basalt rock/hills"
+    );
+}
+
+#[test]
+fn test_worldbox_cellular_freeze_and_ice_walking() {
+    use cogniverse_rpg::world::tile::{ElevationLayer, FrozenState};
+
+    let mut engine = SimulationEngine::new();
+
+    // Set shallow water at (70, 70) with subzero temperature
+    engine.world.tile_at_mut(70, 70).elevation = 0.35;
+    engine.world.tile_at_mut(70, 70).elevation_layer = ElevationLayer::ShallowWaters;
+    engine.world.tile_at_mut(70, 70).temperature = -15.0;
+
+    // Tick cellular dynamics
+    for _ in 0..5 {
+        engine.world.tick_cellular();
+    }
+
+    // Shallow water at freezing temperature freezes into solid walkable ice
+    let t = engine.world.tile_at(70, 70);
+    assert_eq!(
+        t.frozen_state,
+        FrozenState::Ice,
+        "Freezing shallow water must become walkable Ice"
+    );
+    assert!(
+        t.is_walkable(),
+        "Ice formed on water must be walkable"
+    );
+}
+
+#[test]
+fn test_worldbox_biome_creep_competition() {
+    use cogniverse_rpg::world::tile::{ElevationLayer, BiomeType};
+
+    let mut engine = SimulationEngine::new();
+
+    // Seed corrupted biome on soil surrounded by plains
+    for dx in -2isize..=2isize {
+        for dy in -2isize..=2isize {
+            let nx = (45isize + dx) as usize;
+            let ny = (45isize + dy) as usize;
+            engine.world.tile_at_mut(nx, ny).elevation_layer = ElevationLayer::SoilLow;
+            engine.world.tile_at_mut(nx, ny).biome = BiomeType::SunlitPlains;
+            engine.world.tile_at_mut(nx, ny).burned_stages = 0;
+        }
+    }
+    engine.world.tile_at_mut(45, 45).biome = BiomeType::CorruptedInfernal;
+
+    // Run cellular updates: strong biomes (grow_strength 5) can creep into low strength neighbors (grow_strength 1)
+    let mut crept = false;
+    for _ in 0..300 {
+        engine.world.tick_cellular();
+        for dx in -1isize..=1isize {
+            for dy in -1isize..=1isize {
+                if dx != 0 || dy != 0 {
+                    let nx = (45isize + dx) as usize;
+                    let ny = (45isize + dy) as usize;
+                    if engine.world.tile_at(nx, ny).biome == BiomeType::CorruptedInfernal {
+                        crept = true;
+                        break;
+                    }
+                }
+            }
+            if crept {
+                break;
+            }
+        }
+        if crept {
+            break;
+        }
+    }
+
+    assert!(crept, "Corrupted biome with high grow_strength must creep into weaker neighbor tiles");
+}
+
+
 

@@ -167,6 +167,60 @@ function paintTileToBuffer(bCtx, x, y, biome) {
     bCtx.fill();
     bCtx.fillStyle = '#78350f';
     bCtx.fillRect(px + tilePx * 0.45, py + tilePx * 0.72, 2, 3);
+  } else if (biome === 'SavannaGrasslands') {
+    // Warm golden amber savanna grass
+    bCtx.fillStyle = '#ca8a04';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    bCtx.fillStyle = '#a16207';
+    bCtx.fillRect(px + 2, py + 3, tilePx - 4, tilePx - 5);
+    // Dry grass tufts
+    bCtx.fillStyle = '#fef08a';
+    bCtx.fillRect(px + 3, py + 4, 1, 3);
+    bCtx.fillRect(px + 8, py + 6, 1, 3);
+    // Acacia bush dot
+    if ((x * 5 + y * 7) % 7 === 0) {
+      bCtx.fillStyle = '#713f12';
+      bCtx.fillRect(px + 4, py + 5, 3, 2);
+    }
+  } else if (biome === 'VerdantJungle') {
+    // Deep emerald tropical jungle canopy
+    bCtx.fillStyle = '#064e3b';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    bCtx.fillStyle = '#047857';
+    bCtx.beginPath();
+    bCtx.arc(px + tilePx * 0.5, py + tilePx * 0.5, tilePx * 0.44, 0, Math.PI * 2);
+    bCtx.fill();
+    bCtx.fillStyle = '#10b981';
+    bCtx.fillRect(px + 3, py + 3, 3, 3);
+    if ((x + y) % 5 === 0) {
+      // Exotic jungle flower
+      bCtx.fillStyle = '#f43f5e';
+      bCtx.fillRect(px + 6, py + 6, 2, 2);
+    }
+  } else if (biome === 'CorruptedLands') {
+    // WorldBox Corrupted alien purple biomass
+    bCtx.fillStyle = '#3b0764';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    bCtx.fillStyle = '#581c87';
+    bCtx.fillRect(px + 1, py + 1, tilePx - 2, tilePx - 2);
+    // Glowing eerie eyes / spores
+    bCtx.fillStyle = '#c084fc';
+    bCtx.fillRect(px + 3, py + 3, 2, 2);
+    bCtx.fillRect(px + 8, py + 7, 2, 2);
+    bCtx.fillStyle = '#d946ef';
+    bCtx.fillRect(px + 4, py + 4, 1, 1);
+  } else if (biome === 'PermafrostTundra') {
+    // Subzero glacial permafrost tundra
+    bCtx.fillStyle = '#38bdf8';
+    bCtx.fillRect(px, py, tilePx, tilePx);
+    bCtx.fillStyle = '#7dd3fc';
+    bCtx.fillRect(px + 1, py + 1, tilePx - 2, tilePx - 2);
+    bCtx.fillStyle = '#bae6fd';
+    bCtx.fillRect(px + 3, py + 2, 3, 2);
+    bCtx.fillRect(px + 6, py + 6, 4, 2);
+    // Frost crystal sparkle
+    bCtx.fillStyle = '#ffffff';
+    bCtx.fillRect(px + 4, py + 3, 1, 1);
   } else {
     // Sunlit Plains
     bCtx.fillStyle = '#3f8022';
@@ -428,6 +482,32 @@ function applyZoom(factor, focusX, focusY) {
   camera.zoom = newZoom;
 }
 
+let isCtrlOrMetaPressed = false;
+let isSpacePressed = false;
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Control' || e.key === 'Meta') {
+    isCtrlOrMetaPressed = true;
+    if (!camera.isDragging) container.style.cursor = 'grab';
+  }
+  if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+    isSpacePressed = true;
+    if (!camera.isDragging) container.style.cursor = 'grab';
+    e.preventDefault();
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.key === 'Control' || e.key === 'Meta') {
+    isCtrlOrMetaPressed = false;
+    if (!camera.isDragging && !isSpacePressed) container.style.cursor = '';
+  }
+  if (e.code === 'Space') {
+    isSpacePressed = false;
+    if (!camera.isDragging && !isCtrlOrMetaPressed) container.style.cursor = '';
+  }
+});
+
 container.addEventListener('wheel', (e) => {
   e.preventDefault();
   const factor = e.deltaY < 0 ? 1.15 : 0.87;
@@ -435,7 +515,7 @@ container.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 container.addEventListener('mousedown', (e) => {
-  const isPan = e.button === 1 || e.button === 2 || e.spaceKey;
+  const isPan = e.button === 1 || e.button === 2 || e.ctrlKey || e.metaKey || isCtrlOrMetaPressed || isSpacePressed;
   if (isPan) {
     camera.isDragging = true;
     camera.dragStartX = e.clientX;
@@ -443,6 +523,7 @@ container.addEventListener('mousedown', (e) => {
     camera.panStartX = camera.x;
     camera.panStartY = camera.y;
     container.classList.add('panning');
+    container.style.cursor = 'grabbing';
     e.preventDefault();
     return;
   }
@@ -489,6 +570,7 @@ window.addEventListener('mouseup', () => {
   if (camera.isDragging) {
     camera.isDragging = false;
     container.classList.remove('panning');
+    container.style.cursor = (isCtrlOrMetaPressed || isSpacePressed) ? 'grab' : '';
   }
   isMouseDownOnMap = false;
 });
@@ -553,20 +635,46 @@ function handleMapAction(tx, ty) {
     } else if (activeTool === 'brush-mithril') {
       brushType = 'EnrichMithrilVein';
       biomeKey = 'IroncragMountains';
+    } else if (activeTool === 'brush-savanna') {
+      brushType = 'SeedSavanna';
+      biomeKey = 'SavannaGrasslands';
+    } else if (activeTool === 'brush-jungle') {
+      brushType = 'SeedJungle';
+      biomeKey = 'VerdantJungle';
+    } else if (activeTool === 'brush-corrupted') {
+      brushType = 'SeedCorrupted';
+      biomeKey = 'CorruptedLands';
+    } else if (activeTool === 'brush-permafrost') {
+      brushType = 'SeedPermafrost';
+      biomeKey = 'PermafrostTundra';
+    } else if (activeTool === 'brush-lava') {
+      brushType = 'SpawnLava';
+      biomeKey = null;
+    } else if (activeTool === 'brush-fire') {
+      brushType = 'IgniteWildfire';
+      biomeKey = null;
+    } else if (activeTool === 'brush-freeze') {
+      brushType = 'FreezeIce';
+      biomeKey = null;
+    } else if (activeTool === 'brush-thaw') {
+      brushType = 'ThawHeat';
+      biomeKey = null;
     } else if (activeTool === 'brush-clear') {
       brushType = 'ClearLand';
       biomeKey = 'SunlitPlains';
     }
 
     playSound('click');
-    const half = Math.floor(brushRadius / 2);
-    for (let dy = -half; dy <= half; dy++) {
-      for (let dx = -half; dx <= half; dx++) {
-        const px = tx + dx;
-        const py = ty + dy;
-        if (px >= 0 && px < WORLD_SIZE && py >= 0 && py < WORLD_SIZE) {
-          terraformedTiles.set(`${px},${py}`, biomeKey);
-          paintTileToBuffer(terrainCtx, px, py, biomeKey);
+    if (biomeKey) {
+      const half = Math.floor(brushRadius / 2);
+      for (let dy = -half; dy <= half; dy++) {
+        for (let dx = -half; dx <= half; dx++) {
+          const px = tx + dx;
+          const py = ty + dy;
+          if (px >= 0 && px < WORLD_SIZE && py >= 0 && py < WORLD_SIZE) {
+            terraformedTiles.set(`${px},${py}`, biomeKey);
+            paintTileToBuffer(terrainCtx, px, py, biomeKey);
+          }
         }
       }
     }
@@ -851,6 +959,91 @@ function drawWorldMap(data) {
 
   // 1. Blit cached 128x128 grand continent from offscreen buffer (1 single lightning-fast GPU draw call!)
   ctx.drawImage(terrainCanvas, 0, 0);
+
+  // 1.5 WorldBox Dynamic Cellular Automata Effects (Lava, Fire, Ash, Ice, Snow)
+  if (data.dynamic_tiles && Array.isArray(data.dynamic_tiles)) {
+    for (const dt of data.dynamic_tiles) {
+      const px = dt.x * tilePx;
+      const py = dt.y * tilePx;
+
+      // Charred Ash Decay overlay
+      if (dt.burned_stages > 0 && !dt.is_on_fire && dt.lava_level === 0) {
+        ctx.fillStyle = 'rgba(28, 25, 23, 0.75)';
+        ctx.fillRect(px, py, tilePx, tilePx);
+        ctx.fillStyle = 'rgba(87, 83, 78, 0.5)';
+        ctx.fillRect(px + 2, py + 3, tilePx - 4, 2);
+        ctx.fillRect(px + 4, py + 7, 3, 2);
+      }
+
+      // Frozen Ice / Snow State
+      if (dt.frozen_state === 1) { // Walkable Ice
+        ctx.fillStyle = 'rgba(186, 230, 253, 0.78)';
+        ctx.fillRect(px, py, tilePx, tilePx);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px + 2, py + tilePx - 2);
+        ctx.lineTo(px + tilePx * 0.5, py + tilePx * 0.4);
+        ctx.lineTo(px + tilePx - 3, py + 2);
+        ctx.stroke();
+      } else if (dt.frozen_state === 2) { // Snow
+        ctx.fillStyle = 'rgba(248, 250, 252, 0.85)';
+        ctx.fillRect(px, py, tilePx, tilePx);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(px + 3, py + 3, tilePx - 6, tilePx - 6);
+      }
+
+      // Molten Lava (downhill flow & heat glow)
+      if (dt.lava_level > 0) {
+        const pulse = Math.sin(time * 0.008 + dt.x * 2 + dt.y * 3) * 0.15;
+        ctx.fillStyle = dt.lava_level >= 3 ? '#ef4444' : dt.lava_level === 2 ? '#f97316' : '#ea580c';
+        ctx.fillRect(px, py, tilePx, tilePx);
+        ctx.fillStyle = `rgba(254, 240, 138, ${0.75 + pulse})`;
+        ctx.fillRect(px + 3, py + 3, tilePx - 6, tilePx - 6);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px + 4, py + 4, 2, 2);
+        // Ambient heat radiation
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
+        ctx.beginPath();
+        ctx.arc(px + tilePx / 2, py + tilePx / 2, tilePx * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Spreading Wildfire Flames
+      if (dt.is_on_fire) {
+        const fPulse = Math.sin(time * 0.02 + dt.x * 7 + dt.y * 11) * 2;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(px + tilePx / 2, py + tilePx / 2, tilePx * 0.45 + fPulse * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.moveTo(px + 2, py + tilePx - 1);
+        ctx.lineTo(px + tilePx / 2, py + 1 - Math.abs(fPulse));
+        ctx.lineTo(px + tilePx - 2, py + tilePx - 1);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py + tilePx - 2);
+        ctx.lineTo(px + tilePx / 2, py + 4 - Math.abs(fPulse));
+        ctx.lineTo(px + tilePx - 4, py + tilePx - 2);
+        ctx.closePath();
+        ctx.fill();
+
+        if (Math.random() < 0.12) {
+          smokeParticles.push({
+            x: px + tilePx / 2 + (Math.random() - 0.5) * 4,
+            y: py + 2,
+            alpha: 0.6,
+            size: 2.2,
+          });
+        }
+      }
+    }
+  }
 
   // 2. Kingdom Territorial Borders (WorldBox Signature Feature)
   if (showKingdomBorders) {

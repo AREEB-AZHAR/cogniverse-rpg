@@ -4,7 +4,7 @@ use super::god_powers::DivineInterventionKind;
 use super::super::agent::CivilizationRace;
 use super::super::world::altar::Altar;
 use super::super::world::ecology::WeatherCondition;
-use super::super::world::tile::{BiomeType, StructureKind};
+use super::super::world::tile::{BiomeType, ElevationLayer, FrozenState, StructureKind};
 use super::super::brain::desire::AmbitionArchetype;
 use super::super::brain::ast::BehavioralGenome;
 use super::super::brain::neuromod::NeuromodulationState;
@@ -31,6 +31,15 @@ pub enum TerraformBrush {
     BuildWatchtower,
     BuildMineShaft,
     ClearLand,
+    // WorldBox Dynamic Nature Brushes
+    SpawnLava,
+    IgniteWildfire,
+    FreezeIce,
+    ThawHeat,
+    SeedSavanna,
+    SeedJungle,
+    SeedCorrupted,
+    SeedPermafrost,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -132,6 +141,18 @@ pub struct SelectedAgentDetail {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DynamicTileSummary {
+    pub x: usize,
+    pub y: usize,
+    pub biome: BiomeType,
+    pub elevation_layer: ElevationLayer,
+    pub is_on_fire: bool,
+    pub burned_stages: u8,
+    pub lava_level: u8,
+    pub frozen_state: FrozenState,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentActivitySummary {
     pub tick: u64,
     pub agent_id: usize,
@@ -160,6 +181,7 @@ pub struct WorldStateTelemetry {
     pub event_log: Vec<String>,
     pub selected_agent: Option<SelectedAgentDetail>,
     pub modified_tiles: Vec<(usize, usize, BiomeType)>,
+    pub dynamic_tiles: Vec<DynamicTileSummary>,
     pub activities: Vec<AgentActivitySummary>,
     pub terran_culture: CivilizationCulture,
     pub lunar_culture: CivilizationCulture,
@@ -168,4 +190,5 @@ pub struct WorldStateTelemetry {
     pub lunar_treasury: u32,
     pub diplomacy_status: String,
 }
+
 

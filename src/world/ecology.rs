@@ -88,25 +88,36 @@ impl GaiaEngine {
                 let base = tile.biome.base_temperature();
                 tile.temperature = base + self.global_temperature_offset;
 
-                // Regrow flora based on moisture, soil fertility, and sunlight
-                if self.solar_intensity > 0.2 {
+                // Regrow flora based on moisture, soil fertility, and sunlight (never in deep ocean)
+                if tile.elevation_layer.is_water() && !tile.has_fresh_water {
+                    continue;
+                }
+
+                if self.solar_intensity > 0.15 {
                     let growth_factor = tile.soil_fertility * (0.8 + 0.4 * self.solar_intensity);
                     
-                    if tile.biome == BiomeType::SunlitPlains && tile.grain_amount < 25 {
+                    if (tile.biome == BiomeType::SunlitPlains || tile.biome == BiomeType::Savanna) && tile.grain_amount < 25 {
                         if (growth_factor * 10.0) as u32 > 5 {
                             tile.grain_amount += 1;
                         }
                     }
 
-                    if (tile.biome == BiomeType::WhisperingForest || tile.biome == BiomeType::SunlitPlains)
-                        && tile.berry_amount < 20
+                    if (tile.biome == BiomeType::WhisperingForest || tile.biome == BiomeType::SunlitPlains || tile.biome == BiomeType::Jungle)
+                        && tile.berry_amount < 25
                     {
                         if (growth_factor * 8.0) as u32 > 4 {
                             tile.berry_amount += 1;
                         }
                     }
 
-                    if tile.biome == BiomeType::WhisperingForest && tile.wood_amount < 50 {
+                    // Mountain cave berries and lichen regrowth
+                    if tile.biome == BiomeType::IroncragMountains && tile.berry_amount < 15 {
+                        if (growth_factor * 6.0) as u32 > 3 {
+                            tile.berry_amount += 1;
+                        }
+                    }
+
+                    if (tile.biome == BiomeType::WhisperingForest || tile.biome == BiomeType::Jungle) && tile.wood_amount < 60 {
                         if (growth_factor * 5.0) as u32 > 3 {
                             tile.wood_amount += 1;
                         }

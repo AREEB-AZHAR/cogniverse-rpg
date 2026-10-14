@@ -40,9 +40,12 @@
 > [!TIP]
 > ### 📸 User Screenshot Requests (Recent Updates)
 > Please capture and add the following screenshots to the `screenshots/` directory to document the latest systems:
-> 1. **Live Plots & Rebellions Codex Tab** (`screenshots/codex_plots_rebellions.png`): Open the Codex (`🧠 Codex & Activities`) and switch to the `⚔️ Live Plots & Rebellions` tab showing active civil plots, conspirators, treasuries, and progress bars.
-> 2. **Monumental Town Hall & Barracks Architecture** (`screenshots/worldbox_townhall_barracks.png`): Place a Town Hall and Barracks using the `🏗️ Architecture` tool tray near a village center and capture their pixel-art rendering.
-> 3. **Divine Powers & Cataclysms Tray** (`screenshots/worldbox_divine_cataclysms.png`): Expand the `⚡ Cataclysms` tool tray showing `✨ Inspiration`, `👁️ Curse of Doubt`, `🌋 Earthquake`, and `🕊️ Golden Peace`.
+> 1. **Control + Click & Hold Panning & WorldBox Cursor** (`screenshots/worldbox_ctrl_click_panning.png`): Hold `Control` (or `Cmd`) on the Canvas map showing the dynamic `grab` / `grabbing` cursor while smoothly panning across the continent.
+> 2. **Cellular Lava & Basalt Solidification** (`screenshots/worldbox_lava_basalt_dynamics.png`): Drop molten lava into shallow water or ocean using the `🌋 Lava` tool and capture the animated magma glow and cooling into dark basalt rock.
+> 3. **Spreading Wildfire & Ash Decals** (`screenshots/worldbox_cellular_wildfire.png`): Ignite a forest using the `🔥 Wildfire` tool and capture the flame animations, smoke particles, and charred ash ground.
+> 4. **Freeze Ice & Walkable Frozen Waters** (`screenshots/worldbox_freeze_ice_walking.png`): Freeze river or coastal tiles using the `🧊 Freeze Ice` tool showing characters walking across the solid ice sheets.
+> 5. **Live Plots & Rebellions Codex Tab** (`screenshots/codex_plots_rebellions.png`): Open the Codex (`🧠 Codex & Activities`) and switch to the `⚔️ Live Plots & Rebellions` tab showing active civil plots, conspirators, treasuries, and progress bars.
+> 6. **Monumental Town Hall & Barracks Architecture** (`screenshots/worldbox_townhall_barracks.png`): Place a Town Hall and Barracks using the `🏗️ Architecture` tool tray near a village center and capture their pixel-art rendering.
 
 ---
 
@@ -57,10 +60,15 @@ We integrated the **Reverse Engineer Anything (REA)** skills framework (`git@git
 
 | WorldBox C# System | Decompiled Structure & Mechanics | Cogniverse Rust Engine Equivalent |
 |---|---|---|
+| **`TileLibrary` & `MapGenerator`** | 9-layer elevation hierarchy (`deep_ocean`, `close_ocean`, `shallow_waters`, `sand`, `soil_low`, `soil_high`, `hills`, `mountains`, `summit`) generated via multi-octave Perlin noise with radial distance falloff. | **`ElevationLayer` & `MapGenerator` (`src/world/tile.rs`, `src/world/generation.rs`)**: 9-tier elevation hierarchy with continental distance falloff mask, coherent noise, mountain spring pools, and non-potable outer ocean margins. |
+| **`WorldBehaviourActionFire`** | Spreads across flammable materials (trees, grain, wood buildings) based on moisture and heat; water tiles extinguish immediately; leaves burned ground that decays to ash before regenerating fertility. | **`CellularAutomataEngine::tick_fire` (`src/world/cellular.rs`)**: Cellular wildfire engine with neighbor ignition, fuel consumption, structure fire damage, ash recovery stages (`burned_stages`), and animated flame particles in `static/app.js`. |
+| **`WorldBehaviourActionLava`** | Molten lava flows downhill into lower adjacent elevations, melts frozen ice, destroys wood structures, and **solidifies into basalt stone (`TileLibrary.hills`) when touching water**. | **`CellularAutomataEngine::tick_lava` (`src/world/cellular.rs`)**: Molten lava cellular automata with downhill gravity flow, temperature spikes (95°C), and basalt rock/hills formation upon water contact. |
+| **`WorldBehaviourTilesTemperatureFreeze`** | Temperature diffusion where subzero temperatures freeze shallow waters into walkable ice sheets, snow caps summits, and warm heat melts ice back into water. | **`CellularAutomataEngine::tick_freeze_thaw` (`src/world/cellular.rs`)**: Dynamic temperature model where shallow waters freeze into solid walkable ice (`FrozenState::Ice`), enabling entities to walk across bodies of water. |
+| **`WorldBehaviourActionBiomes`** | Biomes compete and creep into neighboring tiles based on `grow_strength` ratings (`Randy.randomInt`). | **`CellularAutomataEngine::tick_biome_creep` (`src/world/cellular.rs`)**: Stochastic competitive biome creeping for Savanna, Lush Jungle, Corrupted Infernal, and Permafrost Tundra. |
 | **`PlotsLibrary` / `PlotAsset`** | Conspirators gather ambition, initiate schemes (Rebellion, War, Alliance, Secession), tick progress toward a threshold, and trigger diplomatic shifts. | **`CivilPlot` & `PlotType` (`src/factions/plots.rs`)**: Emergent political plots (`Rebellion`, `HolyWar`, `CommercialAlliance`, `HeresySchism`, `GoldenAgePact`) driven by faction treasuries, mutual sentiment, and conspirator counts. |
 | **`ActorTraitLibrary` / `ActorTrait`** | Traits possess `rate_birth`, `rate_inherit`, and stat modifiers (`Immortal`, `Regeneration`, `Strong`, `Fast`, `Wise`). | **`ReproductionManager::inherit_traits` (`src/brain/reproduction.rs`)**: 65% hereditary transmission from parents to newborns, plus rare spontaneous mutations (`Immortal`, `Regeneration`, `WiseScholar`, `EagleEyed`, `Pyromancer`, `Energetic`, `Frail`). |
 | **`City` & `BuildingAsset`** | Settlement centers and military bastions hold population caps, provide defense, and anchor territory borders. | **`TownHall` & `Barracks` (`src/world/tile.rs`)**: High-tier architecture. Town Hall (HP: 350, Cap: 8) anchors civil governance; Barracks (HP: 220, Cap: 6) serves as faction garrison. Complete with custom pixel-art renderings in `static/app.js`. |
-| **`GodPower` & `PowerAction`** | Divine interventions that alter world state, inspire citizens, or unleash devastation. | **`DivineInterventionKind` (`src/server/god_powers.rs`)**: Added `DivineInspiration` (+Dopamine & KP), `CurseOfDoubt` (+Noradrenaline & paranoia), `CataclysmEarthquake` (seismic ground rupture damaging buildings), and `GoldenAgePeace` (instantly ends wars and resolves plots). |
+| **`GodPower` & `PowerAction`** | Divine interventions that alter world state, inspire citizens, or unleash devastation. | **`DivineInterventionKind` (`src/server/god_powers.rs`)**: Added `DivineInspiration` (+Dopamine & KP), `CurseOfDoubt` (+Noradrenaline & paranoia), `CataclysmEarthquake`, `SpawnLava`, `IgniteWildfire`, `FreezeIce`, and `ThawHeat`. |
 
 ---
 
@@ -98,6 +106,96 @@ We integrated the **Reverse Engineer Anything (REA)** skills framework (`git@git
   - **Autonomous Shelter Construction**: Units with wood and stone now construct `StoneCabin` (`🏡`) and `Campfire` (`🔥`) structures, physically expanding their settlements.
   - **Empirical Proof**: Population expanded past **84 citizens** across **15 generations** with fluid cross-continental movement and zero riverbank congestion!
   - **Result**: Immediate, multi-generational population boom (**from 16 to 23+ citizens, 0 deaths, Gen 3** reached within 500 ticks at 5x speed).
+
+---
+
+## 🧭 Root Cause Analysis: Why Chthonic Lunarians Walked to (0, 0) & Permanent Solution
+
+### 1. The Investigation
+When observing the simulation over extended ticks, several Chthonic Lunarians (`🌙`) spawned at the northeastern mountain stronghold `(92, 34)` would eventually migrate across the map and clump at coordinate `(0, 0)` in the top-left ocean corner.
+
+Through code and telemetry tracing, we discovered **three compounding root causes**:
+1. **Border Ocean Misclassification as Potable Riverlands**:
+   In `src/world/mod.rs` (legacy generator), the ocean margin check classified `x < 8 || y < 8` as `BiomeType::CrystalRiverlands` with `has_fresh_water = true` and `berry_amount = 8`.
+2. **Resource Starvation in Northeastern Mountains**:
+   The mountain terrain around `(92, 34)` initially lacked dedicated food sources and fresh water springs. As Lunarian vitals dropped, their Darwin-Gödel AST evaluated `ActionChoice::DrinkWater` and `ActionChoice::ForageFood`. Looking across the continent for the nearest food and water, the sensor queries detected the northern border edge (`y <= 7`) as the closest fresh water. Agents walked north to the edge, followed the river/coastline west along the top border (`y = 0..7`), and accumulated at `(0, 0)`.
+3. **Unbounded Idle Roaming**:
+   When agents entered `ActionChoice::IdleRest`, their roaming logic generated step offsets without anchoring to their home settlement or kingdom altar, drifting further northwest into the boundary corner.
+
+### 2. The Architectural Solution
+1. **Multi-Octave Coherent Fractal Continental Generator (`src/world/generation.rs`)**:
+   - Implemented a coherent noise elevation model with a radial distance falloff mask.
+   - Encircling oceanic borders are strictly assigned to `ElevationLayer::DeepOcean` and `ElevationLayer::CloseOcean` with `has_fresh_water = false` and `berry_amount = 0`. Agents never seek or drink non-potable ocean water.
+2. **Mountain Springs & Cave Berry Reserves at Lunar Bastion `(92, 34)`**:
+   - Carved natural mountain spring pools (`has_fresh_water = true`) and rich cave berry bushes directly around the Obsidian Moon Altar at `(92, 34)`.
+   - Updated `src/world/ecology.rs` so flora regrowth replenishes mountain berry bushes and spring pools while ignoring deep ocean tiles.
+3. **Territorial Settlement Gravitation & Roaming Anchors (`src/server/state.rs`)**:
+   - Anchored roaming, drinking, and foraging to the home settlement coordinates:
+     - `☀️ Solar Terrans` anchor to `(38, 86)` in the southern fertile valley.
+     - `🌙 Chthonic Lunarians` anchor to `(92, 34)` in the northeastern mountain caverns.
+   - Verified with automated test `test_lunar_people_do_not_wander_to_origin`: 100% of Lunarians remain in their mountain dominion across hundreds of ticks without a single unit wandering to `(0, 0)`.
+
+---
+
+## 🎮 Smooth Camera Controls & Control + Click & Hold Panning
+
+Navigating the grand $128 \times 128$ continent is now buttery-smooth and responsive with signature RTS/God simulator controls:
+
+* **Control + Click & Hold Pan**: Hold `Control` (or `Cmd` on macOS) and left-click drag anywhere on the canvas to smoothly pan the camera.
+* **Dynamic Cursor Feedback**:
+  - Pressing `Ctrl`, `Cmd`, or `Spacebar` immediately transitions the mouse cursor to a `grab` hand icon (`🤚`).
+  - Clicking and dragging transitions the cursor to `grabbing` (`✊`) with real-time viewport translation.
+  - Releasing the key or mouse button smoothly reverts the cursor.
+* **Multi-Button Pan Support**:
+  - `Ctrl + Left Click & Drag` / `Cmd + Left Click & Drag`
+  - `Spacebar + Left Click & Drag`
+  - `Middle Mouse Button (Scrollwheel) Click & Drag`
+  - `Right Click & Drag`
+* **Zoom Matrix**: Smooth exponential zoom focused on mouse cursor via mouse scrollwheel, or quick +/- buttons on the HUD.
+
+---
+
+## 🗺️ WorldBox Cellular Automata Engine & Map Dynamics
+
+Reverse-engineered from WorldBox runtime assemblies (`TileLibrary`, `WorldBehaviourActionBiomes`, `WorldBehaviourActionFire`, `WorldBehaviourActionLava`, `WorldBehaviourTilesTemperatureFreeze`), Cogniverse now features an authentic cellular automata simulation engine (`src/world/cellular.rs`):
+
+### 1. 9-Layer Elevation Hierarchy (`ElevationLayer`)
+1. `DeepOcean`: Deep abyssal ocean; impassable without seafaring vessels.
+2. `CloseOcean`: Coastal oceanic shelf.
+3. `ShallowWaters`: Wading water; flash-freezes into solid walkable ice sheets under freezing temperatures.
+4. `Sand`: Coastal beaches and dunes.
+5. `SoilLow`: Lowland fertile soil suitable for agriculture and forestry.
+6. `SoilHigh`: Elevated plains and plateaus.
+7. `Hills`: Rugged rocky foothills; cools flowing lava into solid basalt rock.
+8. `Mountains`: Towering granite peaks rich in iron, gold, and mithril ores.
+9. `Summit`: High altitude snow-capped mountain peaks permanently frozen with snowdrifts.
+
+### 2. Molten Lava & Basalt Solidification
+* **Downhill Gravity Flow**: Molten lava (`lava_level: 1..3`) flows downhill from higher elevations to lower adjacent tiles.
+* **Heat Radiation**: Radiates intense heat (temperature spikes to 95°C), vaporizing snow and ice.
+* **Basalt Solidification on Water Contact**: When lava contacts water tiles (`DeepOcean`, `CloseOcean`, `ShallowWaters`), the water immediately quenches the lava, creating permanent dark basalt rock and foothills (`ElevationLayer::Hills`, `+stone_amount`, `+flint_amount`).
+
+### 3. Spreading Wildfire & Ash Decal Recovery
+* **Fuel & Moisture Ignition**: Wildfire ignites flammable vegetation (forests, plains grass, granaries, wooden cottages) based on tile moisture levels.
+* **Decay to Ash**: Once wood/fuel is consumed, the fire decays into charred blackened ash ground (`burned_stages: 4`, `soil_fertility: 0.2`).
+* **Ecological Regeneration**: Over subsequent cycles, ash gradually breaks down, enriching soil fertility back to healthy levels.
+
+### 4. Subzero Freezing & Walkable Ice Sheets
+* **Walkable Ice Formation**: When cold weather or the Divine Freeze power lowers temperature below -2°C, shallow waters freeze into solid ice sheets (`FrozenState::Ice`).
+* **Solid Ice Navigation**: Units can freely walk across frozen ice sheets (`is_walkable() = true`), opening temporary winter pathways across river valleys!
+* **Thawing Cycle**: Warm sunlight thaws ice back into flowing freshwater.
+
+### 5. Competitive Biome Creeping
+Biomes dynamically compete and expand into adjacent uncolonized soil based on their species `grow_strength`:
+* **Savanna Grasslands** (`grow_strength: 3`): Warm amber grasses and acacia shrubs.
+* **Verdant Jungle** (`grow_strength: 4`): Dense tropical canopies with vibrant orchids.
+* **Corrupted Infernal Biomass** (`grow_strength: 5`): High-virulence alien purple creep with pulsing eyes and spores.
+* **Permafrost Tundra** (`grow_strength: 3`): Glacial subzero lichen and frost crystal sparkles.
+
+### 6. Signature God Powers in Bottom Bar
+* **World & Nature**: Plains, Forest, River, Ocean, Mountain, Leyline Ruins, Iron/Gold/Mithril Ore Veins, Savanna Seed, Jungle Seed, Corrupted Seed, Permafrost Seed, Sponge Cleanse.
+* **Architecture**: Stone Cabin, Wood Cottage, Town Hall, Barracks, Campfire Hearth, Granary Silo, Watchtower, Mine Shaft.
+* **Cataclysms & Miracles**: Molten Lava, Spreading Wildfire, Freeze Ice, Thaw Heat, Divine Inspiration, Wrathful Lightning, Tectonic Earthquake, Curse of Doubt, Golden Peace, Meteor Strike.
 
 ---
 

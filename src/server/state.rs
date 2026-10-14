@@ -107,6 +107,13 @@ impl SimulationEngine {
         // 1. Tick the world grid (Gaia engine, flora regrowth, wildlife)
         self.world.tick();
 
+        // 1a. Tick WorldBox cellular automata engine (Fire, Lava, Freeze/Thaw, Biome Creep)
+        let cellular_mods = self.world.tick_cellular();
+        for (mx, my) in cellular_mods {
+            let b = self.world.tile_at(mx, my).biome;
+            self.modified_tiles.push((mx, my, b));
+        }
+
         // 2. Tick civilizations and Rival AI God
         let terran_count = self.agents.iter().filter(|a| a.is_alive && a.race == CivilizationRace::SolarTerran).count();
         let lunarian_count = self.agents.iter().filter(|a| a.is_alive && a.race == CivilizationRace::ChthonicLunarian).count();
@@ -280,18 +287,18 @@ impl SimulationEngine {
                     };
                     // WorldBox Roaming: if rested and vitals good, wander towards home settlement or explore
                     if a_energy > 0.50 && a_hunger < 0.60 && a_thirst < 0.60 {
-                        if current_tick % 2 == 0 {
-                            let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
-                            if let Some((hx, hy)) = altar_target {
+                        let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                        if let Some((hx, hy)) = altar_target {
+                            if (ax as isize - hx as isize).abs() + (ay as isize - hy as isize).abs() > 8 {
                                 self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
+                            } else {
+                                // Close to home: gentle patrol around settlement perimeter
+                                let r_dx = (current_tick as isize % 3) - 1;
+                                let r_dy = ((a_id + current_tick as usize) as isize % 3) - 1;
+                                let tx = (hx as isize + r_dx * 3).clamp(5, WORLD_WIDTH as isize - 6) as usize;
+                                let ty = (hy as isize + r_dy * 3).clamp(5, WORLD_HEIGHT as isize - 6) as usize;
+                                self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                             }
-                        } else {
-                            let r_dx = (current_tick as isize % 3) - 1;
-                            let r_dy = ((a_id + current_tick as usize) as isize % 3) - 1;
-                            let nx = (ax as isize + r_dx).clamp(0, WORLD_WIDTH as isize - 1) as usize;
-                            let ny = (ay as isize + r_dy).clamp(0, WORLD_HEIGHT as isize - 1) as usize;
-                            self.agents[idx].x = nx;
-                            self.agents[idx].y = ny;
                         }
                     }
                 }
@@ -332,6 +339,13 @@ impl SimulationEngine {
                         let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::FoodSource);
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                        } else {
+                            // Fallback to home settlement if no food in vicinity
+                            let (hx, hy) = match self.agents[idx].race {
+                                CivilizationRace::SolarTerran => (38, 86),
+                                CivilizationRace::ChthonicLunarian => (92, 34),
+                            };
+                            self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
                         }
                     }
                 }
@@ -355,11 +369,11 @@ impl SimulationEngine {
                             let agent = &mut self.agents[idx];
                             agent.thirst = (agent.thirst - 0.65).max(0.0);
                             agent.brain.neuromod.update(0.4, 1.0 - agent.thirst, false, false, 0.0);
-                            agent.brain.memory.record_observation("Drank cold, clean river water.");
+                            agent.brain.memory.record_observation("Drank cold, clean mountain/river water.");
                             agent.thirst < 0.25
                         };
 
-                        // Once thirst is satisfied, step away from riverbank towards home settlement
+                        // Once thirst is satisfied, step away from water edge towards home settlement
                         if should_step_home {
                             let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
                             if let Some((hx, hy)) = altar_target {
@@ -370,6 +384,13 @@ impl SimulationEngine {
                         let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::WaterSource);
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
+                        } else {
+                            // Fallback to home settlement
+                            let (hx, hy) = match self.agents[idx].race {
+                                CivilizationRace::SolarTerran => (38, 86),
+                                CivilizationRace::ChthonicLunarian => (92, 34),
+                            };
+                            self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
                         }
                     }
                 }
@@ -1046,6 +1067,44 @@ impl SimulationEngine {
                         tile.biome = BiomeType::SunlitPlains;
                         tile.structure = None;
                         tile.elevation = 0.40;
+                        tile.is_on_fire = false;
+                        tile.lava_level = 0;
+                        tile.burned_stages = 0;
+                        tile.frozen_state = super::super::world::tile::FrozenState::None;
+                    }
+                    TerraformBrush::SpawnLava => {
+                        tile.lava_level = 3;
+                        tile.temperature = 95.0;
+                        tile.frozen_state = super::super::world::tile::FrozenState::None;
+                        tile.structure = None;
+                    }
+                    TerraformBrush::IgniteWildfire => {
+                        tile.is_on_fire = true;
+                        tile.fire_ticks = 40;
+                    }
+                    TerraformBrush::FreezeIce => {
+                        if tile.elevation_layer.is_water() {
+                            tile.frozen_state = super::super::world::tile::FrozenState::Ice;
+                        } else {
+                            tile.frozen_state = super::super::world::tile::FrozenState::Snow;
+                        }
+                    }
+                    TerraformBrush::ThawHeat => {
+                        tile.frozen_state = super::super::world::tile::FrozenState::None;
+                        tile.is_on_fire = false;
+                        tile.temperature = 22.0;
+                    }
+                    TerraformBrush::SeedSavanna => {
+                        tile.biome = BiomeType::Savanna;
+                    }
+                    TerraformBrush::SeedJungle => {
+                        tile.biome = BiomeType::Jungle;
+                    }
+                    TerraformBrush::SeedCorrupted => {
+                        tile.biome = BiomeType::CorruptedInfernal;
+                    }
+                    TerraformBrush::SeedPermafrost => {
+                        tile.biome = BiomeType::PermafrostTundra;
                     }
                     _ => {}
                 }
@@ -1398,6 +1457,23 @@ impl SimulationEngine {
             })
             .collect();
 
+        let dynamic_tiles: Vec<super::protocol::DynamicTileSummary> = self.world.tiles.iter().filter_map(|t| {
+            if t.is_on_fire || t.burned_stages > 0 || t.lava_level > 0 || t.frozen_state != super::super::world::tile::FrozenState::None {
+                Some(super::protocol::DynamicTileSummary {
+                    x: t.x,
+                    y: t.y,
+                    biome: t.biome,
+                    elevation_layer: t.elevation_layer,
+                    is_on_fire: t.is_on_fire,
+                    burned_stages: t.burned_stages,
+                    lava_level: t.lava_level,
+                    frozen_state: t.frozen_state,
+                })
+            } else {
+                None
+            }
+        }).collect();
+
         WorldStateTelemetry {
             world_tick: self.world.gaia.world_tick,
             speed_multiplier: self.speed_multiplier,
@@ -1415,6 +1491,7 @@ impl SimulationEngine {
             event_log: self.event_log.clone(),
             selected_agent: selected_agent_detail,
             modified_tiles: self.modified_tiles.clone(),
+            dynamic_tiles,
             activities,
             terran_culture: self.civilizations.terran_culture.clone(),
             lunar_culture: self.civilizations.lunar_culture.clone(),

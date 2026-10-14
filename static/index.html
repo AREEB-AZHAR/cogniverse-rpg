@@ -88,6 +88,10 @@
         <span id="stat-weather-ico" class="pill-ico">☀️</span>
         <span id="stat-weather" class="pill-num">Clear Sun</span>
       </div>
+      <div class="stat-pill" title="Realm Diplomacy & WorldBox Treaties">
+        <span class="pill-ico">📜</span>
+        <span id="stat-diplomacy" class="pill-num">Peaceful</span>
+      </div>
     </div>
 
     <!-- Top Right Quick Camera Tools -->
@@ -190,6 +194,14 @@
             <span class="tool-ico">🛖</span>
             <span class="tool-name">Wood Cottage</span>
           </button>
+          <button class="wb-tool-btn" data-tool="build-townhall" onclick="selectGodTool('build-townhall', 'Town Hall', 'Erect a grand Chieftain\'s Town Hall (capacity 8)')">
+            <span class="tool-ico">🏛️</span>
+            <span class="tool-name">Town Hall</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="build-barracks" onclick="selectGodTool('build-barracks', 'Warrior Barracks', 'Construct a fortified Warrior Barracks (capacity 6)')">
+            <span class="tool-ico">🛡️</span>
+            <span class="tool-name">Barracks</span>
+          </button>
           <button class="wb-tool-btn" data-tool="build-campfire" onclick="selectGodTool('build-campfire', 'Campfire Hearth', 'Light a communal warmth campfire for travelers & cooking')">
             <span class="tool-ico">🔥</span>
             <span class="tool-name">Campfire</span>
@@ -270,9 +282,25 @@
 
         <!-- Sub-Tray 4: Divine Cataclysms -->
         <div id="sub-tray-cataclysms" class="wb-sub-tray">
+          <button class="wb-tool-btn" data-tool="smite-inspiration" onclick="selectGodTool('smite-inspiration', 'Divine Inspiration', 'Bless mortals with celestial knowledge (+60 KP) and AST insight')">
+            <span class="tool-ico">🌟</span>
+            <span class="tool-name">Inspiration</span>
+          </button>
           <button class="wb-tool-btn" data-tool="smite-lightning" onclick="selectGodTool('smite-lightning', 'Wrathful Smite', 'Strike targeted tile with divine lightning')">
             <span class="tool-ico">⚡</span>
             <span class="tool-name">Lightning</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="cataclysm-earthquake" onclick="selectGodTool('cataclysm-earthquake', 'Earthquake', 'Tectonic tremor fracturing rocks to expose rich ore veins')">
+            <span class="tool-ico">🌋</span>
+            <span class="tool-name">Earthquake</span>
+          </button>
+          <button class="wb-tool-btn" data-tool="curse-doubt" onclick="selectGodTool('curse-doubt', 'Curse of Doubt', 'Plunge mortals into existential crisis and heresy')">
+            <span class="tool-ico">💀</span>
+            <span class="tool-name">Curse</span>
+          </button>
+          <button class="wb-tool-btn" onclick="triggerGoldenAgePeace()">
+            <span class="tool-ico">🕊️</span>
+            <span class="tool-name">Golden Peace</span>
           </button>
           <button class="wb-tool-btn" data-tool="fire-meteor" onclick="selectGodTool('fire-meteor', 'Flaming Meteor', 'Crash an incandescent meteor into the earth')">
             <span class="tool-ico">☄️</span>
@@ -528,6 +556,7 @@
       <button id="codex-tab-btn-act" class="ai-tab-btn active" onclick="switchCodexTab('activities')">📡 Live Activity Stream</button>
       <button id="codex-tab-btn-tech" class="ai-tab-btn" onclick="switchCodexTab('tech')">🏛️ Cultural Tech Tree</button>
       <button id="codex-tab-btn-disc" class="ai-tab-btn" onclick="switchCodexTab('discoveries')">💎 Mountain Ores & Lore</button>
+      <button id="codex-tab-btn-plots" class="ai-tab-btn" onclick="switchCodexTab('plots')">⚔️ Live Plots & Rebellions</button>
     </div>
 
     <!-- Pane 1: Live Activity Stream -->
@@ -581,6 +610,18 @@
         <h4>📜 Recorded Civilizational Discoveries</h4>
         <div id="codex-discoveries-list" class="discoveries-scroll"></div>
       </div>
+    </div>
+
+    <!-- Pane 4: Live Plots & Rebellions -->
+    <div id="codex-pane-plots" class="ai-pane">
+      <div class="plots-header-summary">
+        <div class="realm-treasury-box">
+          <span>☀️ Solaria Treasury: <strong id="treasury-solaria">250</strong> Gold</span>
+          <span>🌙 Lunar Treasury: <strong id="treasury-lunar">250</strong> Gold</span>
+          <span>Treaty: <strong id="diplomacy-banner">Peaceful Coexistence</strong></span>
+        </div>
+      </div>
+      <div id="codex-plots-list" class="plots-scroll"></div>
     </div>
   </aside>
 

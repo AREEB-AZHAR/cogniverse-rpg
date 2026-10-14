@@ -25,6 +25,8 @@ pub enum TerraformBrush {
     BuildCabin,
     BuildCottage,
     BuildCampfire,
+    BuildTownHall,
+    BuildBarracks,
     BuildGranary,
     BuildWatchtower,
     BuildMineShaft,
@@ -161,5 +163,9 @@ pub struct WorldStateTelemetry {
     pub activities: Vec<AgentActivitySummary>,
     pub terran_culture: CivilizationCulture,
     pub lunar_culture: CivilizationCulture,
+    pub active_plots: Vec<super::super::factions::plots::CivilPlot>,
+    pub terran_treasury: u32,
+    pub lunar_treasury: u32,
+    pub diplomacy_status: String,
 }
 

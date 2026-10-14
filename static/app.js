@@ -505,6 +505,8 @@ function handleMapAction(tx, ty) {
   if (activeTool.startsWith('build-')) {
     let brushType = 'BuildCabin';
     if (activeTool === 'build-cottage') brushType = 'BuildCottage';
+    else if (activeTool === 'build-townhall') brushType = 'BuildTownHall';
+    else if (activeTool === 'build-barracks') brushType = 'BuildBarracks';
     else if (activeTool === 'build-campfire') brushType = 'BuildCampfire';
     else if (activeTool === 'build-granary') brushType = 'BuildGranary';
     else if (activeTool === 'build-watchtower') brushType = 'BuildWatchtower';
@@ -610,6 +612,33 @@ function handleMapAction(tx, ty) {
     showToast(`⚡ Wrathful Smite struck at (${tx}, ${ty})`);
     return;
   }
+  if (activeTool === 'smite-inspiration') {
+    playSound('chime');
+    sendMsg({
+      type: 'TriggerIntervention',
+      intervention: { DivineInspiration: { x: tx, y: ty } }
+    });
+    showToast(`🌟 Divine Inspiration beamed upon (${tx}, ${ty})`);
+    return;
+  }
+  if (activeTool === 'curse-doubt') {
+    playSound('thunder');
+    sendMsg({
+      type: 'TriggerIntervention',
+      intervention: { CurseOfDoubt: { x: tx, y: ty } }
+    });
+    showToast(`💀 Curse of Doubt cast over mortals at (${tx}, ${ty})`);
+    return;
+  }
+  if (activeTool === 'cataclysm-earthquake') {
+    playSound('thunder');
+    sendMsg({
+      type: 'TriggerIntervention',
+      intervention: { CataclysmEarthquake: { x: tx, y: ty } }
+    });
+    showToast(`🌋 Tectonic Earthquake fractured crust at (${tx}, ${ty})`);
+    return;
+  }
   if (activeTool === 'manna-drop') {
     playSound('chime');
     sendMsg({
@@ -621,6 +650,10 @@ function handleMapAction(tx, ty) {
   }
   if (activeTool === 'blessing-spark') {
     playSound('chime');
+    sendMsg({
+      type: 'TriggerIntervention',
+      intervention: { DivineInspiration: { x: tx, y: ty } }
+    });
     showToast(`✨ Divine Blessing cast over (${tx}, ${ty})`);
     return;
   }
@@ -745,6 +778,12 @@ function renderTelemetry(data) {
     document.getElementById('stat-weather-ico').textContent = wIco;
     document.getElementById('stat-weather').textContent = data.weather ?? 'Clear Sun';
 
+    // WorldBox-style Treaty & Diplomacy Pill
+    const dipEl = document.getElementById('stat-diplomacy');
+    if (dipEl && data.diplomacy_status) {
+      dipEl.textContent = data.diplomacy_status;
+    }
+
     // 3. Auto-follow tracked character
     if (isFollowActive && data.agents) {
       const tracked = data.agents.find(a => a.id === (favoriteAgentId || selectedAgentId));
@@ -770,6 +809,9 @@ function renderTelemetry(data) {
     if (data.terran_culture || data.lunar_culture) {
       renderCodexTechTree(data.terran_culture, data.lunar_culture);
       renderCodexDiscoveries(data.terran_culture, data.lunar_culture);
+    }
+    if (data.active_plots) {
+      renderCodexPlots(data.active_plots, data.terran_treasury, data.lunar_treasury, data.diplomacy_status);
     }
   } catch (err) {
     console.error('Telemetry render error:', err);
@@ -950,6 +992,45 @@ function drawWorldMap(data) {
         // Door
         ctx.fillStyle = '#451a03';
         ctx.fillRect(px + 5, py + 8, 4, tilePx - 8);
+      } else if (s.kind === 'TownHall') {
+        // Grand Chieftain's Town Hall with Classical Pillars & Gilded Crest
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px + 1, py + 3, tilePx - 2, tilePx - 3);
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(px + 2, py + 4, tilePx - 4, tilePx - 5);
+        // Stone Pillars
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(px + 3, py + 6, 2, tilePx - 7);
+        ctx.fillRect(px + tilePx - 5, py + 6, 2, tilePx - 7);
+        // Triangular Gilded Pediment Roof
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.moveTo(px + tilePx / 2, py - 1);
+        ctx.lineTo(px + tilePx + 1, py + 4);
+        ctx.lineTo(px - 1, py + 4);
+        ctx.closePath();
+        ctx.fill();
+        // Golden Kingdom Crest
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(px + tilePx / 2, py + 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (s.kind === 'Barracks') {
+        // Fortified Warrior Barracks with Crenelated Battlements
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(px + 1, py + 3, tilePx - 2, tilePx - 3);
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(px + 2, py + 4, tilePx - 4, tilePx - 5);
+        // Crenelated battlements
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(px + 1, py + 1, 3, 3);
+        ctx.fillRect(px + 6, py + 1, 3, 3);
+        ctx.fillRect(px + 11, py + 1, 3, 3);
+        // Iron fortified gate
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px + 5, py + 7, 5, tilePx - 7);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(px + 7, py + 2, 2, 2);
       } else if (s.kind === 'Granary') {
         // Communal Granary Silo on Stilts
         ctx.fillStyle = '#78350f';
@@ -1506,6 +1587,15 @@ function triggerBabel() {
   }
 }
 
+function triggerGoldenAgePeace() {
+  playSound('chime');
+  sendMsg({
+    type: 'TriggerIntervention',
+    intervention: 'GoldenAgePeace'
+  });
+  showToast('🕊️ Golden Age Peace decreed across all realms!');
+}
+
 // ----------------------------------------------------------------------------
 // KNOWLEDGE & ACTIVITY CODEX CONTROLLERS
 // ----------------------------------------------------------------------------
@@ -1522,6 +1612,14 @@ function toggleCodexModal() {
       if (currentTelemetry.terran_culture || currentTelemetry.lunar_culture) {
         renderCodexTechTree(currentTelemetry.terran_culture, currentTelemetry.lunar_culture);
         renderCodexDiscoveries(currentTelemetry.terran_culture, currentTelemetry.lunar_culture);
+      }
+      if (currentTelemetry.active_plots) {
+        renderCodexPlots(
+          currentTelemetry.active_plots,
+          currentTelemetry.terran_treasury,
+          currentTelemetry.lunar_treasury,
+          currentTelemetry.diplomacy_status
+        );
       }
     }
   } else {
@@ -1555,6 +1653,67 @@ function switchCodexTab(tab) {
     const pane = document.getElementById('codex-pane-discoveries');
     if (btn) btn.classList.add('active');
     if (pane) pane.classList.add('active');
+  } else if (tab === 'plots') {
+    const btn = document.getElementById('codex-tab-btn-plots');
+    const pane = document.getElementById('codex-pane-plots');
+    if (btn) btn.classList.add('active');
+    if (pane) pane.classList.add('active');
+    if (currentTelemetry && currentTelemetry.active_plots) {
+      renderCodexPlots(
+        currentTelemetry.active_plots,
+        currentTelemetry.terran_treasury,
+        currentTelemetry.lunar_treasury,
+        currentTelemetry.diplomacy_status
+      );
+    }
+  }
+}
+
+function renderCodexPlots(plots, terranTreasury, lunarTreasury, diplomacy) {
+  const solTreasury = document.getElementById('treasury-solaria');
+  const lunTreasury = document.getElementById('treasury-lunar');
+  const dipBanner = document.getElementById('diplomacy-banner');
+  if (solTreasury) solTreasury.textContent = terranTreasury ?? 250;
+  if (lunTreasury) lunTreasury.textContent = lunarTreasury ?? 250;
+  if (dipBanner) dipBanner.textContent = diplomacy ?? 'Peaceful Coexistence';
+
+  const list = document.getElementById('codex-plots-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!plots || plots.length === 0) {
+    list.innerHTML = '<span class="text-dim" style="font-size:0.7rem;padding:8px">No active civil plots or rebellions. Mortal peace reigns.</span>';
+    return;
+  }
+
+  for (const p of plots) {
+    const row = document.createElement('div');
+    row.className = `plot-card ${p.is_resolved ? 'resolved' : 'active'}`;
+    const icon = p.plot_type === 'Rebellion' ? '⚔️' :
+                 p.plot_type === 'HolyWar' ? '⚡' :
+                 p.plot_type === 'CommercialAlliance' ? '🤝' :
+                 p.plot_type === 'HeresySchism' ? '🔥' : '✨';
+    const statusText = p.is_resolved ? 'COMPLETED / EXECUTED' : `${Math.round(p.progress)}% Progress`;
+    const isSolar = p.initiator_race === 'SolarTerran';
+
+    row.innerHTML = `
+      <div class="plot-card-head">
+        <div class="plot-card-title">
+          <span>${icon}</span>
+          <strong>${p.title}</strong>
+        </div>
+        <span class="plot-status-badge ${p.is_resolved ? 'resolved' : ''}">${statusText}</span>
+      </div>
+      <div class="plot-desc">${p.target_description}</div>
+      <div class="plot-meta">
+        <span>Conspirator: <strong>${p.initiator_name}</strong> (${isSolar ? '☀️ Solar' : '🌙 Lunar'})</span>
+        <span>Supporters: <strong>${p.supporter_ids.length}</strong> citizens</span>
+      </div>
+      <div class="plot-progress-bar">
+        <div class="plot-progress-fill" style="width: ${p.progress}%"></div>
+      </div>
+    `;
+    list.appendChild(row);
   }
 }
 

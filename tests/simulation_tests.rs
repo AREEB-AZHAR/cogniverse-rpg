@@ -1,10 +1,9 @@
 use cogniverse_rpg::brain::ast::{
-    ActionChoice, AstVmContext, BehavioralGenome, EntityFilter, Expr, Op, Stmt, VitalType,
+    ActionChoice, AstVmContext, BehavioralGenome, EntityFilter,
 };
 use cogniverse_rpg::brain::neuromod::NeuromodulationState;
 use cogniverse_rpg::world::altar::{Altar, DeityAlignment};
 use cogniverse_rpg::world::items::ItemId;
-use cogniverse_rpg::world::WorldGrid;
 use cogniverse_rpg::server::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
 use cogniverse_rpg::server::state::SimulationEngine;
 
@@ -189,4 +188,75 @@ fn test_cultural_technology_progression() {
     assert_eq!(telemetry.terran_culture.knowledge_points, 120);
     assert!(!telemetry.activities.is_empty(), "Activities telemetry must be populated");
 }
+
+#[test]
+fn test_worldbox_traits_inheritance_and_rare_mutations() {
+    use cogniverse_rpg::brain::reproduction::ReproductionManager;
+
+    let parent_a_traits = vec!["Strong".to_string(), "Sunblessed".to_string()];
+    let parent_b_traits = vec!["WiseScholar".to_string(), "Swift".to_string()];
+
+    let child_traits = ReproductionManager::inherit_traits(&parent_a_traits, &parent_b_traits);
+    assert!(!child_traits.is_empty(), "Child must have at least one inherited or mutated trait");
+}
+
+#[test]
+fn test_worldbox_plots_and_diplomacy_resolution() {
+    use cogniverse_rpg::factions::plots::PlotType;
+    use cogniverse_rpg::factions::DiplomaticStatus;
+    use cogniverse_rpg::agent::CivilizationRace;
+
+    let mut engine = SimulationEngine::new();
+    assert_eq!(engine.civilizations.diplomacy, DiplomaticStatus::PeacefulCoexistence);
+
+    // Hatch a Holy War plot
+    engine.civilizations.hatch_plot(
+        1,
+        "Orion",
+        CivilizationRace::SolarTerran,
+        PlotType::HolyWar,
+        "Crusade of the Golden Sun",
+        "Eradicate heresy across the mountain passes",
+    );
+
+    let plot_idx = engine.civilizations.active_plots.len() - 1;
+    // Fast forward plot to 100%
+    engine.civilizations.active_plots[plot_idx].progress = 99.5;
+    let events = engine.civilizations.tick_plots();
+
+    assert!(!events.is_empty(), "Resolved plot must produce announcement event");
+    assert_eq!(engine.civilizations.diplomacy, DiplomaticStatus::OpenWarfare, "Holy war plot must escalate diplomacy to Open Warfare");
+
+    // Telemetry check
+    let telemetry = engine.generate_telemetry();
+    assert_eq!(telemetry.diplomacy_status, "Open Warfare");
+    assert!(!telemetry.active_plots.is_empty());
+}
+
+#[test]
+fn test_worldbox_architecture_and_divine_powers() {
+    use cogniverse_rpg::server::god_powers::DivineInterventionKind;
+    use cogniverse_rpg::server::protocol::TerraformBrush;
+    use cogniverse_rpg::world::tile::StructureKind;
+
+    let mut engine = SimulationEngine::new();
+
+    // Place Town Hall and Barracks
+    engine.terraform_area(40, 80, TerraformBrush::BuildTownHall, 1);
+    engine.terraform_area(42, 80, TerraformBrush::BuildBarracks, 1);
+
+    assert_eq!(engine.world.tile_at(40, 80).structure.as_ref().unwrap().kind, StructureKind::TownHall);
+    assert_eq!(engine.world.tile_at(42, 80).structure.as_ref().unwrap().kind, StructureKind::Barracks);
+    assert_eq!(engine.world.tile_at(40, 80).structure.as_ref().unwrap().max_health, 350.0);
+
+    // Trigger Divine Inspiration
+    let prev_knowledge = engine.civilizations.terran_culture.knowledge_points;
+    engine.execute_intervention(DivineInterventionKind::DivineInspiration { x: 38, y: 86 });
+    assert_eq!(engine.civilizations.terran_culture.knowledge_points, prev_knowledge + 60);
+
+    // Trigger Golden Age Peace
+    engine.execute_intervention(DivineInterventionKind::GoldenAgePeace);
+    assert_eq!(engine.civilizations.diplomacy, cogniverse_rpg::factions::DiplomaticStatus::CommercialAlliance);
+}
+
 

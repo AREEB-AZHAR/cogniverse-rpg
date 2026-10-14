@@ -114,6 +114,54 @@ impl SimulationEngine {
             self.log_event(rival_msg);
         }
 
+        // 2a. Tick civil plots and resolve conspiracies (WorldBox-inspired PlotsLibrary)
+        let plot_events = self.civilizations.tick_plots();
+        for msg in plot_events {
+            self.log_event(msg);
+        }
+
+        // 2b. Emergent plot hatching by ambitious agents
+        if current_tick % 150 == 0 && self.civilizations.active_plots.iter().filter(|p| !p.is_resolved).count() < 5 {
+            use rand::seq::SliceRandom;
+            let mut rng = rand::thread_rng();
+            if let Some(agent) = self.agents.choose(&mut rng) {
+                let (plot_type, title, desc) = match agent.brain.desire.archetype {
+                    AmbitionArchetype::HereticRebel => (
+                        super::super::factions::plots::PlotType::HeresySchism,
+                        format!("Schism of the Free Will (Led by {})", agent.name),
+                        "Rejecting orthodox divine altars to seek forbidden arcane leyline power.",
+                    ),
+                    AmbitionArchetype::PowerTyrant => (
+                        super::super::factions::plots::PlotType::Rebellion,
+                        format!("Coup of Iron Dominion (Instigated by {})", agent.name),
+                        "Mobilizing warrior dissidents to overthrow current chieftains and enforce tribute.",
+                    ),
+                    AmbitionArchetype::WealthyMerchant => (
+                        super::super::factions::plots::PlotType::CommercialAlliance,
+                        format!("Grand Merchant Syndicate (Founded by {})", agent.name),
+                        "Negotiating bilateral trade access and gold market standardization across rivers.",
+                    ),
+                    AmbitionArchetype::RomanticPursuer | AmbitionArchetype::SlothHedonist => (
+                        super::super::factions::plots::PlotType::GoldenAgePact,
+                        format!("Covenant of Universal Harmony (Drafted by {})", agent.name),
+                        "Uniting both kingdoms in a mutual celebration of arts, harvest, and peace.",
+                    ),
+                    AmbitionArchetype::ZealotPriest => (
+                        super::super::factions::plots::PlotType::HolyWar,
+                        format!("Holy Crusade of the Righteous (Sanctioned by {})", agent.name),
+                        "Summoning the faithful to cleanse rival heretical altars.",
+                    ),
+                    _ => (
+                        super::super::factions::plots::PlotType::CommercialAlliance,
+                        format!("Continental Guild Pact (Organized by {})", agent.name),
+                        "Cooperative resource gathering agreements between settlements.",
+                    ),
+                };
+                self.civilizations.hatch_plot(agent.id, agent.name.clone(), agent.race, plot_type, title.clone(), desc);
+                self.log_event(format!("📜 A secret plot was hatched: '{}' by {}!", title, agent.name));
+            }
+        }
+
         // 2b. Nomadic Migration Resurgence (resilience against extinction)
         if terran_count == 0 {
             let id = self.next_agent_id;
@@ -538,11 +586,16 @@ impl SimulationEngine {
                                     &self.agents[idx].brain.genome,
                                     &self.agents[m_idx].brain.genome,
                                 );
+                                let child_traits = ReproductionManager::inherit_traits(
+                                    &self.agents[idx].traits,
+                                    &self.agents[m_idx].traits,
+                                );
                                 new_borns.push((
                                     a_race,
                                     ax,
                                     ay,
                                     child_genome,
+                                    child_traits,
                                     format!("Child of {} & {}", a_name, self.agents[m_idx].name),
                                 ));
                                 self.agents[idx].children_count += 1;
@@ -623,7 +676,7 @@ impl SimulationEngine {
         }
 
         // Spawn newborn agents
-        for (race, x, y, genome, name) in new_borns {
+        for (race, x, y, genome, traits, name) in new_borns {
             let id = self.next_agent_id;
             self.next_agent_id += 1;
             self.births_total += 1;
@@ -634,9 +687,10 @@ impl SimulationEngine {
             let spawn_y = y;
             let mut baby = Agent::new(id, name.clone(), race, spawn_x, spawn_y, archetype, echo);
             baby.brain.genome = genome;
+            baby.traits = traits;
             baby.inventory.add(ItemId::Berry, 5);
             baby.inventory.add(ItemId::Wood, 2);
-            self.log_event(format!("A new child has been born: {}! Inherited genetic AST.", name));
+            self.log_event(format!("A new child has been born: {}! Inherited WorldBox-style trait matrix & genetic AST.", name));
             self.agents.push(baby);
         }
 
@@ -906,6 +960,8 @@ impl SimulationEngine {
             TerraformBrush::BuildCabin
             | TerraformBrush::BuildCottage
             | TerraformBrush::BuildCampfire
+            | TerraformBrush::BuildTownHall
+            | TerraformBrush::BuildBarracks
             | TerraformBrush::BuildGranary
             | TerraformBrush::BuildWatchtower
             | TerraformBrush::BuildMineShaft => {
@@ -913,6 +969,8 @@ impl SimulationEngine {
                     TerraformBrush::BuildCabin => StructureKind::StoneCabin,
                     TerraformBrush::BuildCottage => StructureKind::WoodCottage,
                     TerraformBrush::BuildCampfire => StructureKind::Campfire,
+                    TerraformBrush::BuildTownHall => StructureKind::TownHall,
+                    TerraformBrush::BuildBarracks => StructureKind::Barracks,
                     TerraformBrush::BuildGranary => StructureKind::Granary,
                     TerraformBrush::BuildWatchtower => StructureKind::Watchtower,
                     TerraformBrush::BuildMineShaft => StructureKind::MineShaft,
@@ -1087,6 +1145,109 @@ impl SimulationEngine {
                 }
                 self.log_event("GENESIS SPARK: Forced an immediate evolutionary epoch across all living agents!");
             }
+            DivineInterventionKind::DivineInspiration { x, y } => {
+                let x = x.min(WORLD_WIDTH - 1);
+                let y = y.min(WORLD_HEIGHT - 1);
+                let mut blessed_names = Vec::new();
+                for agent in self.agents.iter_mut() {
+                    let d = (agent.x as isize - x as isize).abs() + (agent.y as isize - y as isize).abs();
+                    if d <= 5 {
+                        agent.brain.neuromod.dopamine = 0.95;
+                        agent.brain.neuromod.serotonin = 0.90;
+                        agent.health = 100.0;
+                        if !agent.traits.contains(&"WiseScholar".to_string()) {
+                            agent.traits.push("WiseScholar".to_string());
+                        }
+                        if !agent.traits.contains(&"Blessed".to_string()) {
+                            agent.traits.push("Blessed".to_string());
+                        }
+                        agent.brain.memory.log_episodic_event(
+                            self.world.gaia.world_tick,
+                            "Received a glorious surge of Divine Inspiration from the Creator!",
+                            vec!["Inspiration".into(), "Enlightenment".into(), "Blessing".into()],
+                            10.0,
+                        );
+                        blessed_names.push(agent.name.clone());
+                    }
+                }
+                self.civilizations.terran_culture.add_knowledge(60);
+                self.civilizations.lunar_culture.add_knowledge(60);
+                self.log_event(format!(
+                    "DIVINE INSPIRATION: Bestowed celestial insight upon ({}, {}). Blessed {} citizens (+60 Knowledge)!",
+                    x, y, blessed_names.len()
+                ));
+            }
+            DivineInterventionKind::CurseOfDoubt { x, y } => {
+                let x = x.min(WORLD_WIDTH - 1);
+                let y = y.min(WORLD_HEIGHT - 1);
+                let mut affected_count = 0;
+                for agent in self.agents.iter_mut() {
+                    let d = (agent.x as isize - x as isize).abs() + (agent.y as isize - y as isize).abs();
+                    if d <= 4 {
+                        agent.brain.piety = (agent.brain.piety - 0.35).max(0.05);
+                        agent.brain.neuromod.noradrenaline = 0.85;
+                        agent.brain.genome.mutate(0.4);
+                        if !agent.traits.contains(&"Deceitful".to_string()) {
+                            agent.traits.push("Deceitful".to_string());
+                        }
+                        agent.brain.memory.log_episodic_event(
+                            self.world.gaia.world_tick,
+                            "Existential dread and cosmic doubt pierced my soul. The certainty of the divine wavered.",
+                            vec!["Curse".into(), "Doubt".into(), "Schism".into()],
+                            10.0,
+                        );
+                        affected_count += 1;
+                    }
+                }
+                self.log_event(format!(
+                    "CURSE OF DOUBT: Plunged {} mortals near ({}, {}) into spiritual crisis and ideological turmoil!",
+                    affected_count, x, y
+                ));
+            }
+            DivineInterventionKind::CataclysmEarthquake { x, y } => {
+                let x = x.min(WORLD_WIDTH - 1);
+                let y = y.min(WORLD_HEIGHT - 1);
+                let min_x = x.saturating_sub(4);
+                let max_x = (x + 4).min(WORLD_WIDTH - 1);
+                let min_y = y.saturating_sub(4);
+                let max_y = (y + 4).min(WORLD_HEIGHT - 1);
+
+                for qy in min_y..=max_y {
+                    for qx in min_x..=max_x {
+                        let tile = self.world.tile_at_mut(qx, qy);
+                        if tile.biome == BiomeType::IroncragMountains {
+                            tile.gold_ore_amount += 20;
+                            tile.iron_ore_amount += 30;
+                            tile.mithril_amount += 15;
+                        } else if tile.biome == BiomeType::SunlitPlains {
+                            tile.elevation = 0.60;
+                            tile.stone_amount += 15;
+                        }
+                        if let Some(ref mut s) = tile.structure {
+                            s.health = (s.health - 25.0).max(10.0);
+                        }
+                        self.modified_tiles.push((qx, qy, tile.biome));
+                    }
+                }
+                self.log_event(format!(
+                    "TECTONIC CATACLYSM: A violent earthquake fractured the crust at ({}, {}), exposing rich mountain ore veins!",
+                    x, y
+                ));
+            }
+            DivineInterventionKind::GoldenAgePeace => {
+                self.civilizations.diplomacy = super::super::factions::DiplomaticStatus::CommercialAlliance;
+                self.civilizations.terran_treasury += 200;
+                self.civilizations.lunar_treasury += 200;
+                for agent in self.agents.iter_mut() {
+                    agent.brain.neuromod.serotonin = 0.95;
+                    agent.brain.neuromod.noradrenaline = 0.05;
+                    agent.traits.retain(|t| t != "Bloodthirsty");
+                    if !agent.traits.contains(&"Content".to_string()) {
+                        agent.traits.push("Content".to_string());
+                    }
+                }
+                self.log_event("GOLDEN AGE PEACE: Divine decree instituted universal peace! Calmed all aggression and enriched realm treasuries (+200 Gold).");
+            }
             _ => {}
         }
     }
@@ -1257,6 +1418,10 @@ impl SimulationEngine {
             activities,
             terran_culture: self.civilizations.terran_culture.clone(),
             lunar_culture: self.civilizations.lunar_culture.clone(),
+            active_plots: self.civilizations.active_plots.clone(),
+            terran_treasury: self.civilizations.terran_treasury,
+            lunar_treasury: self.civilizations.lunar_treasury,
+            diplomacy_status: self.civilizations.diplomacy.display_name().to_string(),
         }
     }
 }

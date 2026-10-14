@@ -83,6 +83,8 @@ pub enum StructureKind {
     LeanTo,
     WoodCottage,
     StoneCabin,
+    TownHall,
+    Barracks,
     Granary,
     Watchtower,
     MineShaft,
@@ -98,6 +100,8 @@ impl StructureKind {
             StructureKind::LeanTo => "Lean-To Shelter",
             StructureKind::WoodCottage => "Wood Cottage",
             StructureKind::StoneCabin => "Stone Cabin",
+            StructureKind::TownHall => "Chieftain's Town Hall",
+            StructureKind::Barracks => "Warrior Barracks",
             StructureKind::Granary => "Granary Silo",
             StructureKind::Watchtower => "Guard Watchtower",
             StructureKind::MineShaft => "Mountain Mine Shaft",
@@ -109,6 +113,8 @@ impl StructureKind {
 
     pub fn housing_capacity(&self) -> usize {
         match self {
+            StructureKind::TownHall => 8,
+            StructureKind::Barracks => 6,
             StructureKind::StoneCabin => 4,
             StructureKind::WoodCottage => 2,
             StructureKind::LeanTo => 1,
@@ -122,6 +128,8 @@ impl StructureKind {
             StructureKind::LeanTo => "⛺",
             StructureKind::WoodCottage => "🛖",
             StructureKind::StoneCabin => "🏡",
+            StructureKind::TownHall => "🏛️",
+            StructureKind::Barracks => "🛡️",
             StructureKind::Granary => "🌾",
             StructureKind::Watchtower => "🗼",
             StructureKind::MineShaft => "⛏️",
@@ -145,6 +153,8 @@ impl PlacedStructure {
         let max_hp = match kind {
             StructureKind::StoneCabin => 120.0,
             StructureKind::WoodCottage => 90.0,
+            StructureKind::TownHall => 350.0,
+            StructureKind::Barracks => 220.0,
             StructureKind::Granary => 100.0,
             StructureKind::Watchtower => 150.0,
             StructureKind::MineShaft => 200.0,

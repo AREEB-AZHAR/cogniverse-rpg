@@ -1,7 +1,10 @@
 pub mod rival_god;
+pub mod plots;
 
 use serde::{Deserialize, Serialize};
 use rival_god::RivalGodState;
+use plots::{CivilPlot, PlotType};
+use crate::agent::CivilizationRace;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiplomaticStatus {
@@ -179,10 +182,36 @@ pub struct CivilizationsCoordinator {
     pub terran_favor: f32, // Player God favor
     pub terran_culture: CivilizationCulture,
     pub lunar_culture: CivilizationCulture,
+    pub terran_capital: (usize, usize),
+    pub lunar_capital: (usize, usize),
+    pub terran_treasury: u32,
+    pub lunar_treasury: u32,
+    pub active_plots: Vec<CivilPlot>,
+    pub next_plot_id: usize,
 }
 
 impl CivilizationsCoordinator {
     pub fn new() -> Self {
+        let mut plots = Vec::new();
+        plots.push(CivilPlot::new(
+            1,
+            7,
+            "Theron",
+            CivilizationRace::SolarTerran,
+            PlotType::CommercialAlliance,
+            "Grand Trans-Continental Caravan Pact",
+            "Establish duty-free timber and ore trading route across Crystal River",
+        ));
+        plots.push(CivilPlot::new(
+            2,
+            12,
+            "Corvus",
+            CivilizationRace::ChthonicLunarian,
+            PlotType::HeresySchism,
+            "Cult of the Midnight Leyline",
+            "Consecrate ancient leyline ruins independent of orthodox Moon Altar priesthood",
+        ));
+
         Self {
             rival_god: RivalGodState::new(),
             diplomacy: DiplomaticStatus::PeacefulCoexistence,
@@ -191,10 +220,95 @@ impl CivilizationsCoordinator {
             terran_favor: 70.0,
             terran_culture: CivilizationCulture::new("Kingdom of Solaria"),
             lunar_culture: CivilizationCulture::new("Lunar Sovereignty"),
+            terran_capital: (38, 86),
+            lunar_capital: (92, 34),
+            terran_treasury: 250,
+            lunar_treasury: 250,
+            active_plots: plots,
+            next_plot_id: 3,
         }
     }
 
     pub fn tick(&mut self, current_tick: u64, terran_count: usize, lunarian_count: usize) -> Option<String> {
         self.rival_god.evaluate_and_intervene(current_tick, terran_count, lunarian_count)
+    }
+
+    pub fn hatch_plot(
+        &mut self,
+        initiator_id: usize,
+        initiator_name: impl Into<String>,
+        initiator_race: CivilizationRace,
+        plot_type: PlotType,
+        title: impl Into<String>,
+        target_desc: impl Into<String>,
+    ) {
+        let plot = CivilPlot::new(
+            self.next_plot_id,
+            initiator_id,
+            initiator_name,
+            initiator_race,
+            plot_type,
+            title,
+            target_desc,
+        );
+        self.next_plot_id += 1;
+        self.active_plots.push(plot);
+        if self.active_plots.len() > 10 {
+            self.active_plots.remove(0);
+        }
+    }
+
+    pub fn tick_plots(&mut self) -> Vec<String> {
+        let mut events = Vec::new();
+        for plot in self.active_plots.iter_mut() {
+            if plot.is_resolved {
+                continue;
+            }
+            // Advance progress gradually based on supporters count
+            let rate = 0.35 + (plot.supporter_ids.len() as f32 * 0.15);
+            if plot.advance_progress(rate) {
+                match plot.plot_type {
+                    PlotType::CommercialAlliance => {
+                        self.diplomacy = DiplomaticStatus::CommercialAlliance;
+                        self.terran_treasury += 150;
+                        self.lunar_treasury += 150;
+                        events.push(format!(
+                            "📜 [PLOT RESOLVED] {}'s plot '{}' SUCCEEDED! Realms entered Commercial Alliance (+150 gold to treasuries).",
+                            plot.initiator_name, plot.title
+                        ));
+                    }
+                    PlotType::Rebellion => {
+                        self.diplomacy = DiplomaticStatus::BorderTension;
+                        events.push(format!(
+                            "⚔️ [PLOT RESOLVED] {}'s rebellion '{}' IGNITED! Provincial unrest flares up along realm borders.",
+                            plot.initiator_name, plot.title
+                        ));
+                    }
+                    PlotType::HolyWar => {
+                        self.diplomacy = DiplomaticStatus::OpenWarfare;
+                        events.push(format!(
+                            "⚡ [PLOT RESOLVED] {}'s Crusade '{}' COMMENCED! Open warfare erupts between Solaria and Lunar Sovereignty!",
+                            plot.initiator_name, plot.title
+                        ));
+                    }
+                    PlotType::HeresySchism => {
+                        events.push(format!(
+                            "🔥 [PLOT RESOLVED] {}'s Heretical Schism '{}' COMPLETED! Heretical cultists consecrated independent leyline shrines.",
+                            plot.initiator_name, plot.title
+                        ));
+                    }
+                    PlotType::GoldenAgePact => {
+                        self.diplomacy = DiplomaticStatus::PeacefulCoexistence;
+                        self.terran_culture.add_knowledge(60);
+                        self.lunar_culture.add_knowledge(60);
+                        events.push(format!(
+                            "✨ [PLOT RESOLVED] {}'s Golden Age Pact '{}' TRIUMPHED! Philosophers ushered in an era of mutual enlightenment (+60 Knowledge).",
+                            plot.initiator_name, plot.title
+                        ));
+                    }
+                }
+            }
+        }
+        events
     }
 }

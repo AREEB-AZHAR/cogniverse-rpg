@@ -33,4 +33,46 @@ impl ReproductionManager {
         child.mutate(0.2);
         child
     }
+
+    /// Inherits traits from parents with genetic transmission and spontaneous mutation inspired by WorldBox
+    pub fn inherit_traits(parent_a_traits: &[String], parent_b_traits: &[String]) -> Vec<String> {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let mut child_traits = Vec::new();
+
+        for trait_name in parent_a_traits.iter() {
+            if rng.gen_bool(0.65) && !child_traits.contains(trait_name) {
+                child_traits.push(trait_name.clone());
+            }
+        }
+        for trait_name in parent_b_traits.iter() {
+            if rng.gen_bool(0.65) && !child_traits.contains(trait_name) {
+                child_traits.push(trait_name.clone());
+            }
+        }
+
+        // Spontaneous genetic mutation (WorldBox-style rare trait emergence)
+        if rng.gen_bool(0.12) {
+            let rare_traits = [
+                "Immortal",
+                "Regeneration",
+                "WiseScholar",
+                "EagleEyed",
+                "Pyromancer",
+                "HardSkin",
+                "Sunblessed",
+                "Moonshadow",
+            ];
+            let mutation = rare_traits[rng.gen_range(0..rare_traits.len())];
+            if !child_traits.contains(&mutation.to_string()) {
+                child_traits.push(mutation.to_string());
+            }
+        }
+
+        if child_traits.is_empty() {
+            child_traits.push("HardSkin".to_string());
+        }
+
+        child_traits
+    }
 }

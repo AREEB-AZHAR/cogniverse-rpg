@@ -37,6 +37,31 @@
 ![Authentic WorldBox Character Sheet](screenshots/worldbox_character_sheet.png)
 *Authentic WorldBox Character Sheet Modal featuring character portrait, noble titles (`Chieftain`, `HereticRebel`), kingdom affiliation, favorite star (⭐), core RPG stats matrix (`HP`, `ATK`, `DEF`, `SPD`, `INT`, `DIP`, `AGE`, `OFF`, `KILLS`), WorldBox Trait Badges (`✦ Deceitful`, `✦ Swift`, `✦ Strong`), tabbed cognition (Inner Monologue, Kenji Doya Neuromodulators, Darwin-Gödel AST, Akashic Lineage), inventory items, and God powers (`💬 Whisper`, `✨ Bless`, `💚 Heal`, `⚡ Smite`).*
 
+> [!TIP]
+> ### 📸 User Screenshot Requests (Recent Updates)
+> Please capture and add the following screenshots to the `screenshots/` directory to document the latest systems:
+> 1. **Live Plots & Rebellions Codex Tab** (`screenshots/codex_plots_rebellions.png`): Open the Codex (`🧠 Codex & Activities`) and switch to the `⚔️ Live Plots & Rebellions` tab showing active civil plots, conspirators, treasuries, and progress bars.
+> 2. **Monumental Town Hall & Barracks Architecture** (`screenshots/worldbox_townhall_barracks.png`): Place a Town Hall and Barracks using the `🏗️ Architecture` tool tray near a village center and capture their pixel-art rendering.
+> 3. **Divine Powers & Cataclysms Tray** (`screenshots/worldbox_divine_cataclysms.png`): Expand the `⚡ Cataclysms` tool tray showing `✨ Inspiration`, `👁️ Curse of Doubt`, `🌋 Earthquake`, and `🕊️ Golden Peace`.
+
+---
+
+## 🔬 Reverse Engineering WorldBox & REA Toolchain Integration
+
+We integrated the **Reverse Engineer Anything (REA)** skills framework (`git@github.com:morluto/rea.git`) into our workspace and global configuration, registering the REA MCP server for live autonomous inspection:
+* **REA Skill Bundle**: Configured at `.agents/skills/reverse-engineer-anything/` and `C:\Users\areeb\.gemini\config\skills\reverse-engineer-anything\`.
+* **REA MCP Server**: Registered in `C:\Users\areeb\.gemini\config\mcp_config.json` via `npx -y rea-agents@latest mcp`.
+* **Binary Decompilation**: Used `ilspycmd` (v11.1.0 on .NET 10) on local WorldBox runtime binaries (`D:\Games\Worldbox.v0.51.2\game\worldbox_Data\Managed\Assembly-CSharp.dll`).
+
+### WorldBox Architectural Systems Reverse-Engineered & Adapted
+
+| WorldBox C# System | Decompiled Structure & Mechanics | Cogniverse Rust Engine Equivalent |
+|---|---|---|
+| **`PlotsLibrary` / `PlotAsset`** | Conspirators gather ambition, initiate schemes (Rebellion, War, Alliance, Secession), tick progress toward a threshold, and trigger diplomatic shifts. | **`CivilPlot` & `PlotType` (`src/factions/plots.rs`)**: Emergent political plots (`Rebellion`, `HolyWar`, `CommercialAlliance`, `HeresySchism`, `GoldenAgePact`) driven by faction treasuries, mutual sentiment, and conspirator counts. |
+| **`ActorTraitLibrary` / `ActorTrait`** | Traits possess `rate_birth`, `rate_inherit`, and stat modifiers (`Immortal`, `Regeneration`, `Strong`, `Fast`, `Wise`). | **`ReproductionManager::inherit_traits` (`src/brain/reproduction.rs`)**: 65% hereditary transmission from parents to newborns, plus rare spontaneous mutations (`Immortal`, `Regeneration`, `WiseScholar`, `EagleEyed`, `Pyromancer`, `Energetic`, `Frail`). |
+| **`City` & `BuildingAsset`** | Settlement centers and military bastions hold population caps, provide defense, and anchor territory borders. | **`TownHall` & `Barracks` (`src/world/tile.rs`)**: High-tier architecture. Town Hall (HP: 350, Cap: 8) anchors civil governance; Barracks (HP: 220, Cap: 6) serves as faction garrison. Complete with custom pixel-art renderings in `static/app.js`. |
+| **`GodPower` & `PowerAction`** | Divine interventions that alter world state, inspire citizens, or unleash devastation. | **`DivineInterventionKind` (`src/server/god_powers.rs`)**: Added `DivineInspiration` (+Dopamine & KP), `CurseOfDoubt` (+Noradrenaline & paranoia), `CataclysmEarthquake` (seismic ground rupture damaging buildings), and `GoldenAgePeace` (instantly ends wars and resolves plots). |
+
 ---
 
 ## ⚡ 60 FPS Performance Optimization & Thriving Population Dynamics
@@ -207,10 +232,11 @@ Rather than static utility weights, each NPC's cognition is co-regulated in real
 
 | Component | Choice | Rationale |
 |---|---|---|
-| **Core Language** | **Rust (Edition 2021 / 1.97+)** | Zero-cost abstractions, memory safety, thread safety without garbage collection pauses. |
+| **Core Language** | **Rust (Edition 2021 / 1.80+)** | Zero-cost abstractions, memory safety, thread safety without garbage collection pauses. |
 | **Concurrency** | **Tokio & Rayon** | Multi-threaded simulation ticks saturating available CPU cores; asynchronous WebSocket dispatch. |
 | **Web Server** | **Axum 0.8** | Ultra-lightweight asynchronous HTTP/WebSocket server embedded in the same binary. |
 | **Front-End / God Console**| **HTML5 Canvas + Vanilla CSS** | Zero npm bloat, instant loading, renders 60fps canvas world with zero external GPU dependencies. |
+| **Reverse Engineering** | **REA Skills & ilspycmd** | Reverse Engineer Anything skill ecosystem + .NET IL decompilation of Unity Mono engines. |
 | **Hardware Target** | **Ordinary PC / CPU-First** | Single or multi-core x86_64 CPU; consumes < 150MB RAM out-of-the-box. |
 
 ---
@@ -228,6 +254,12 @@ Rather than static utility weights, each NPC's cognition is co-regulated in real
    rustc --version
    cargo --version
    ```
+3. *(Optional - Reverse Engineering Subsystem)*:
+   - **.NET SDK** (v8.0+ or v10.0+): Required if using `ilspycmd` for decompiling Unity Mono `Assembly-CSharp.dll`.
+     ```bash
+     dotnet tool install --global ilspycmd
+     ```
+   - **Node.js & npm** (v18+): Required if executing the REA agents MCP server (`npx -y rea-agents@latest mcp`).
 
 ### Clone & Build
 ```bash
@@ -256,7 +288,19 @@ Open **`http://localhost:3000`** in any web browser to enter the live WorldBox G
 ```bash
 cargo test
 ```
-Executes 9 unit & integration tests covering AST gas metering, Darwin-Gödel mutations, Kenji Doya neuromodulation, altar offerings, covenant fulfillment, multi-generational population dispersion, architecture placement, ore vein enrichment, and cultural technology progression.
+Executes **12 comprehensive unit & integration tests** covering:
+- AST gas metering and sandbox recursion prevention
+- Darwin-Gödel AST semantic mutations
+- Kenji Doya neuromodulation kinetics
+- Altar offerings and sincerity scoring
+- Covenant fulfillment and divine reward disbursement
+- Multi-generational population dispersion and auto-nutrition
+- Architecture placement (Town Halls, Barracks, Stone Cabins)
+- Mountain ore vein enrichment and discoverability
+- Civilizational cultural technology progression
+- Hereditary trait inheritance (65% Mendelian rate) & rare mutations
+- Emergent civil plot ticking, progression, and hatching
+- Divine interventions & cataclysms (`DivineInspiration`, `CurseOfDoubt`, `Earthquake`, `GoldenAgePeace`)
 
 ---
 
@@ -264,47 +308,57 @@ Executes 9 unit & integration tests covering AST gas metering, Darwin-Gödel mut
 
 ```
 cogniverse-rpg/
-├── Cargo.toml                    # Project dependencies (Tokio, Axum, Rayon, Serde, Rand)
-├── README.md                     # Comprehensive documentation & setup instructions
-├── screenshots/
-│   ├── worldbox_god_console.png  # Live WorldBox God Console screenshot
-│   └── god_console_overview.png  # Legacy overview screenshot
+├── .agents/
+│   └── skills/
+│       └── reverse-engineer-anything/ # Local REA reverse engineering agent skills
+├── Cargo.toml                         # Project dependencies (Tokio, Axum, Rayon, Serde, Rand)
+├── README.md                          # Comprehensive documentation & setup instructions
+├── screenshots/                       # High-resolution simulation screenshots
+│   ├── worldbox_buildings_and_ores.png
+│   ├── codex_live_activities.png
+│   ├── codex_cultural_tech_tree.png
+│   ├── codex_mountain_ores_lore.png
+│   ├── worldbox_roaming_population_boom.png
+│   ├── worldbox_60fps_population_growth.png
+│   ├── worldbox_128x128_grand_view.png
+│   └── worldbox_character_sheet.png
 ├── src/
-│   ├── lib.rs                    # Exported library root for modular architecture & tests
-│   ├── main.rs                   # System entrypoint, CLI runner, background simulation ticker
-│   ├── world/                    # Environment & Living Nature
-│   │   ├── mod.rs                # 64x64 spatial grid coordinator and tick dispatcher
-│   │   ├── tile.rs               # Biomes, elevation, moisture, temperatures, placed structures
-│   │   ├── items.rs              # Item catalog, crafting recipe matrix, inventory system
-│   │   ├── ecology.rs            # Gaia Engine: Thermodynamic solar cycle, flora logistic growth
-│   │   ├── fauna.rs              # Adaptive wildlife AI (Predator/prey carrying capacity)
-│   │   └── altar.rs              # Solar/Lunar Altars, sacrificial deposits, sincerity scoring
-│   ├── brain/                    # Cognitive Engine
-│   │   ├── mod.rs                # Cognitive pipeline coordinator
-│   │   ├── ast.rs                # Fuel-metered Darwin-Gödel AST virtual machine
-│   │   ├── neuromod.rs           # Kenji Doya Dopamine, Serotonin, Noradrenaline dynamics
-│   │   ├── memory.rs             # Working, Episodic, Associative memory & Akashic Core
-│   │   ├── reflection.rs         # Semantic reflection & Knowledge Graph synthesis
-│   │   ├── world_model.rs        # Predictive state transitions ("Dreamer" RSSM)
-│   │   ├── desire.rs             # Radical free-will motivation archetypes & inner monologue
-│   │   ├── reproduction.rs       # Courtship, attraction compatibility & AST crossover
-│   │   ├── magic.rs              # Arcane Code Weaving (Magic as compiled AST runes)
-│   │   └── justice.rs            # Reputation tracking, taboos & costly third-party punishment
-│   ├── factions/                 # Competing Races & Dual Pantheons
-│   │   ├── mod.rs                # Civilization coordinator & diplomatic status
-│   │   └── rival_god.rs          # "The Shadow Weaver" autonomous Rival AI Deity
-│   └── server/                   # Pantheon God Console
-│       ├── mod.rs                # Axum HTTP server & WebSocket real-time broadcaster
-│       ├── state.rs              # Thread-safe simulation state (SimulationEngine)
-│       ├── covenants.rs          # Divine quest creator, tracking & reward distribution
-│       ├── god_powers.rs         # Divine interventions (Whisper, Miracle, Smite, Babel)
-│       └── protocol.rs           # Real-time JSON telemetry packets & terraform protocol
-├── static/                       # Embedded WorldBox God Panel Web Frontend
-│   ├── index.html                # God dashboard, canvas map, agent inspector UI
-│   ├── style.css                 # Sleek dark-mode glassmorphic styling & WorldBox God bar
-│   └── app.js                    # High-performance 60fps canvas renderer & WS client
+│   ├── lib.rs                         # Exported library root for modular architecture & tests
+│   ├── main.rs                        # System entrypoint, CLI runner, background simulation ticker
+│   ├── world/                         # Environment & Living Nature
+│   │   ├── mod.rs                     # 128x128 spatial grid coordinator and tick dispatcher
+│   │   ├── tile.rs                    # Biomes, structures (TownHall, Barracks, StoneCabin, etc.)
+│   │   ├── items.rs                   # Item catalog, crafting recipe matrix, inventory system
+│   │   ├── ecology.rs                 # Gaia Engine: Thermodynamic solar cycle, flora logistic growth
+│   │   ├── fauna.rs                   # Adaptive wildlife AI (Predator/prey carrying capacity)
+│   │   └── altar.rs                   # Solar/Lunar Altars, sacrificial deposits, sincerity scoring
+│   ├── brain/                         # Cognitive Engine
+│   │   ├── mod.rs                     # Cognitive pipeline coordinator
+│   │   ├── ast.rs                     # Fuel-metered Darwin-Gödel AST virtual machine
+│   │   ├── neuromod.rs                # Kenji Doya Dopamine, Serotonin, Noradrenaline dynamics
+│   │   ├── memory.rs                  # Working, Episodic, Associative memory & Akashic Core
+│   │   ├── reflection.rs              # Semantic reflection & Knowledge Graph synthesis
+│   │   ├── world_model.rs             # Predictive state transitions ("Dreamer" RSSM)
+│   │   ├── desire.rs                  # Radical free-will motivation archetypes & inner monologue
+│   │   ├── reproduction.rs            # Courtship, attraction, Mendelian trait inheritance & mutation
+│   │   ├── magic.rs                   # Arcane Code Weaving (Magic as compiled AST runes)
+│   │   └── justice.rs                 # Reputation tracking, taboos & costly third-party punishment
+│   ├── factions/                      # Competing Races & Dual Pantheons
+│   │   ├── mod.rs                     # Civilization coordinator, treasuries & diplomatic status
+│   │   ├── plots.rs                   # Civil plots (Rebellions, Holy Wars, Commercial Alliances)
+│   │   └── rival_god.rs               # "The Shadow Weaver" autonomous Rival AI Deity
+│   └── server/                        # Pantheon God Console
+│       ├── mod.rs                     # Axum HTTP server & WebSocket real-time broadcaster
+│       ├── state.rs                   # Thread-safe simulation state (SimulationEngine)
+│       ├── covenants.rs               # Divine quest creator, tracking & reward distribution
+│       ├── god_powers.rs              # Divine interventions (Whisper, Inspiration, Curse, Earthquake, Peace)
+│       └── protocol.rs                # Real-time JSON telemetry packets & terraform protocol
+├── static/                            # Embedded WorldBox God Panel Web Frontend
+│   ├── index.html                     # God dashboard, canvas map, plots codex modal, character inspector
+│   ├── style.css                      # Sleek dark-mode glassmorphic styling, plots cards, progress bars
+│   └── app.js                         # High-performance 60fps canvas renderer, pixel-art structures, WS client
 └── tests/
-    └── simulation_tests.rs       # Complete unit & integration test suite
+    └── simulation_tests.rs            # 12-case comprehensive unit & integration test suite
 ```
 
 ---
@@ -319,11 +373,20 @@ cogniverse-rpg/
    * **STEP**: Advances the simulation by exactly 1 tick for behavioral debugging.
 2. **Divine Interventions & Cataclysms**:
    * **Divine Whisper**: Telepathically inject high-salience thoughts into any chosen agent or all living souls.
+   * **Divine Inspiration**: Flood an agent with dopamine ($+0.35$) and award civilizational Knowledge Points.
+   * **Curse of Doubt**: Infuse paranoia and distrust, spiking noradrenaline and dampening piety.
+   * **Cataclysmic Earthquake**: Strike target coordinates with a seismic rupture, shattering structures within 3 tiles.
+   * **Golden Age of Peace**: Divine amnesty declaring universal peace, settling active civil plots and replenishing treasuries.
    * **Manna Drop**: Spawns emergency berry and grain stockpiles at target coordinates.
    * **Wrathful Smite**: Calls down a lightning bolt to punish wrongdoers.
    * **Tower of Babel**: Scrambles emergent dialect trees to test linguistic re-adaptation.
    * **Genesis Spark**: Forces an immediate mutation epoch across all agents with elevated plasticity.
-3. **Divine Covenant & Quest Forge**:
+3. **Architecture Placement Tools**:
+   * **Town Hall**: Deploy administrative civic centers housing up to 8 citizens.
+   * **Barracks**: Deploy military garrison forts housing up to 6 warriors.
+   * **Stone Cabin & Cottage**: Erect peasant and noble residences.
+   * **Watchtower & Granary**: Establish border fortifications and survival silos.
+4. **Divine Covenant & Quest Forge**:
    * Issue commandments (deliver offerings, stockpile grain, forge iron tools, inscribe runes).
    * Set promised rewards (Rain of Manna, Fertility blessing, Promethean inspiration).
    * Observe whether NPCs zealously obey or heretically rebel!

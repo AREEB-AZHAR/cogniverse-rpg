@@ -8,6 +8,10 @@ pub enum DivineInterventionKind {
     SmiteLightning { x: usize, y: usize },
     TowerOfBabel,
     GenesisEvolutionSpark,
+    DivineInspiration { x: usize, y: usize },
+    CurseOfDoubt { x: usize, y: usize },
+    CataclysmEarthquake { x: usize, y: usize },
+    GoldenAgePeace,
 }
 
 impl DivineInterventionKind {
@@ -19,6 +23,10 @@ impl DivineInterventionKind {
             DivineInterventionKind::SmiteLightning { .. } => "Wrathful Lightning Smite",
             DivineInterventionKind::TowerOfBabel => "Tower of Babel (Linguistic Perturbation)",
             DivineInterventionKind::GenesisEvolutionSpark => "Genesis Evolution Spark",
+            DivineInterventionKind::DivineInspiration { .. } => "Divine Inspiration (Ast & Knowledge Boon)",
+            DivineInterventionKind::CurseOfDoubt { .. } => "Curse of Doubt (Crisis of Faith)",
+            DivineInterventionKind::CataclysmEarthquake { .. } => "Cataclysmic Earthquake (Tectonic Fault)",
+            DivineInterventionKind::GoldenAgePeace => "Golden Age Peace Decree",
         }
     }
 }

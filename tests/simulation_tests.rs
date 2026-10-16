@@ -527,6 +527,34 @@ fn test_world_reset_and_map_change() {
     assert!(telemetry2.full_map_sync.is_none(), "Subsequent telemetry must not resend full map sync");
 }
 
+#[test]
+fn test_export_and_import_run_state() {
+    let mut engine = SimulationEngine::new();
+
+    // Advance simulation to accumulate achievements, memories, and learning
+    for _ in 0..20 {
+        engine.tick();
+    }
+
+    // Export run snapshot to JSON
+    let exported_json = engine.export_run_snapshot_json();
+    assert!(!exported_json.is_empty(), "Exported snapshot JSON must not be empty");
+    assert!(exported_json.contains("World of Genesis"), "Exported JSON must contain world title or map info");
+    assert!(exported_json.contains("milestones"), "Exported JSON must contain learning milestones");
+    assert!(exported_json.contains("civilizations"), "Exported JSON must contain civilizations");
+
+    // Modify engine state (e.g. reset world)
+    engine.reset_world();
+    assert_eq!(engine.world.gaia.world_tick, 0, "Reset engine should start at tick 0");
+
+    // Import exported snapshot back
+    let import_res = engine.import_run_snapshot_json(&exported_json);
+    assert!(import_res.is_ok(), "Importing valid snapshot JSON must succeed");
+    assert_eq!(engine.world.gaia.world_tick, 20, "Imported state must restore tick count 20");
+    assert_eq!(engine.agents.len(), 16, "Imported state must restore agents");
+}
+
+
 
 
 

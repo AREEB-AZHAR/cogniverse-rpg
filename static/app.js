@@ -82,10 +82,11 @@ function paintTileToBuffer(bCtx, x, y, biome) {
   const isCoast = biome === 'SandyCoast';
 
   if (biome === 'DeepOcean') {
-    bCtx.fillStyle = '#08203e';
+    const oceanTheme = getThemeOceanColors();
+    bCtx.fillStyle = oceanTheme.deep;
     bCtx.fillRect(px, py, tilePx, tilePx);
     if ((x + y) % 6 === 0) {
-      bCtx.fillStyle = '#0f3869';
+      bCtx.fillStyle = oceanTheme.ripple;
       bCtx.fillRect(px + 2, py + 3, 4, 1);
     }
   } else if (isWater) {
@@ -370,6 +371,9 @@ function connectWebSocket() {
     try {
       const data = JSON.parse(event.data);
       currentTelemetry = data;
+      if (data.exported_snapshot) {
+        handleReceivedExportSnapshot(data.exported_snapshot);
+      }
       renderTelemetry(data);
     } catch (e) {
       console.error('Error parsing telemetry:', e);
@@ -997,8 +1001,9 @@ function drawWorldMap(data) {
     buildTerrainBuffer();
   }
 
+  const oceanTheme = getThemeOceanColors();
   ctx.save();
-  ctx.fillStyle = '#061c33';
+  ctx.fillStyle = oceanTheme.backdrop;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Apply Camera Translation & Zoom
@@ -1010,11 +1015,11 @@ function drawWorldMap(data) {
 
   // 0. Boundless WorldBox Deep Abyss Ocean Backdrop
   const oceanMargin = 40 * tilePx;
-  ctx.fillStyle = '#061c33'; // Deep abyssal ocean
+  ctx.fillStyle = oceanTheme.deep; // Deep abyssal ocean
   ctx.fillRect(-oceanMargin, -oceanMargin, WORLD_SIZE * tilePx + oceanMargin * 2, WORLD_SIZE * tilePx + oceanMargin * 2);
 
   // Animated ocean wave lines outside continent
-  ctx.fillStyle = 'rgba(16, 82, 142, 0.28)';
+  ctx.fillStyle = oceanTheme.wave;
   for (let oy = -36; oy < WORLD_SIZE + 36; oy += 6) {
     const waveOffset = Math.sin(time * 0.0018 + oy * 0.35) * 6;
     ctx.fillRect(-oceanMargin, oy * tilePx + waveOffset, WORLD_SIZE * tilePx + oceanMargin * 2, 2);
@@ -1426,7 +1431,7 @@ function drawWorldMap(data) {
         else if (act.includes('rest')) emote = '💤';
 
         // Draw small round bubble
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillStyle = 'rgba(20, 22, 28, 0.92)';
         ctx.beginPath();
         ctx.arc(px + 8, py + bounce - 8, 6, 0, Math.PI * 2);
         ctx.fill();
@@ -2180,9 +2185,19 @@ function confirmGenerateNewMap() {
 }
 
 // ----------------------------------------------------------------------------
-// CONTINUOUS 60 FPS GAME & RENDER LOOP
+// CONTINUOUS GAME & RENDER LOOP WITH GPU TIER SCALING
 // ----------------------------------------------------------------------------
-function gameLoop() {
+let lastFrameTime = 0;
+function gameLoop(timestamp) {
+  if (gpuTier === 'low') {
+    // Low / Battery Saver: cap at 30 FPS
+    if (timestamp - lastFrameTime < 33.3) {
+      requestAnimationFrame(gameLoop);
+      return;
+    }
+  }
+  lastFrameTime = timestamp;
+
   if (currentTelemetry) {
     drawWorldMap(currentTelemetry);
   }
@@ -2190,12 +2205,903 @@ function gameLoop() {
 }
 
 // ----------------------------------------------------------------------------
+// THEME & OCEAN PALETTE CONTROLLER (NON-DARK-BLUE AESTHETIC)
+// ----------------------------------------------------------------------------
+let activeTheme = localStorage.getItem('cogniverse_theme') || 'theme-obsidian';
+
+function getThemeOceanColors() {
+  if (activeTheme === 'theme-amber') {
+    return {
+      deep: '#171310',
+      ripple: '#272019',
+      backdrop: '#0e0b09',
+      wave: 'rgba(217, 119, 6, 0.12)'
+    };
+  } else if (activeTheme === 'theme-emerald') {
+    return {
+      deep: '#0b1411',
+      ripple: '#14241e',
+      backdrop: '#060b09',
+      wave: 'rgba(16, 185, 129, 0.12)'
+    };
+  } else if (activeTheme === 'theme-crimson') {
+    return {
+      deep: '#160e11',
+      ripple: '#27161c',
+      backdrop: '#0c0709',
+      wave: 'rgba(244, 63, 94, 0.12)'
+    };
+  }
+  // Default: theme-obsidian
+  return {
+    deep: '#111317',
+    ripple: '#1e2129',
+    backdrop: '#0a0b0d',
+    wave: 'rgba(245, 158, 11, 0.10)'
+  };
+}
+
+function setTheme(theme) {
+  activeTheme = theme;
+  document.body.className = `worldbox-game ${theme}`;
+  localStorage.setItem('cogniverse_theme', theme);
+
+  const select = document.getElementById('theme-select');
+  if (select) select.value = theme;
+
+  const hubLabel = document.getElementById('hub-current-theme-label');
+  if (hubLabel) {
+    const names = {
+      'theme-obsidian': 'Obsidian Gold',
+      'theme-amber': 'Alchemical Amber',
+      'theme-emerald': 'Emerald Sanctum',
+      'theme-crimson': 'Crimson Basalt'
+    };
+    hubLabel.textContent = names[theme] || theme;
+  }
+
+  // Re-render terrain offscreen buffer with new theme palette
+  buildTerrainBuffer();
+  showToast(`🎨 Theme switched to: ${theme.replace('theme-', '').toUpperCase()}`);
+}
+
+function cycleThemeFromHub() {
+  const themes = ['theme-obsidian', 'theme-amber', 'theme-emerald', 'theme-crimson'];
+  const nextIdx = (themes.indexOf(activeTheme) + 1) % themes.length;
+  setTheme(themes[nextIdx]);
+}
+
+// ----------------------------------------------------------------------------
+// GPU POWER & COMPUTATIONAL TIER CONTROLLER
+// ----------------------------------------------------------------------------
+let gpuTier = localStorage.getItem('cogniverse_gpu_tier') || 'medium';
+
+function setGpuTier(tier) {
+  gpuTier = tier;
+  localStorage.setItem('cogniverse_gpu_tier', tier);
+
+  const select = document.getElementById('gpu-tier-select');
+  if (select) select.value = tier;
+
+  const hubLabel = document.getElementById('hub-current-gpu-label');
+  if (hubLabel) {
+    const labels = {
+      'ultra': 'Ultra (Bloom & Shaders)',
+      'medium': 'Medium (Smooth 60 FPS)',
+      'low': 'Low (Battery Saver)'
+    };
+    hubLabel.textContent = labels[tier] || tier;
+  }
+
+  showToast(`⚡ GPU Tier: ${tier.toUpperCase()}`);
+}
+
+function cycleGpuTierFromHub() {
+  const tiers = ['ultra', 'medium', 'low'];
+  const nextIdx = (tiers.indexOf(gpuTier) + 1) % tiers.length;
+  setGpuTier(tiers[nextIdx]);
+}
+
+// ----------------------------------------------------------------------------
+// JSON EXPORT & IMPORT RUN STATE ENGINE
+// ----------------------------------------------------------------------------
+function triggerExportState() {
+  playSound('click');
+  showToast('💾 Exporting world run state, AST brains & achievements to JSON...');
+  sendMsg({ type: 'ExportState' });
+}
+
+function handleReceivedExportSnapshot(snapshotJson) {
+  try {
+    const parsed = typeof snapshotJson === 'string' ? JSON.parse(snapshotJson) : snapshotJson;
+    const jsonStr = typeof snapshotJson === 'string' ? snapshotJson : JSON.stringify(snapshotJson, null, 2);
+
+    // 1. Auto-download JSON file
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeMapName = (parsed.metadata?.map_name || 'world').replace(/[^a-zA-Z0-9]/g, '_');
+    const tick = parsed.metadata?.tick_count ?? 0;
+    a.href = url;
+    a.download = `cogniverse_run_${safeMapName}_tick${tick}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // 2. Save snapshot to LocalStorage archive for Start Panel and Cross-World Stats
+    saveSnapshotToArchive(parsed);
+
+    showToast('💾 World state exported! File downloaded & chronicle archived.');
+  } catch (err) {
+    console.error('Error handling exported snapshot:', err);
+    showToast('❌ Export error: failed to process snapshot JSON');
+  }
+}
+
+function triggerImportPrompt() {
+  playSound('click');
+  const input = document.getElementById('file-import-input');
+  if (input) input.click();
+}
+
+function onFileImportSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const content = e.target.result;
+      const parsed = JSON.parse(content);
+
+      if (!parsed.metadata || !parsed.agents) {
+        throw new Error('Invalid Cogniverse snapshot format');
+      }
+
+      // Send to server engine
+      sendMsg({
+        type: 'ImportState',
+        snapshot_json: content
+      });
+
+      // Save in local archive
+      saveSnapshotToArchive(parsed);
+
+      showToast(`📂 Imported world '${parsed.metadata.map_name || 'Realm'}' successfully!`);
+      closeStartModal();
+    } catch (err) {
+      console.error('Snapshot import error:', err);
+      alert(`Failed to import JSON chronicle: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function getSavedRunsArchive() {
+  try {
+    const stored = localStorage.getItem('cogniverse_saved_runs');
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveSnapshotToArchive(snapshot) {
+  try {
+    const archive = getSavedRunsArchive();
+    const id = `${snapshot.metadata?.map_id || 1}_${snapshot.metadata?.tick_count || 0}_${Date.now()}`;
+    const entry = {
+      id,
+      title: snapshot.metadata?.map_name || 'World Realm',
+      archetype: snapshot.metadata?.map_archetype || 'GrandArchipelago',
+      seed: snapshot.metadata?.map_seed || 42,
+      tick: snapshot.metadata?.tick_count || 0,
+      year: Math.floor((snapshot.metadata?.tick_count || 0) / 1000) + 1,
+      population: snapshot.agents?.length || 0,
+      terran_kp: snapshot.civilizations?.terran_culture?.knowledge_points || 0,
+      lunar_kp: snapshot.civilizations?.lunar_culture?.knowledge_points || 0,
+      tech_count: (snapshot.civilizations?.terran_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0) +
+                  (snapshot.civilizations?.lunar_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0),
+      timestamp: new Date().toLocaleDateString(),
+      rawSnapshot: snapshot
+    };
+
+    // Keep up to 10 snapshots, avoiding duplicates of same map & tick
+    const filtered = archive.filter(a => !(a.title === entry.title && a.tick === entry.tick));
+    filtered.unshift(entry);
+    if (filtered.length > 10) filtered.pop();
+
+    localStorage.setItem('cogniverse_saved_runs', JSON.stringify(filtered));
+    renderSavedRunsList();
+    renderStatsTable();
+  } catch (e) {
+    console.error('Failed to save snapshot to archive:', e);
+  }
+}
+
+function loadArchivedRun(id) {
+  const archive = getSavedRunsArchive();
+  const run = archive.find(r => r.id === id);
+  if (!run || !run.rawSnapshot) return;
+
+  if (confirm(`Load saved chronicle '${run.title}' (Year ${run.year})? This will replace the active realm.`)) {
+    sendMsg({
+      type: 'ImportState',
+      snapshot_json: JSON.stringify(run.rawSnapshot)
+    });
+    showToast(`📂 Restored realm: ${run.title}`);
+    closeStartModal();
+  }
+}
+
+function deleteArchivedRun(id, event) {
+  if (event) event.stopPropagation();
+  const archive = getSavedRunsArchive();
+  const filtered = archive.filter(r => r.id !== id);
+  localStorage.setItem('cogniverse_saved_runs', JSON.stringify(filtered));
+  renderSavedRunsList();
+  renderStatsTable();
+  showToast('Removed chronicle from archive');
+}
+
+// ----------------------------------------------------------------------------
+// GAME START PANEL CONTROLLER
+// ----------------------------------------------------------------------------
+function toggleStartModal() {
+  playSound('click');
+  const modal = document.getElementById('modal-game-start');
+  if (!modal) return;
+  modal.classList.toggle('hidden');
+  if (!modal.classList.contains('hidden')) {
+    updateStartModalSummary();
+    renderSavedRunsList();
+  }
+}
+
+function closeStartModal() {
+  playSound('click');
+  const modal = document.getElementById('modal-game-start');
+  if (modal) modal.classList.add('hidden');
+}
+
+function continueActiveWorld() {
+  playSound('chime');
+  closeStartModal();
+  setSpeed(1); // unpause if paused
+  showToast('🚀 Resumed active realm evolution');
+}
+
+function openMapForgeFromStart() {
+  closeStartModal();
+  toggleWorldModal();
+}
+
+function openStatsFromStart() {
+  closeStartModal();
+  toggleStatsModal();
+}
+
+function updateStartModalSummary() {
+  const summaryEl = document.getElementById('start-active-summary');
+  if (!summaryEl || !currentTelemetry) return;
+
+  const tick = currentTelemetry.world_tick ?? 0;
+  const year = Math.floor(tick / 1000) + 1;
+  const pop = currentTelemetry.demographics?.total_population ?? 16;
+  const dip = currentTelemetry.diplomacy_status || 'Peaceful';
+  summaryEl.textContent = `Year ${year} | ${pop} Citizens | ${dip}`;
+}
+
+function renderSavedRunsList() {
+  const container = document.getElementById('saved-runs-list');
+  const countEl = document.getElementById('saved-runs-count');
+  if (!container) return;
+
+  const archive = getSavedRunsArchive();
+  if (countEl) countEl.textContent = `${archive.length} Archived Worlds`;
+
+  if (archive.length === 0) {
+    container.innerHTML = '<div class="empty-runs-state">No saved snapshots yet. Click <strong>Export World State</strong> or import a JSON file to build your multiversal archive!</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  for (const run of archive) {
+    const card = document.createElement('div');
+    card.className = 'saved-run-card';
+    card.innerHTML = `
+      <div class="run-card-info">
+        <span class="run-card-title">${run.title}</span>
+        <span class="run-card-meta">Year ${run.year} (Tick ${run.tick}) • ${run.population} Citizens • ${run.terran_kp + run.lunar_kp} KP • ${run.timestamp}</span>
+      </div>
+      <div class="run-card-actions">
+        <button class="btn-run-load" onclick="loadArchivedRun('${run.id}')">Load Run</button>
+        <button class="btn-run-del" onclick="deleteArchivedRun('${run.id}', event)">✖</button>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// MULTI-WORLD STATISTICS & ADVANCED CANVAS CHART ENGINE
+// ----------------------------------------------------------------------------
+let activeGraphStyle = 'timeline';
+let activeStatsMetric = 'knowledge';
+const activeWorldTimeSeries = []; // Samples recorded over years
+
+// Sample live metrics for cross-world learning curves
+setInterval(() => {
+  if (!currentTelemetry) return;
+  const tick = currentTelemetry.world_tick ?? 0;
+  const year = Math.floor(tick / 1000) + 1;
+  const terranKp = currentTelemetry.terran_culture?.knowledge_points || 0;
+  const lunarKp = currentTelemetry.lunar_culture?.knowledge_points || 0;
+  const totalKp = terranKp + lunarKp;
+
+  const unlockedTech = (currentTelemetry.terran_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0) +
+                       (currentTelemetry.lunar_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0);
+
+  let maxGen = 1;
+  let maxMutations = 0;
+  if (currentTelemetry.agents) {
+    for (const a of currentTelemetry.agents) {
+      if (a.generation > maxGen) maxGen = a.generation;
+      if (a.genome && a.genome.mutation_count > maxMutations) maxMutations = a.genome.mutation_count;
+    }
+  }
+
+  const discoveriesCount = (currentTelemetry.terran_culture?.discoveries?.length || 0) +
+                           (currentTelemetry.lunar_culture?.discoveries?.length || 0);
+
+  const sample = {
+    tick,
+    year,
+    kp: totalKp,
+    tech: unlockedTech,
+    gen: maxGen,
+    mutations: maxMutations,
+    discoveries: discoveriesCount,
+    pop: currentTelemetry.demographics?.total_population || 16
+  };
+
+  // Keep last 40 time samples
+  if (activeWorldTimeSeries.length === 0 || activeWorldTimeSeries[activeWorldTimeSeries.length - 1].tick !== tick) {
+    activeWorldTimeSeries.push(sample);
+    if (activeWorldTimeSeries.length > 40) activeWorldTimeSeries.shift();
+  }
+}, 4000);
+
+function toggleStatsModal() {
+  playSound('click');
+  const modal = document.getElementById('modal-learning-stats');
+  if (!modal) return;
+  modal.classList.toggle('hidden');
+  if (!modal.classList.contains('hidden')) {
+    updateStatsWorldCheckboxes();
+    updateStatsKpis();
+    renderStatsTable();
+    renderStatsCharts();
+  }
+}
+
+function closeStatsModal() {
+  playSound('click');
+  const modal = document.getElementById('modal-learning-stats');
+  if (modal) modal.classList.add('hidden');
+}
+
+function setGraphStyle(style) {
+  playSound('click');
+  activeGraphStyle = style;
+  document.querySelectorAll('#graph-style-group .stats-style-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-style') === style);
+  });
+  renderStatsCharts();
+}
+
+function onStatsMetricChange(val) {
+  activeStatsMetric = val;
+  renderStatsCharts();
+}
+
+function updateStatsWorldCheckboxes() {
+  const container = document.getElementById('stats-world-checkboxes');
+  if (!container) return;
+
+  const activeName = currentTelemetry?.map_name || 'Active Realm';
+  const activeLabel = document.getElementById('lbl-active-world-name');
+  if (activeLabel) activeLabel.textContent = activeName;
+
+  const archive = getSavedRunsArchive();
+  // Keep active world chk, add archived worlds
+  const archivedHtml = archive.slice(0, 2).map((run, idx) => `
+    <label class="stats-chk-label">
+      <input type="checkbox" id="chk-world-arch-${idx}" checked onchange="renderStatsCharts()" />
+      <span class="world-color-dot archived-${idx + 1}"></span>
+      <span>${run.title} (Yr ${run.year})</span>
+    </label>
+  `).join('');
+
+  container.innerHTML = `
+    <label class="stats-chk-label">
+      <input type="checkbox" id="chk-world-active" checked onchange="renderStatsCharts()" />
+      <span class="world-color-dot active-world"></span>
+      <span id="lbl-active-world-name">${activeName}</span>
+    </label>
+    ${archivedHtml}
+  `;
+}
+
+function updateStatsKpis() {
+  if (!currentTelemetry) return;
+  const terranDisc = currentTelemetry.terran_culture?.discoveries?.length || 0;
+  const lunarDisc = currentTelemetry.lunar_culture?.discoveries?.length || 0;
+  const totalDisc = terranDisc + lunarDisc;
+  document.getElementById('kpi-total-discoveries').textContent = totalDisc;
+
+  let maxGen = 1;
+  let maxMut = 0;
+  if (currentTelemetry.agents) {
+    for (const a of currentTelemetry.agents) {
+      if (a.generation > maxGen) maxGen = a.generation;
+      if (a.genome && a.genome.mutation_count > maxMut) maxMut = a.genome.mutation_count;
+    }
+  }
+  document.getElementById('kpi-max-gen').textContent = `Gen ${maxGen} (${maxMut} mut)`;
+
+  const unlockedTech = (currentTelemetry.terran_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0) +
+                       (currentTelemetry.lunar_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0);
+  document.getElementById('kpi-tech-mastered').textContent = `${unlockedTech} / 12`;
+
+  const tick = currentTelemetry.world_tick ?? 0;
+  const year = Math.floor(tick / 1000) + 1;
+  document.getElementById('kpi-years-lived').textContent = `Year ${year}`;
+}
+
+function renderStatsTable() {
+  const tbody = document.getElementById('stats-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  // 1. Row for Active Realm
+  const tick = currentTelemetry?.world_tick ?? 0;
+  const year = Math.floor(tick / 1000) + 1;
+  const activeKp = (currentTelemetry?.terran_culture?.knowledge_points || 0) + (currentTelemetry?.lunar_culture?.knowledge_points || 0);
+  const activeTech = (currentTelemetry?.terran_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0) +
+                     (currentTelemetry?.lunar_culture?.technologies?.filter(t => t.is_unlocked)?.length || 0);
+
+  const activeRow = document.createElement('tr');
+  activeRow.innerHTML = `
+    <td><strong style="color:var(--wb-gold-bright)">⭐ ${currentTelemetry?.map_name || 'Active Realm'}</strong></td>
+    <td>${currentTelemetry?.map_archetype || 'GrandArchipelago'} (Seed 42)</td>
+    <td>Year ${year} (${tick} ticks)</td>
+    <td>${currentTelemetry?.demographics?.total_population || 16}</td>
+    <td>${activeKp} KP</td>
+    <td>${activeTech} / 12</td>
+    <td>2 Consecrated</td>
+    <td><span style="color:#10b981">${currentTelemetry?.diplomacy_status || 'Peaceful'}</span></td>
+    <td><button class="btn-run-load" onclick="triggerExportState()">Export JSON</button></td>
+  `;
+  tbody.appendChild(activeRow);
+
+  // 2. Rows for Archived Saved Runs
+  const archive = getSavedRunsArchive();
+  for (const run of archive) {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>📜 ${run.title}</td>
+      <td>${run.archetype} (Seed ${run.seed})</td>
+      <td>Year ${run.year} (${run.tick} ticks)</td>
+      <td>${run.population}</td>
+      <td>${run.terran_kp + run.lunar_kp} KP</td>
+      <td>${run.tech_count} / 12</td>
+      <td>2 Altars</td>
+      <td>Peaceful</td>
+      <td><button class="btn-run-load" onclick="loadArchivedRun('${run.id}')">Load Run</button></td>
+    `;
+    tbody.appendChild(row);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// CANVAS CHART GRAPH RENDERING (TIMELINE, RADAR, BAR, DONUT)
+// ----------------------------------------------------------------------------
+function renderStatsCharts() {
+  const sCanvas = document.getElementById('stats-chart-canvas');
+  if (!sCanvas) return;
+  const sCtx = sCanvas.getContext('2d');
+  const w = sCanvas.width;
+  const h = sCanvas.height;
+
+  // Clear background
+  sCtx.fillStyle = '#14151b';
+  sCtx.fillRect(0, 0, w, h);
+
+  // Grid Lines
+  sCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  sCtx.lineWidth = 1;
+  for (let x = 40; x < w; x += 60) {
+    sCtx.beginPath();
+    sCtx.moveTo(x, 20);
+    sCtx.lineTo(x, h - 30);
+    sCtx.stroke();
+  }
+  for (let y = 30; y < h - 30; y += 45) {
+    sCtx.beginPath();
+    sCtx.moveTo(40, y);
+    sCtx.lineTo(w - 20, y);
+    sCtx.stroke();
+  }
+
+  if (activeGraphStyle === 'timeline') {
+    drawTimelineChart(sCtx, w, h);
+  } else if (activeGraphStyle === 'radar') {
+    drawRadarChart(sCtx, w, h);
+  } else if (activeGraphStyle === 'bars') {
+    drawBarChart(sCtx, w, h);
+  } else if (activeGraphStyle === 'donut') {
+    drawDonutChart(sCtx, w, h);
+  }
+}
+
+function drawTimelineChart(ctx, w, h) {
+  const padL = 60;
+  const padR = 30;
+  const padT = 30;
+  const padB = 40;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  // Ensure active points exist
+  const activePts = activeWorldTimeSeries.length > 0 ? activeWorldTimeSeries : [
+    { year: 1, kp: 10, tech: 1, gen: 1 },
+    { year: 2, kp: 35, tech: 2, gen: 2 },
+    { year: 3, kp: 80, tech: 4, gen: 3 },
+  ];
+
+  // Synthesize archived comparison series if saved
+  const archive = getSavedRunsArchive();
+  const arch1Pts = archive[0] ? [
+    { year: 1, kp: 15, tech: 1 },
+    { year: Math.max(2, Math.floor(archive[0].year * 0.5)), kp: Math.floor(archive[0].terran_kp * 0.5), tech: Math.floor(archive[0].tech_count * 0.5) },
+    { year: archive[0].year, kp: archive[0].terran_kp + archive[0].lunar_kp, tech: archive[0].tech_count }
+  ] : null;
+
+  // Extract metric values
+  const getVal = (pt) => {
+    if (activeStatsMetric === 'tech') return pt.tech || 0;
+    if (activeStatsMetric === 'generation') return pt.gen || 1;
+    if (activeStatsMetric === 'discoveries') return pt.discoveries || 0;
+    return pt.kp || 0; // default knowledge
+  };
+
+  let maxVal = 10;
+  for (const pt of activePts) {
+    const v = getVal(pt);
+    if (v > maxVal) maxVal = v;
+  }
+  if (arch1Pts) {
+    for (const pt of arch1Pts) {
+      const v = getVal(pt);
+      if (v > maxVal) maxVal = v;
+    }
+  }
+  maxVal = Math.ceil(maxVal * 1.25);
+
+  // Y-axis labels
+  ctx.fillStyle = '#71717a';
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round((maxVal / 4) * i);
+    const y = padT + plotH - (plotH / 4) * i;
+    ctx.fillText(val.toString(), padL - 8, y + 3);
+  }
+
+  // Draw Series 1: Active World
+  const chkActive = document.getElementById('chk-world-active');
+  if (!chkActive || chkActive.checked) {
+    const pts = activePts.map((pt, i) => {
+      const x = padL + (i / Math.max(1, activePts.length - 1)) * plotW;
+      const y = padT + plotH - (getVal(pt) / maxVal) * plotH;
+      return { x, y, pt };
+    });
+
+    // Area Fill
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+    ctx.beginPath();
+    ctx.moveTo(padL, padT + plotH);
+    for (const p of pts) ctx.lineTo(p.x, p.y);
+    ctx.lineTo(pts[pts.length - 1].x, padT + plotH);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glowing Curve Line
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(245, 158, 11, 0.6)';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      if (i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+      else ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Glowing Vertices
+    for (const p of pts) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Draw Series 2: Archived World
+  const chkArch1 = document.getElementById('chk-world-arch-0');
+  if (arch1Pts && chkArch1 && chkArch1.checked) {
+    const pts = arch1Pts.map((pt, i) => {
+      const x = padL + (i / Math.max(1, arch1Pts.length - 1)) * plotW;
+      const y = padT + plotH - (getVal(pt) / maxVal) * plotH;
+      return { x, y, pt };
+    });
+
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      if (i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+      else ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    for (const p of pts) {
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // X-axis label
+  ctx.fillStyle = '#a1a1aa';
+  ctx.font = '11px Outfit, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Evolutionary Spacetime (Progression over Elapsed Years)', padL + plotW / 2, h - 10);
+}
+
+function drawRadarChart(ctx, w, h) {
+  const cx = w / 2;
+  const cy = h / 2 + 10;
+  const radius = Math.min(w, h) * 0.36;
+
+  const axes = [
+    '🌾 Agronomy',
+    '⛏️ Metallurgy',
+    '🛠️ Tool Crafting',
+    '🏛️ Architecture',
+    '🛐 Theology/Piety',
+    '🗺️ Exploration'
+  ];
+  const numAxes = axes.length;
+
+  // Background concentric polygons
+  for (let level = 1; level <= 4; level++) {
+    const r = (radius / 4) * level;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < numAxes; i++) {
+      const angle = (Math.PI * 2 / numAxes) * i - Math.PI / 2;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // Draw Spokes & Axis Labels
+  ctx.fillStyle = '#e4e4e7';
+  ctx.font = '11px Outfit, sans-serif';
+  for (let i = 0; i < numAxes; i++) {
+    const angle = (Math.PI * 2 / numAxes) * i - Math.PI / 2;
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    // Label offset
+    const lx = cx + Math.cos(angle) * (radius + 22);
+    const ly = cy + Math.sin(angle) * (radius + 18);
+    ctx.textAlign = 'center';
+    ctx.fillText(axes[i], lx, ly);
+  }
+
+  // Compute active world competencies (0.0 to 1.0)
+  const terranKp = currentTelemetry?.terran_culture?.knowledge_points || 20;
+  const lunarKp = currentTelemetry?.lunar_culture?.knowledge_points || 20;
+  const techCount = (currentTelemetry?.terran_culture?.technologies?.filter(t => t.is_unlocked)?.length || 1);
+
+  const activeVals = [
+    Math.min(1.0, 0.4 + (terranKp % 50) / 100),       // Agronomy
+    Math.min(1.0, 0.3 + (techCount * 0.12)),          // Metallurgy
+    Math.min(1.0, 0.45 + (techCount * 0.1)),          // Tool Crafting
+    Math.min(1.0, 0.35 + (currentTelemetry?.villages || 4) * 0.08), // Architecture
+    Math.min(1.0, 0.5 + (lunarKp % 40) / 80),         // Theology
+    Math.min(1.0, 0.55 + (currentTelemetry?.demographics?.total_population || 16) * 0.02) // Exploration
+  ];
+
+  // Draw Active World Polygon
+  ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let i = 0; i < numAxes; i++) {
+    const angle = (Math.PI * 2 / numAxes) * i - Math.PI / 2;
+    const r = radius * activeVals[i];
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Draw Archived Comparison Polygon if available
+  const archive = getSavedRunsArchive();
+  if (archive.length > 0) {
+    const archVals = [0.75, 0.65, 0.70, 0.60, 0.80, 0.65];
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.18)';
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < numAxes; i++) {
+      const angle = (Math.PI * 2 / numAxes) * i - Math.PI / 2;
+      const r = radius * archVals[i];
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+function drawBarChart(ctx, w, h) {
+  const padL = 70;
+  const padR = 40;
+  const padT = 40;
+  const padB = 40;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  const categories = [
+    'Knowledge (KP / 10)',
+    'Technologies Unlocked',
+    'Max Generation (AST)',
+    'Lifespan (Years)',
+    'Altar Offerings'
+  ];
+
+  const activeKp = (currentTelemetry?.terran_culture?.knowledge_points || 20) + (currentTelemetry?.lunar_culture?.knowledge_points || 20);
+  const activeTech = (currentTelemetry?.terran_culture?.technologies?.filter(t => t.is_unlocked)?.length || 2);
+  const activeYear = Math.floor((currentTelemetry?.world_tick || 0) / 1000) + 1;
+
+  const activeData = [activeKp / 10, activeTech, 2, activeYear, 6];
+  const archData = [12, 5, 3, 4, 15]; // sample archived world baseline
+
+  const numGroups = categories.length;
+  const groupWidth = plotW / numGroups;
+  const barWidth = groupWidth * 0.32;
+  const maxVal = 20;
+
+  for (let i = 0; i < numGroups; i++) {
+    const groupX = padL + i * groupWidth;
+
+    // Active Bar (Gold)
+    const h1 = (activeData[i] / maxVal) * plotH;
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(groupX + groupWidth * 0.15, padT + plotH - h1, barWidth, h1);
+
+    // Archived Bar (Emerald)
+    const h2 = (archData[i] / maxVal) * plotH;
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(groupX + groupWidth * 0.15 + barWidth + 4, padT + plotH - h2, barWidth, h2);
+
+    // Label
+    ctx.fillStyle = '#a1a1aa';
+    ctx.font = '10px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(categories[i], groupX + groupWidth * 0.5, h - 14);
+  }
+
+  // Legend
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(w - 180, 15, 10, 10);
+  ctx.fillStyle = '#f5f5f7';
+  ctx.font = '11px Outfit, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Active Realm', w - 165, 24);
+
+  ctx.fillStyle = '#10b981';
+  ctx.fillRect(w - 90, 15, 10, 10);
+  ctx.fillStyle = '#f5f5f7';
+  ctx.fillText('Archived Run', w - 75, 24);
+}
+
+function drawDonutChart(ctx, w, h) {
+  const cx = w / 2;
+  const cy = h / 2 + 10;
+  const outerR = Math.min(w, h) * 0.36;
+  const innerR = outerR * 0.55;
+
+  const slices = [
+    { label: 'Agronomy (Food)', val: 30, color: '#f59e0b' },
+    { label: 'Metallurgy (Tools)', val: 25, color: '#10b981' },
+    { label: 'Arcane Theology', val: 20, color: '#c084fc' },
+    { label: 'Architecture', val: 15, color: '#38bdf8' },
+    { label: 'Social & Diplomacy', val: 10, color: '#f43f5e' }
+  ];
+
+  const total = slices.reduce((acc, s) => acc + s.val, 0);
+  let startAngle = -Math.PI / 2;
+
+  for (const s of slices) {
+    const sliceAngle = (s.val / total) * Math.PI * 2;
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, startAngle, startAngle + sliceAngle);
+    ctx.arc(cx, cy, innerR, startAngle + sliceAngle, startAngle, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // Outer label
+    const midAngle = startAngle + sliceAngle / 2;
+    const lx = cx + Math.cos(midAngle) * (outerR + 24);
+    const ly = cy + Math.sin(midAngle) * (outerR + 24);
+    ctx.fillStyle = s.color;
+    ctx.font = '11px Outfit, sans-serif';
+    ctx.textAlign = Math.cos(midAngle) > 0 ? 'left' : 'right';
+    ctx.fillText(`${s.label} (${s.val}%)`, lx, ly);
+
+    startAngle += sliceAngle;
+  }
+
+  // Inner hole text
+  ctx.fillStyle = '#f5f5f7';
+  ctx.font = '800 13px MedievalSharp, cursive';
+  ctx.textAlign = 'center';
+  ctx.fillText('COGNITIVE', cx, cy - 6);
+  ctx.font = '11px Outfit, sans-serif';
+  ctx.fillStyle = '#a1a1aa';
+  ctx.fillText('DOMAINS', cx, cy + 12);
+}
+
+// ----------------------------------------------------------------------------
 // INITIALIZATION
 // ----------------------------------------------------------------------------
 window.addEventListener('load', () => {
   resizeCanvas();
+  setTheme(activeTheme);
+  setGpuTier(gpuTier);
   buildTerrainBuffer();
   centerCamera();
   connectWebSocket();
   requestAnimationFrame(gameLoop);
 });
+

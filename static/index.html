@@ -96,8 +96,24 @@
 
     <!-- Top Right Quick Camera Tools -->
     <div class="hud-right">
+      <button id="btn-start-panel" class="btn-hud-action hub-btn" onclick="toggleStartModal()" title="Game Start Hub & Run Archive">🚀 Game Hub</button>
+      <button id="btn-stats-panel" class="btn-hud-action stats-btn" onclick="toggleStatsModal()" title="Multi-World Learning & Evolution Analytics">📊 Statistics</button>
+      <button id="btn-export-quick" class="btn-hud-action export-btn" onclick="triggerExportState()" title="Export All Knowledge, Brains & Achievements to JSON">💾 Export</button>
+      <button id="btn-import-quick" class="btn-hud-action import-btn" onclick="triggerImportPrompt()" title="Import Saved Chronicle JSON">📂 Import</button>
+      <select id="gpu-tier-select" class="hud-select" onchange="setGpuTier(this.value)" title="GPU Computational Power Tier">
+        <option value="ultra">⚡ GPU: Ultra (Bloom & Shaders)</option>
+        <option value="medium" selected>⚡ GPU: Medium (Smooth)</option>
+        <option value="low">⚡ GPU: Low (Battery Saver)</option>
+      </select>
+      <select id="theme-select" class="hud-select" onchange="setTheme(this.value)" title="Color Aesthetic Theme">
+        <option value="theme-obsidian" selected>🎨 Obsidian Gold</option>
+        <option value="theme-amber">🎨 Alchemical Amber</option>
+        <option value="theme-emerald">🎨 Emerald Sanctum</option>
+        <option value="theme-crimson">🎨 Crimson Basalt</option>
+      </select>
+      <input type="file" id="file-import-input" accept=".json" style="display:none" onchange="onFileImportSelected(event)" />
       <button id="btn-world-manage" class="btn-hud-action world-btn" onclick="toggleWorldModal()" title="World Archetypes, Map Forge & Reset">🌍 Worlds & Maps</button>
-      <button id="btn-codex" class="btn-hud-action codex-btn" onclick="toggleCodexModal()" title="Knowledge & Activities Codex">🧠 Codex & Activities</button>
+      <button id="btn-codex" class="btn-hud-action codex-btn" onclick="toggleCodexModal()" title="Knowledge & Activities Codex">🧠 Codex</button>
       <button class="btn-hud-action" onclick="zoomIn()" title="Zoom In (+)">🔍+</button>
       <button class="btn-hud-action" onclick="zoomOut()" title="Zoom Out (-)">🔍-</button>
       <button class="btn-hud-action" onclick="resetCamera()" title="Reset Camera View">🎯</button>
@@ -818,6 +834,231 @@
           <small>Procedurally generate selected archetype</small>
         </div>
       </button>
+    </div>
+  </aside>
+
+  <!-- =========================================================
+       GAME START PANEL & WORLD HUB MODAL
+  ========================================================= -->
+  <aside id="modal-game-start" class="wb-modal-card hidden start-hub-window">
+    <div class="modal-header">
+      <div class="name-row">
+        <h2>🚀 COGNIVERSE REALM HUB</h2>
+        <span class="header-badge gold">Neural Evolution Engine</span>
+      </div>
+      <button class="btn-close-modal" onclick="closeStartModal()">✖</button>
+    </div>
+
+    <div class="start-hub-content">
+      <p class="start-hub-lead">Guide neural agents, shape continental biomes, and observe synthetic civilizations evolve across procedural epochs.</p>
+
+      <!-- Primary Action Cards -->
+      <div class="start-cards-grid">
+        <!-- Card 1: Continue World -->
+        <div class="start-action-card hero-continue" onclick="continueActiveWorld()">
+          <div class="card-icon">🚀</div>
+          <div class="card-body">
+            <h3>Continue Active Realm</h3>
+            <p>Resume the living world already in motion. Pioneers are actively gathering, mining, and philosophizing.</p>
+            <div class="card-status-pill">
+              <span class="status-dot green"></span>
+              <span id="start-active-summary">Year 1 | 16 Citizens | Peaceful</span>
+            </div>
+          </div>
+          <button class="btn-card-action">Continue Realm ➔</button>
+        </div>
+
+        <!-- Card 2: Forge New World -->
+        <div class="start-action-card hero-forge" onclick="openMapForgeFromStart()">
+          <div class="card-icon">🌍</div>
+          <div class="card-body">
+            <h3>Forge New World</h3>
+            <p>Select from 6 procedural archetypes (Archipelago, Pangaea, Ring Atoll, Twin Continents, etc.) with custom seeds.</p>
+            <div class="card-status-pill">
+              <span class="status-dot gold"></span>
+              <span>Procedural Fractal Map Engine</span>
+            </div>
+          </div>
+          <button class="btn-card-action">Open Map Forge ➔</button>
+        </div>
+
+        <!-- Card 3: Import Saved Chronicle -->
+        <div class="start-action-card hero-import" onclick="triggerImportPrompt()">
+          <div class="card-icon">📂</div>
+          <div class="card-body">
+            <h3>Import Chronicle (JSON)</h3>
+            <p>Load an exported world file. Instantly restore all agent brains, learned AST genomes, tech trees, and civilization history.</p>
+            <div class="card-status-pill">
+              <span class="status-dot blue"></span>
+              <span>Full-Fidelity Neural State</span>
+            </div>
+          </div>
+          <button class="btn-card-action">Select JSON File ➔</button>
+        </div>
+      </div>
+
+      <!-- Quick Tools Strip -->
+      <div class="start-tools-strip">
+        <div class="tool-tile" onclick="triggerExportState()">
+          <span class="tile-glyph">💾</span>
+          <div class="tile-info">
+            <strong>Export World State</strong>
+            <small>Save full run & achievements as JSON</small>
+          </div>
+        </div>
+        <div class="tool-tile" onclick="openStatsFromStart()">
+          <span class="tile-glyph">📊</span>
+          <div class="tile-info">
+            <strong>Learning Analytics</strong>
+            <small>Compare progress across different worlds</small>
+          </div>
+        </div>
+        <div class="tool-tile" onclick="cycleThemeFromHub()">
+          <span class="tile-glyph">🎨</span>
+          <div class="tile-info">
+            <strong>Aesthetic Theme</strong>
+            <small id="hub-current-theme-label">Obsidian & Amber Gold</small>
+          </div>
+        </div>
+        <div class="tool-tile" onclick="cycleGpuTierFromHub()">
+          <span class="tile-glyph">⚡</span>
+          <div class="tile-info">
+            <strong>GPU Acceleration</strong>
+            <small id="hub-current-gpu-label">Medium (Hardware Canvas)</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Chronicles & Past Runs Section -->
+      <div class="saved-runs-section">
+        <div class="runs-header">
+          <span class="runs-title">📜 CHRONICLES ARCHIVE & SAVED RUNS</span>
+          <span id="saved-runs-count" class="runs-badge">0 Archived Worlds</span>
+        </div>
+        <div id="saved-runs-list" class="saved-runs-grid">
+          <div class="empty-runs-state">No saved snapshots yet. Click <strong>Export World State</strong> or import a JSON file to build your multiversal archive!</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =========================================================
+       STATISTICS & MULTI-WORLD LEARNING ANALYTICS MODAL
+  ========================================================= -->
+  <aside id="modal-learning-stats" class="wb-modal-card hidden stats-window">
+    <div class="modal-header">
+      <div class="name-row">
+        <h2>📊 MULTI-WORLD LEARNING & EVOLUTION ANALYTICS</h2>
+        <span class="header-badge gold">Cross-World Knowledge Synthesis</span>
+      </div>
+      <button class="btn-close-modal" onclick="closeStatsModal()">✖</button>
+    </div>
+
+    <div class="stats-modal-body">
+      <!-- Toolbar: Graph Styles, Metrics, & World Filters -->
+      <div class="stats-controls-row">
+        <!-- Graph Style Switcher -->
+        <div class="stats-btn-group" id="graph-style-group">
+          <button class="stats-style-btn active" data-style="timeline" onclick="setGraphStyle('timeline')">
+            <span class="ico">📈</span>
+            <span>Timeline Curves</span>
+          </button>
+          <button class="stats-style-btn" data-style="radar" onclick="setGraphStyle('radar')">
+            <span class="ico">🕸️</span>
+            <span>Cognitive Radar</span>
+          </button>
+          <button class="stats-style-btn" data-style="bars" onclick="setGraphStyle('bars')">
+            <span class="ico">📊</span>
+            <span>Comparative Bars</span>
+          </button>
+          <button class="stats-style-btn" data-style="donut" onclick="setGraphStyle('donut')">
+            <span class="ico">🍩</span>
+            <span>Domain Donut</span>
+          </button>
+        </div>
+
+        <!-- Metric Filter Dropdown -->
+        <div class="stats-metric-picker">
+          <label for="stats-metric-select">Metric Focus:</label>
+          <select id="stats-metric-select" onchange="onStatsMetricChange(this.value)">
+            <option value="knowledge">Total Knowledge Points (KP)</option>
+            <option value="tech">Technologies Mastered</option>
+            <option value="generation">AST Generational Depth</option>
+            <option value="discoveries">Historical Discoveries</option>
+            <option value="altars">Altar Sincerity & Piety</option>
+          </select>
+        </div>
+
+        <!-- World Comparison Checkboxes -->
+        <div class="stats-world-filters" id="stats-world-checkboxes">
+          <label class="stats-chk-label">
+            <input type="checkbox" id="chk-world-active" checked onchange="renderStatsCharts()" />
+            <span class="world-color-dot active-world"></span>
+            <span id="lbl-active-world-name">Active Realm</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Main Chart Display Canvas -->
+      <div class="stats-canvas-wrapper">
+        <canvas id="stats-chart-canvas" width="860" height="360"></canvas>
+        <div id="stats-chart-tooltip" class="chart-tooltip hidden"></div>
+      </div>
+
+      <!-- Macro Evolutionary Metric Cards -->
+      <div class="stats-cards-row">
+        <div class="stat-card-kpi">
+          <div class="kpi-icon">📜</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Cumulative Discoveries</span>
+            <strong id="kpi-total-discoveries" class="kpi-val">0</strong>
+          </div>
+        </div>
+        <div class="stat-card-kpi">
+          <div class="kpi-icon">🧬</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Max AST Gen / Mutations</span>
+            <strong id="kpi-max-gen" class="kpi-val">Gen 1 (0)</strong>
+          </div>
+        </div>
+        <div class="stat-card-kpi">
+          <div class="kpi-icon">🏛️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Tech Nodes Mastered</span>
+            <strong id="kpi-tech-mastered" class="kpi-val">0 / 12</strong>
+          </div>
+        </div>
+        <div class="stat-card-kpi">
+          <div class="kpi-icon">⏳</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Elapsed Years Lived</span>
+            <strong id="kpi-years-lived" class="kpi-val">Year 1</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cross-World Side-by-Side Data Table -->
+      <div class="stats-table-wrapper">
+        <div class="table-title">CROSS-WORLD PROGRESSION LEDGER</div>
+        <table class="stats-comparison-table" id="stats-comparison-table">
+          <thead>
+            <tr>
+              <th>Realm / Run</th>
+              <th>Archetype & Seed</th>
+              <th>Years Lived</th>
+              <th>Population</th>
+              <th>Knowledge (KP)</th>
+              <th>Tech Mastered</th>
+              <th>Altars Consecrated</th>
+              <th>Diplomatic Stance</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stats-table-body">
+            <!-- Dynamic rows populated from active telemetry and imported runs -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </aside>
 

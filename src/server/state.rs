@@ -10,8 +10,13 @@ use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
 use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
 use super::god_powers::DivineInterventionKind;
+use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
-use super::protocol::{AgentActivitySummary, AgentSummary, DemographicsTelemetry, PlacedStructureSummary, SelectedAgentDetail, TerraformBrush, WorldStateTelemetry, MapArchetype, encode_base64};
+use super::protocol::{
+    AgentActivitySummary, AgentSummary, DemographicsTelemetry, PlacedStructureSummary,
+    SelectedAgentDetail, TerraformBrush, WorldStateTelemetry, MapArchetype, encode_base64,
+    CivilizationRunSnapshot, WorldMetadataSnapshot, LearningMilestonesSnapshot,
+};
 
 pub struct SimulationEngine {
     pub world: WorldGrid,
@@ -35,6 +40,7 @@ pub struct SimulationEngine {
     pub map_water_level: f32,
     pub map_mountain_density: f32,
     pub pending_map_sync: AtomicBool,
+    pub pending_exported_snapshot: Mutex<Option<String>>,
 }
 
 impl SimulationEngine {
@@ -104,6 +110,7 @@ impl SimulationEngine {
             map_water_level: 0.5,
             map_mountain_density: 0.5,
             pending_map_sync: AtomicBool::new(true),
+            pending_exported_snapshot: Mutex::new(None),
         }
     }
 
@@ -117,6 +124,91 @@ impl SimulationEngine {
 
     pub fn request_full_map_sync(&self) {
         self.pending_map_sync.store(true, Ordering::SeqCst);
+    }
+
+    pub fn export_run_snapshot(&self) -> CivilizationRunSnapshot {
+        let total_unlocked = self.civilizations.terran_culture.technologies.iter().filter(|t| t.is_unlocked).count()
+            + self.civilizations.lunar_culture.technologies.iter().filter(|t| t.is_unlocked).count();
+        let total_discoveries = self.civilizations.terran_culture.discoveries.len()
+            + self.civilizations.lunar_culture.discoveries.len();
+        let peak_gen = self.agents.iter().map(|a| a.brain.genome.generation).max().unwrap_or(1);
+        let total_wealth: f32 = self.agents.iter().map(|a| a.inventory.total_wealth()).sum();
+        let elapsed_years = (self.world.gaia.world_tick / 1000) + 1;
+
+        CivilizationRunSnapshot {
+            engine_version: "0.2.0".into(),
+            metadata: WorldMetadataSnapshot {
+                world_name: self.map_name.clone(),
+                map_archetype: self.map_archetype,
+                map_seed: self.map_seed,
+                map_water_level: self.map_water_level,
+                map_mountain_density: self.map_mountain_density,
+                world_tick: self.world.gaia.world_tick,
+                elapsed_years,
+                export_timestamp: format!("Year {}, Tick {}", elapsed_years, self.world.gaia.world_tick),
+            },
+            milestones: LearningMilestonesSnapshot {
+                total_technologies_unlocked: total_unlocked,
+                total_discoveries_recorded: total_discoveries,
+                peak_generation: peak_gen,
+                total_births: self.births_total,
+                total_deaths: self.deaths_total,
+                total_wealth,
+            },
+            civilizations: self.civilizations.clone(),
+            covenants: self.covenants.clone(),
+            agents: self.agents.clone(),
+            event_log: self.event_log.clone(),
+        }
+    }
+
+    pub fn export_run_snapshot_json(&self) -> String {
+        let snapshot = self.export_run_snapshot();
+        serde_json::to_string_pretty(&snapshot).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    pub fn trigger_export_state(&self) {
+        let json = self.export_run_snapshot_json();
+        *self.pending_exported_snapshot.lock() = Some(json);
+    }
+
+    pub fn import_run_snapshot(&mut self, snapshot: CivilizationRunSnapshot) -> Result<String, String> {
+        let _ = self.world.reset_with_params(
+            snapshot.metadata.map_archetype,
+            snapshot.metadata.map_seed,
+            snapshot.metadata.map_water_level,
+            snapshot.metadata.map_mountain_density,
+        );
+        self.world.gaia.world_tick = snapshot.metadata.world_tick;
+        self.map_name = snapshot.metadata.world_name;
+        self.map_archetype = snapshot.metadata.map_archetype;
+        self.map_seed = snapshot.metadata.map_seed;
+        self.map_water_level = snapshot.metadata.map_water_level;
+        self.map_mountain_density = snapshot.metadata.map_mountain_density;
+        self.map_id += 1;
+
+        self.civilizations = snapshot.civilizations;
+        self.covenants = snapshot.covenants;
+        self.agents = snapshot.agents;
+        self.births_total = snapshot.milestones.total_births;
+        self.deaths_total = snapshot.milestones.total_deaths;
+        self.event_log = snapshot.event_log;
+        self.selected_agent_id = self.agents.first().map(|a| a.id);
+        self.modified_tiles.clear();
+
+        self.log_event(format!(
+            "CHRONICLE RESTORED: Realm '{}' reinstated from save archive (Tick {}, {} citizens)!",
+            self.map_name, snapshot.metadata.world_tick, self.agents.len()
+        ));
+        self.request_full_map_sync();
+
+        Ok(format!("Successfully restored world '{}'", self.map_name))
+    }
+
+    pub fn import_run_snapshot_json(&mut self, json_str: &str) -> Result<String, String> {
+        let snapshot: CivilizationRunSnapshot = serde_json::from_str(json_str)
+            .map_err(|e| format!("Invalid JSON run snapshot format: {}", e))?;
+        self.import_run_snapshot(snapshot)
     }
 
     pub fn reset_world(&mut self) {
@@ -1628,6 +1720,7 @@ impl SimulationEngine {
             map_name: self.map_name.clone(),
             map_archetype: self.map_archetype,
             full_map_sync,
+            exported_snapshot: self.pending_exported_snapshot.lock().take(),
         }
     }
 }

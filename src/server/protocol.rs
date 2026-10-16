@@ -77,6 +77,8 @@ pub enum ClientMessage {
         mountain_density: Option<f32>,
     },
     RequestFullMap,
+    ExportState,
+    ImportState { snapshot_json: String },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -202,6 +204,40 @@ pub struct WorldStateTelemetry {
     pub map_name: String,
     pub map_archetype: MapArchetype,
     pub full_map_sync: Option<String>,
+    pub exported_snapshot: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WorldMetadataSnapshot {
+    pub world_name: String,
+    pub map_archetype: MapArchetype,
+    pub map_seed: u64,
+    pub map_water_level: f32,
+    pub map_mountain_density: f32,
+    pub world_tick: u64,
+    pub elapsed_years: u64,
+    pub export_timestamp: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LearningMilestonesSnapshot {
+    pub total_technologies_unlocked: usize,
+    pub total_discoveries_recorded: usize,
+    pub peak_generation: u32,
+    pub total_births: u64,
+    pub total_deaths: u64,
+    pub total_wealth: f32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CivilizationRunSnapshot {
+    pub engine_version: String,
+    pub metadata: WorldMetadataSnapshot,
+    pub milestones: LearningMilestonesSnapshot,
+    pub civilizations: super::super::factions::CivilizationsCoordinator,
+    pub covenants: Vec<DivineCovenant>,
+    pub agents: Vec<super::super::agent::Agent>,
+    pub event_log: Vec<String>,
 }
 
 pub fn encode_base64(bytes: &[u8]) -> String {

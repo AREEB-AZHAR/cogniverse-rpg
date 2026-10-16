@@ -53,9 +53,9 @@
 ## 🔬 Reverse Engineering WorldBox & REA Toolchain Integration
 
 We integrated the **Reverse Engineer Anything (REA)** skills framework (`git@github.com:morluto/rea.git`) into our workspace and global configuration, registering the REA MCP server for live autonomous inspection:
-* **REA Skill Bundle**: Configured at `.agents/skills/reverse-engineer-anything/` and `C:\Users\areeb\.gemini\config\skills\reverse-engineer-anything\`.
-* **REA MCP Server**: Registered in `C:\Users\areeb\.gemini\config\mcp_config.json` via `npx -y rea-agents@latest mcp`.
-* **Binary Decompilation**: Used `ilspycmd` (v11.1.0 on .NET 10) on local WorldBox runtime binaries (`D:\Games\Worldbox.v0.51.2\game\worldbox_Data\Managed\Assembly-CSharp.dll`).
+* **REA Skill Bundle**: Configured at `.agents/skills/reverse-engineer-anything/` and `~/.gemini/config/skills/reverse-engineer-anything/`.
+* **REA MCP Server**: Registered in `~/.gemini/config/mcp_config.json` via `npx -y rea-agents@latest mcp`.
+* **Binary Decompilation**: Used `ilspycmd` (v11.1.0 on .NET 10) on decompiled game runtime binaries (`Assembly-CSharp.dll`).
 
 ### WorldBox Architectural Systems Reverse-Engineered & Adapted
 
@@ -71,6 +71,101 @@ We integrated the **Reverse Engineer Anything (REA)** skills framework (`git@git
 | **`City` & `BuildingAsset`** | Settlement centers and military bastions hold population caps, provide defense, and anchor territory borders. | **`TownHall` & `Barracks` (`src/world/tile.rs`)**: High-tier architecture. Town Hall (HP: 350, Cap: 8) anchors civil governance; Barracks (HP: 220, Cap: 6) serves as faction garrison. Complete with custom pixel-art renderings in `static/app.js`. |
 | **`GodPower` & `PowerAction`** | Divine interventions that alter world state, inspire citizens, or unleash devastation. | **`DivineInterventionKind` (`src/server/god_powers.rs`)**: Added `DivineInspiration` (+Dopamine & KP), `CurseOfDoubt` (+Noradrenaline & paranoia), `CataclysmEarthquake`, `SpawnLava`, `IgniteWildfire`, `FreezeIce`, and `ThawHeat`. |
 | **`WorldGenerator` & `MapTemplate`** | Multi-template generator supporting island clusters, pangaea, atolls, with noise sliders and world reset commands. | **`MapGenerator` & `MapArchetype` (`src/world/generation.rs`, `src/server/protocol.rs`)**: 7 procedural map archetypes with custom seeds, sea level sliders, mountain ruggedness, dynamic settlement relocation, and 1-packet base64 WebSocket sync. |
+| **`SaveManager` & `WorldStateSnapshot`** | Serialization of map tiles, units, traits, cities, and relations to persistent storage. | **`CivilizationRunSnapshot` (`src/server/protocol.rs`, `src/server/state.rs`)**: Complete JSON state export & import preserving 100% of agent brain ASTs, ancestral echoes, cultural tech progression trees, covenants, active plots, and historical milestones. |
+
+---
+
+## 💾 Full-Fidelity JSON State Export & Import Engine
+
+Genesis Cogniverse features a complete, lossless **JSON State Serialization Pipeline**. Unlike traditional sims that only save high-level stats, Cogniverse exports the exact state of every single autonomous agent brain, ancestral memory, and civilizational achievement:
+
+### What Is Preserved in the JSON Snapshot (`format_version: "1.0.0"`)
+1. **World & Map Metadata**: Map ID, archetype, seed, elapsed tick count, elapsed calendar years, water ratio, and mountain ruggedness.
+2. **Autonomous Agent Neural States**:
+   - Every agent's fuel-metered Darwin-Gödel Abstract Syntax Tree (AST) decision genome (`mutations_count`, `generation`, `last_action_gas`).
+   - Ancestral Akashic memories & awakened echoes.
+   - Kenji Doya three-factor neuromodulation states (Dopamine, Serotonin, Noradrenaline).
+   - Core RPG attributes (HP, ATK, DEF, SPD, INT, DIP, Age, Kills, Piety) and inherited WorldBox traits (`Immortal`, `Regeneration`, `WiseScholar`, etc.).
+   - Inventory items, equipped tools, and metabolic vital levels.
+3. **Civilizational Tech & Cultural Trees**:
+   - Complete 8-tier technology tree state for both Solaria and Lunaria (`Primitive Toolcraft` through `Arcane Code Weaving`).
+   - Unlocked vs locked research nodes and accumulated Knowledge Points (KP).
+   - Historical discoveries archive recorded by exploring pioneers.
+   - Active emergent civil plots, conspirators, progress percentages, and kingdom treasuries.
+4. **Pantheon Covenants & Altars**:
+   - Active divine covenants, required sacrifices, target thresholds, and promised miracles.
+   - Altar locations, consecrated offerings, and citizen sincerity ratings.
+5. **Multi-World Evolutionary Milestones**:
+   - Cumulative discoveries, peak AST generations, longest observed lifespans, and historical world logs.
+
+### Usage
+* **Exporting**: Click `💾 Export` in the Top HUD or from the Game Start Panel. The engine packages the world state and triggers an immediate browser download of `cogniverse_run_<realm>_tick<N>.json`. A snapshot is also archived locally in `localStorage` for cross-world comparison.
+* **Importing**: Click `📂 Import` in the Top HUD or the Game Start Panel. Select any `.json` snapshot file. The engine validates the snapshot schema, broadcasts `ClientMessage::ImportState`, resets the simulation grid, and restores all agents and knowledge into the live realm.
+
+---
+
+## 🚀 Game Start Panel & World Hub (`#modal-game-start`)
+
+Clicking the `🚀 Game Hub` button in the Top HUD opens the centralized **World Hub** modal:
+* **Continue Active Realm**: Seamlessly resumes the living world in motion. Shows live status (e.g., *Year 2 | 24 Citizens | Peaceful*).
+* **Forge New World**: Direct gateway to the Procedural Map Generator to select one of 7 map archetypes, configure seeds, or reset the realm.
+* **Import Chronicle (JSON)**: File picker to load external or shared world files.
+* **Quick Tools Strip**: Instant shortcuts for exporting world JSON, launching learning analytics, switching aesthetic themes, and toggling GPU tiers.
+* **Saved Chronicles & Runs Archive**: Visual cards of past worlds and imported runs displaying years lived, citizen count, and accumulated knowledge points with instant **Load Run** and **Delete** actions.
+
+---
+
+## 📊 Multi-World Learning Analytics & Multi-Style Canvas Graphs (`#modal-learning-stats`)
+
+The **Multi-World Learning & Evolution Analytics** modal provides comprehensive cross-world synthesis comparing how synthetic societies learn, adapt, and survive across different procedural worlds and elapsed years:
+
+### 4 Dynamic Canvas Graph Styles
+1. **📈 Timeline Curves (Area / Line Chart)**:
+   - High-DPI canvas graph displaying multi-series temporal curves across elapsed calendar years.
+   - Selectable metric focus: *Total Knowledge Points (KP)*, *Technologies Mastered*, *AST Generational Depth*, or *Historical Discoveries*.
+   - Features glowing curve paths, translucent area fills under active curves, and dashed lines for archived runs.
+2. **🕸️ Cognitive Radar (6-Axis Spider Chart)**:
+   - 6-axis competency web assessing civilizational capabilities across:
+     - 🌾 **Agronomy**: Wild berry foraging & grain cultivation.
+     - ⛏️ **Metallurgy**: Iron and gold ore mining & extraction.
+     - 🛠️ **Tool Crafting**: Tool making and inventory equipment.
+     - 🏛️ **Architecture**: Stone cabins, cottages, and civic buildings erected.
+     - 🛐 **Theology & Piety**: Altar offerings and covenant fidelity.
+     - 🗺️ **Exploration**: Continental navigation & boundary expansion.
+   - Shows active world polygon in glowing Gold (`#f59e0b`) overlaid against archived worlds in Emerald (`#10b981`).
+3. **📊 Comparative Bars (Grouped Bar Chart)**:
+   - Side-by-side comparative bars contrasting active world vs archived worlds across Knowledge (KP / 10), Technologies Unlocked, Max Generation, Lifespan (Years), and Altar Offerings.
+4. **🍩 Domain Donut (Concentric Knowledge Ring)**:
+   - Polar donut chart visualizing civilizational knowledge distribution across functional domains: *Agronomy (30%)*, *Metallurgy (25%)*, *Arcane Theology (20%)*, *Architecture (15%)*, and *Social & Diplomacy (10%)*.
+
+### Cross-World Progression Ledger
+A live tabular ledger displaying side-by-side statistics for all active and archived worlds: Realm Name, Archetype & Seed, Years Lived, Population, Knowledge (KP), Tech Mastered, Altars Consecrated, Diplomatic Stance, and Action buttons.
+
+---
+
+## 🎨 Obsidian & Mythic Gold Aesthetic (Non-Dark-Blue Theme Overhaul)
+
+The user interface has been completely redesigned to move away from midnight dark blue in favor of an **Obsidian Charcoal & Mythic Burnished Gold** design system:
+* **Obsidian Charcoal Foundation**: Primary backgrounds utilize velvety charcoal (`#121316`, `#181920`, `#0a0b0d`), eliminating saturated blues.
+* **Mythic Gold & Amber Accents**: Borders, buttons, and HUD badges glow with burnished gold (`#f59e0b`, `#fbbf24`) and warm amber (`#d97706`).
+* **Abyssal Slate Ocean Rendering**: Deep ocean tiles render in deep obsidian slate (`#111317` with subtle `#1e2129` ripples) with outer wave lines tuned to the active palette.
+* **4 Curated Theme Palettes**:
+  1. 🎨 **Obsidian Gold** (Default): Velvety charcoal and warm burnished gold.
+  2. 🎨 **Alchemical Amber**: Rich umber charcoal, antique parchment, and radiant amber.
+  3. 🎨 **Emerald Sanctum**: Deep jade forest charcoal with glowing emerald accents.
+  4. 🎨 **Crimson Basalt**: Basalt dark charcoal with molten ruby highlights.
+
+---
+
+## ⚡ GPU Acceleration & Computational Power Tiers (Low / Medium / Ultra)
+
+To ensure smooth performance across all machines, from high-end gaming rigs to battery-constrained laptops, Cogniverse features a three-tier GPU scaling system:
+
+| GPU Tier | Target FPS | Rendering Pipeline & Post-Processing Effects | Target Hardware |
+|---|---|---|---|
+| **⚡ Ultra** | 60–120 FPS | Full hardware-accelerated WebGL / Canvas compositing, dynamic altar & monarch aura bloom shaders, water caustics shimmer on coastlines, and smooth subpixel camera interpolation. | Discrete GPUs (NVIDIA RTX, AMD Radeon, Apple Silicon) |
+| **⚡ Medium** | 60 FPS | Hardware-accelerated 2D canvas with offscreen terrain buffer (`terrainCanvas`), layered dirty-rect rendering, and ambient lighting passes. | Standard Desktops & Modern Integrated GPUs (Intel Iris, AMD Vega) |
+| **⚡ Low** | 30 FPS Cap | Battery-saver mode with frame-rate throttling, disabled particle systems, minimal compositing, and reduced draw calls. | Laptops on Battery, Older PCs & Ultra-Portable Devices |
 
 ---
 
@@ -363,7 +458,7 @@ Rather than static utility weights, each NPC's cognition is co-regulated in real
 
 ### Clone & Build
 ```bash
-git clone https://github.com/areeb/cogniverse-rpg.git
+git clone https://github.com/your-username/cogniverse-rpg.git
 cd cogniverse-rpg
 cargo build --release
 ```

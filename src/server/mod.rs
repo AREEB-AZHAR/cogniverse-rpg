@@ -133,6 +133,20 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                         ClientMessage::RequestFullMap => {
                             engine.request_full_map_sync();
                         }
+                        ClientMessage::ExportState => {
+                            engine.trigger_export_state();
+                            engine.log_event("Exporting world knowledge, achievements, and civilization history to JSON snapshot.");
+                        }
+                        ClientMessage::ImportState { snapshot_json } => {
+                            match engine.import_run_snapshot_json(&snapshot_json) {
+                                Ok(summary) => {
+                                    engine.log_event(&format!("Import successful: {}", summary));
+                                }
+                                Err(err) => {
+                                    engine.log_event(&format!("Import failed: {}", err));
+                                }
+                            }
+                        }
                     }
                 }
             }

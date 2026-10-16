@@ -123,6 +123,16 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                         ClientMessage::SpawnAgentAt { race, x, y } => {
                             engine.spawn_agent_at(race, x, y);
                         }
+                        ClientMessage::ResetWorld => {
+                            engine.reset_world();
+                            engine.log_event("The cosmos shivers as the Divine Will RESETS the living realm!");
+                        }
+                        ClientMessage::ChangeMap { archetype, seed, water_level, mountain_density } => {
+                            engine.change_map(archetype, seed, water_level, mountain_density);
+                        }
+                        ClientMessage::RequestFullMap => {
+                            engine.request_full_map_sync();
+                        }
                     }
                 }
             }

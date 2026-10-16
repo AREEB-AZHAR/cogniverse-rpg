@@ -46,6 +46,7 @@
 > 4. **Freeze Ice & Walkable Frozen Waters** (`screenshots/worldbox_freeze_ice_walking.png`): Freeze river or coastal tiles using the `🧊 Freeze Ice` tool showing characters walking across the solid ice sheets.
 > 5. **Live Plots & Rebellions Codex Tab** (`screenshots/codex_plots_rebellions.png`): Open the Codex (`🧠 Codex & Activities`) and switch to the `⚔️ Live Plots & Rebellions` tab showing active civil plots, conspirators, treasuries, and progress bars.
 > 6. **Monumental Town Hall & Barracks Architecture** (`screenshots/worldbox_townhall_barracks.png`): Place a Town Hall and Barracks using the `🏗️ Architecture` tool tray near a village center and capture their pixel-art rendering.
+> 7. **World Archetypes & Generation Forge Modal** (`screenshots/worldbox_world_management_modal.png`): Open the `🌍 Worlds & Maps` modal showing the 7 archetype cards, seed randomizer, sea level & mountain ruggedness sliders, and dual divine Reset / Forge action buttons.
 
 ---
 
@@ -69,6 +70,7 @@ We integrated the **Reverse Engineer Anything (REA)** skills framework (`git@git
 | **`ActorTraitLibrary` / `ActorTrait`** | Traits possess `rate_birth`, `rate_inherit`, and stat modifiers (`Immortal`, `Regeneration`, `Strong`, `Fast`, `Wise`). | **`ReproductionManager::inherit_traits` (`src/brain/reproduction.rs`)**: 65% hereditary transmission from parents to newborns, plus rare spontaneous mutations (`Immortal`, `Regeneration`, `WiseScholar`, `EagleEyed`, `Pyromancer`, `Energetic`, `Frail`). |
 | **`City` & `BuildingAsset`** | Settlement centers and military bastions hold population caps, provide defense, and anchor territory borders. | **`TownHall` & `Barracks` (`src/world/tile.rs`)**: High-tier architecture. Town Hall (HP: 350, Cap: 8) anchors civil governance; Barracks (HP: 220, Cap: 6) serves as faction garrison. Complete with custom pixel-art renderings in `static/app.js`. |
 | **`GodPower` & `PowerAction`** | Divine interventions that alter world state, inspire citizens, or unleash devastation. | **`DivineInterventionKind` (`src/server/god_powers.rs`)**: Added `DivineInspiration` (+Dopamine & KP), `CurseOfDoubt` (+Noradrenaline & paranoia), `CataclysmEarthquake`, `SpawnLava`, `IgniteWildfire`, `FreezeIce`, and `ThawHeat`. |
+| **`WorldGenerator` & `MapTemplate`** | Multi-template generator supporting island clusters, pangaea, atolls, with noise sliders and world reset commands. | **`MapGenerator` & `MapArchetype` (`src/world/generation.rs`, `src/server/protocol.rs`)**: 7 procedural map archetypes with custom seeds, sea level sliders, mountain ruggedness, dynamic settlement relocation, and 1-packet base64 WebSocket sync. |
 
 ---
 
@@ -425,7 +427,9 @@ cogniverse-rpg/
 │   ├── main.rs                        # System entrypoint, CLI runner, background simulation ticker
 │   ├── world/                         # Environment & Living Nature
 │   │   ├── mod.rs                     # 128x128 spatial grid coordinator and tick dispatcher
-│   │   ├── tile.rs                    # Biomes, structures (TownHall, Barracks, StoneCabin, etc.)
+│   │   ├── tile.rs                    # Biomes, elevation layers, structures (TownHall, Barracks, etc.)
+│   │   ├── generation.rs              # 7 procedural map archetypes with custom seeds & noise tuning
+│   │   ├── cellular.rs                # WorldBox cellular automata (Lava, Wildfire, Freeze/Thaw, Biome Creep)
 │   │   ├── items.rs                   # Item catalog, crafting recipe matrix, inventory system
 │   │   ├── ecology.rs                 # Gaia Engine: Thermodynamic solar cycle, flora logistic growth
 │   │   ├── fauna.rs                   # Adaptive wildlife AI (Predator/prey carrying capacity)
@@ -452,24 +456,72 @@ cogniverse-rpg/
 │       ├── god_powers.rs              # Divine interventions (Whisper, Inspiration, Curse, Earthquake, Peace)
 │       └── protocol.rs                # Real-time JSON telemetry packets & terraform protocol
 ├── static/                            # Embedded WorldBox God Panel Web Frontend
-│   ├── index.html                     # God dashboard, canvas map, plots codex modal, character inspector
-│   ├── style.css                      # Sleek dark-mode glassmorphic styling, plots cards, progress bars
+│   ├── index.html                     # God dashboard, canvas map, world management modal, codex modal
+│   ├── style.css                      # Sleek dark-mode glassmorphic styling, archetype cards, progress bars
 │   └── app.js                         # High-performance 60fps canvas renderer, pixel-art structures, WS client
 └── tests/
-    └── simulation_tests.rs            # 12-case comprehensive unit & integration test suite
+    └── simulation_tests.rs            # 19-case comprehensive unit & integration test suite
 ```
+
+---
+
+## 🌍 Procedural World Archetypes & Divine Map Forge
+
+The God Player now has sovereign control to reset the living realm or forge entirely new procedural realities on the fly. Accessed via the **`🌍 Worlds & Maps`** button in the Top HUD or the **`🔄 Reset/Map`** tool in the Nature dock tray.
+
+### The 7 WorldBox-Inspired Map Archetypes
+
+| Archetype | Geological & Biome Profile | Strategic Geopolitical Dynamic |
+|---|---|---|
+| **🌍 Grand Archipelago** *(Default Genesis)* | Elliptical continental landmass encircled by deep ocean, split by the Great Crystal River, eastern tributaries, and the Ironcrag mountain spine. | Balanced initial proving ground with fertile plains, lush redwoods, and mountain caves. |
+| **🗺️ Pangaea Supercontinent** | Colossal monolithic supercontinent spanning 75% of the world grid with inland freshwater seas, sprawling forest heartlands, and dense central peaks. | High border tension, massive territorial empires, and land trade routes. |
+| **🏝️ Scattered Islands** | Cellular maritime archipelago featuring 15–20 distinct tropical, forested, and volcanic isles separated by azure ocean channels. | Fragmented tribal territories, island resource competition, and naval frontiers. |
+| **⭕ Sacred Ring Atoll** | Giant circular volcanic atoll rim surrounding a sheltered turquoise lagoon with an ancient arcane sanctuary at its heart. | Natural caldera fortress with circular migration corridors and sacred central leyline altar. |
+| **⚖️ Twin Continents** | Two colossal rival continental plates separated by a Grand Central Ocean Rift running north to south. | Hemispheric rivalry: Western realm of the Solar Terrans vs. Eastern fortress of the Chthonic Lunarians. |
+| **❄️ Glacial Wastes** | Subzero northern permafrost continent dominated by frozen bays, glaciers, blizzards, and cold pine taiga. | Extreme survival stakes: requires fires, insulated stone cabins, and hearth management. |
+| **🌋 Volcanic Caldera** | Scorched infernal wasteland with basalt ridges, magma cauldrons, obsidian spires, savanna deserts, and ashlands. | Dangerous environment with active lava flows and rich mineral/mithril pockets. |
+
+### Procedural Generator Controls
+
+1. **Custom Seed System**:
+   * Deterministic seed input allows replaying or sharing favorite world configurations.
+   * **`🎲 Random` Button**: Instantly rolls fresh numeric seeds for unexpected landmass geometry.
+2. **Sea Level & Ocean Ratio Slider**:
+   * Modulates continental shelf emergence:
+     - *Dry Basin ($0\% - 35\%$)*: Ocean recedes, exposing massive land bridges and fertile seabed valleys.
+     - *Standard ($36\% - 65\%$)*: Classical coastal balance with pristine beaches and river deltas.
+     - *High Seas ($66\% - 100\%$)*: Ocean floods inland, turning continents into archipelagos and fjord networks.
+3. **Mountain Ruggedness Slider**:
+   * Modulates tectonic uplift and mineral density:
+     - *Rolling Hills ($0\% - 35\%$)*: Gentle slopes and vast arable plains.
+     - *Moderate Crags ($36\% - 65\%$)*: Realistic alpine chains with iron and gold veins.
+     - *Extreme Peaks ($66\% - 100\%$)*: Sky-piercing jagged peaks and deep mountain caverns.
+
+### Divine Actions: Reset vs. Forge
+
+* **🔄 Reset Active World**:
+  - Preserves current terrain geometry and seed.
+  - Cleanses the realm of old structures, resets simulation ticks and demography back to Year 1.
+  - Re-seeds starting pioneer cohorts at the Golden Sun and Obsidian Moon Altars.
+* **✨ Forge New Map Realm**:
+  - Synthesizes fresh multi-octave harmonic noise from the chosen archetype and seed.
+  - Automatically identifies optimal, habitable settlement coordinates for both factions (plains near fresh water for Terrans; mineral-rich foothill caves for Lunarians).
+  - Transmits a compact $16,\!384$-byte base64 tile payload over WebSocket, instantly updating the 60 FPS offscreen terrain canvas without page reloads.
 
 ---
 
 ## 🎮 God Console Controls & Key Features
 
-1. **Chronos Time Dilation**:
+1. **World Management & Map Forge**:
+   * **`🌍 Worlds & Maps`**: Opens the Realm Forge modal to select archetypes, randomize seeds, adjust ocean/mountain sliders, and reset or generate worlds.
+   * **Title Click**: Click the world title badge (`World of Genesis ✎`) in the top HUD to quickly open the World Manager.
+2. **Chronos Time Dilation**:
    * **Pause (0x)**: Freezes world ticks; allows deep inspection of frozen thoughts.
    * **1x (Real-time)**: 10 ticks/second (human-observable speed).
-   * **10x & 100x**: Accelerated village growth and tool development.
-   * **⚡ TURBO (1000x)**: Multi-threaded execution for multi-generational evolutionary jumps.
+   * **2x & 5x**: Accelerated village growth and tool development.
+   * **⚡ SONIC (1000x)**: Multi-threaded execution for multi-generational evolutionary jumps.
    * **STEP**: Advances the simulation by exactly 1 tick for behavioral debugging.
-2. **Divine Interventions & Cataclysms**:
+3. **Divine Interventions & Cataclysms**:
    * **Divine Whisper**: Telepathically inject high-salience thoughts into any chosen agent or all living souls.
    * **Divine Inspiration**: Flood an agent with dopamine ($+0.35$) and award civilizational Knowledge Points.
    * **Curse of Doubt**: Infuse paranoia and distrust, spiking noradrenaline and dampening piety.
@@ -479,12 +531,12 @@ cogniverse-rpg/
    * **Wrathful Smite**: Calls down a lightning bolt to punish wrongdoers.
    * **Tower of Babel**: Scrambles emergent dialect trees to test linguistic re-adaptation.
    * **Genesis Spark**: Forces an immediate mutation epoch across all agents with elevated plasticity.
-3. **Architecture Placement Tools**:
+4. **Architecture Placement Tools**:
    * **Town Hall**: Deploy administrative civic centers housing up to 8 citizens.
    * **Barracks**: Deploy military garrison forts housing up to 6 warriors.
    * **Stone Cabin & Cottage**: Erect peasant and noble residences.
    * **Watchtower & Granary**: Establish border fortifications and survival silos.
-4. **Divine Covenant & Quest Forge**:
+5. **Divine Covenant & Quest Forge**:
    * Issue commandments (deliver offerings, stockpile grain, forge iron tools, inscribe runes).
    * Set promised rewards (Rain of Manna, Fertility blessing, Promethean inspiration).
    * Observe whether NPCs zealously obey or heretically rebel!

@@ -444,5 +444,89 @@ fn test_worldbox_biome_creep_competition() {
     assert!(crept, "Corrupted biome with high grow_strength must creep into weaker neighbor tiles");
 }
 
+#[test]
+fn test_procedural_map_archetypes_generation() {
+    use cogniverse_rpg::world::generation::{MapArchetype, MapGenerator};
+
+    let archetypes = [
+        MapArchetype::GrandArchipelago,
+        MapArchetype::Pangaea,
+        MapArchetype::ScatteredIslands,
+        MapArchetype::RingAtoll,
+        MapArchetype::TwinContinents,
+        MapArchetype::GlacialWastes,
+        MapArchetype::VolcanicCaldera,
+    ];
+
+    for arch in archetypes {
+        let (tiles, altars, title) = MapGenerator::generate_world_with_params(
+            128,
+            128,
+            arch,
+            9999,
+            0.5,
+            0.5,
+        );
+
+        assert_eq!(tiles.len(), 128 * 128, "Every archetype must produce 16384 tiles");
+        assert_eq!(altars.len(), 2, "Every archetype must place exactly 2 altars");
+        assert!(!title.is_empty(), "World title must be populated");
+
+        // Altars must be placed on dry land
+        for altar in &altars {
+            let idx = altar.y * 128 + altar.x;
+            assert!(
+                !tiles[idx].elevation_layer.is_water(),
+                "Altar for {:?} at ({}, {}) must be situated on dry land!",
+                arch,
+                altar.x,
+                altar.y
+            );
+        }
+    }
+}
+
+#[test]
+fn test_world_reset_and_map_change() {
+    use cogniverse_rpg::world::generation::MapArchetype;
+
+    let mut engine = SimulationEngine::new();
+    assert_eq!(engine.map_id, 1);
+    assert_eq!(engine.map_archetype, MapArchetype::GrandArchipelago);
+
+    // Run some ticks
+    for _ in 0..15 {
+        engine.tick();
+    }
+
+    // Reset world
+    engine.reset_world();
+    assert_eq!(engine.map_id, 2, "map_id must increment upon reset");
+    assert_eq!(engine.agents.len(), 16, "Fresh 16 pioneers must spawn on reset");
+    assert_eq!(engine.births_total, 16);
+    assert_eq!(engine.deaths_total, 0);
+
+    // Change map to Ring Atoll
+    engine.change_map(MapArchetype::RingAtoll, Some(777), Some(0.4), Some(0.6));
+    assert_eq!(engine.map_id, 3, "map_id must increment upon map change");
+    assert_eq!(engine.map_archetype, MapArchetype::RingAtoll);
+    assert!(engine.map_name.contains("Ring"), "Map name must reflect Ring Atoll archetype");
+
+    // Test map base64 encoding
+    let encoded = engine.encode_map_base64();
+    assert_eq!(encoded.len(), (128 * 128 + 2) / 3 * 4, "Base64 encoded map must match 16384 bytes encoded length");
+
+    // Telemetry generation must include full map sync when pending
+    let telemetry = engine.generate_telemetry();
+    assert!(telemetry.full_map_sync.is_some(), "Pending map sync must produce full_map_sync payload");
+    assert_eq!(telemetry.map_id, 3);
+    assert_eq!(telemetry.map_archetype, MapArchetype::RingAtoll);
+
+    // Subsequent telemetry call should clear pending flag
+    let telemetry2 = engine.generate_telemetry();
+    assert!(telemetry2.full_map_sync.is_none(), "Subsequent telemetry must not resend full map sync");
+}
+
+
 
 

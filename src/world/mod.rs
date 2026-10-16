@@ -12,6 +12,7 @@ use altar::Altar;
 use ecology::GaiaEngine;
 use fauna::{AnimalSpecies, WildlifeEntity};
 use generation::MapGenerator;
+pub use generation::MapArchetype;
 use cellular::CellularAutomataEngine;
 
 pub const WORLD_WIDTH: usize = 128;
@@ -35,8 +36,50 @@ impl WorldGrid {
 
         // Generate map with coherent fractal noise, elevation layers, and faction resource bases
         let (mut tiles, altars) = MapGenerator::generate_world(width, height);
+        Self::enrich_minerals(&mut tiles);
+        let (wildlife, next_id) = Self::spawn_initial_wildlife();
 
-        // Enrich mineral deposits
+        Self {
+            width,
+            height,
+            tiles,
+            gaia: GaiaEngine::new(),
+            altars,
+            wildlife,
+            next_entity_id: next_id,
+        }
+    }
+
+    /// Resets the world grid with the specified map archetype and procedural parameters
+    pub fn reset_with_params(
+        &mut self,
+        archetype: MapArchetype,
+        seed: u64,
+        water_level: f32,
+        mountain_density: f32,
+    ) -> String {
+        let (mut tiles, altars, map_title) = MapGenerator::generate_world_with_params(
+            self.width,
+            self.height,
+            archetype,
+            seed,
+            water_level,
+            mountain_density,
+        );
+
+        Self::enrich_minerals(&mut tiles);
+        let (wildlife, next_id) = Self::spawn_initial_wildlife();
+
+        self.tiles = tiles;
+        self.altars = altars;
+        self.wildlife = wildlife;
+        self.next_entity_id = next_id;
+        self.gaia = GaiaEngine::new();
+
+        map_title
+    }
+
+    fn enrich_minerals(tiles: &mut [Tile]) {
         for t in tiles.iter_mut() {
             if t.biome == BiomeType::IroncragMountains {
                 if (t.x + t.y) % 11 == 0 {
@@ -54,12 +97,13 @@ impl WorldGrid {
                 }
             }
         }
+    }
 
-        // Populate initial wildlife across the 128x128 expanse
+    fn spawn_initial_wildlife() -> (Vec<WildlifeEntity>, usize) {
         let mut wildlife = Vec::new();
         let mut next_id = 1;
 
-        // Spawn deer herds in the Whispering Forest
+        // Spawn deer herds
         for i in 0..28 {
             let wx = 14 + (i * 5) % 40;
             let wy = 16 + (i * 7) % 65;
@@ -67,7 +111,7 @@ impl WorldGrid {
             next_id += 1;
         }
 
-        // Spawn dire wolves in mountain foothills
+        // Spawn dire wolves
         for i in 0..14 {
             let wx = 75 + (i * 4) % 42;
             let wy = 14 + (i * 6) % 40;
@@ -75,7 +119,7 @@ impl WorldGrid {
             next_id += 1;
         }
 
-        // Spawn rabbits in plains
+        // Spawn rabbits
         for i in 0..36 {
             let wx = 22 + (i * 7) % 80;
             let wy = 60 + (i * 5) % 52;
@@ -91,15 +135,7 @@ impl WorldGrid {
             next_id += 1;
         }
 
-        Self {
-            width,
-            height,
-            tiles,
-            gaia: GaiaEngine::new(),
-            altars,
-            wildlife,
-            next_entity_id: next_id,
-        }
+        (wildlife, next_id)
     }
 
     pub fn tile_at(&self, x: usize, y: usize) -> &Tile {

@@ -25,10 +25,10 @@
   <header id="top-hud" class="wb-panel-floating">
     <!-- World Title & Chronos Engine -->
     <div class="hud-left">
-      <div class="world-title-badge">
+      <div class="world-title-badge" onclick="toggleWorldModal()" style="cursor: pointer;" title="Click to Change Map or Reset World">
         <span class="world-icon">🌍</span>
         <div class="world-title-text">
-          <span class="world-name">World of Genesis <span class="edit-glyph">✎</span></span>
+          <span class="world-name"><span id="hud-world-name">World of Genesis</span> <span class="edit-glyph">✎</span></span>
           <span id="hud-date" class="world-date">Year 1, Month 1 (Tick 0)</span>
         </div>
       </div>
@@ -96,6 +96,7 @@
 
     <!-- Top Right Quick Camera Tools -->
     <div class="hud-right">
+      <button id="btn-world-manage" class="btn-hud-action world-btn" onclick="toggleWorldModal()" title="World Archetypes, Map Forge & Reset">🌍 Worlds & Maps</button>
       <button id="btn-codex" class="btn-hud-action codex-btn" onclick="toggleCodexModal()" title="Knowledge & Activities Codex">🧠 Codex & Activities</button>
       <button class="btn-hud-action" onclick="zoomIn()" title="Zoom In (+)">🔍+</button>
       <button class="btn-hud-action" onclick="zoomOut()" title="Zoom Out (-)">🔍-</button>
@@ -142,6 +143,10 @@
       <div class="wb-power-tray-wrapper">
         <!-- Sub-Tray 1: World & Nature -->
         <div id="sub-tray-nature" class="wb-sub-tray active">
+          <button class="wb-tool-btn danger-pulse" data-tool="btn-world-reset" onclick="toggleWorldModal()" title="Reset World or Change Map Archetype">
+            <span class="tool-ico">🔄</span>
+            <span class="tool-name">Reset/Map</span>
+          </button>
           <button class="wb-tool-btn active" data-tool="brush-plains" onclick="selectGodTool('brush-plains', 'Fertile Plains', 'Plant rich grassland and wild grain fields')">
             <span class="tool-ico">🌾</span>
             <span class="tool-name">Plains</span>
@@ -654,6 +659,165 @@
         </div>
       </div>
       <div id="codex-plots-list" class="plots-scroll"></div>
+    </div>
+  </aside>
+
+  <!-- =========================================================
+       WORLD ARCHETYPES & GENERATION FORGE MODAL WINDOW
+  ========================================================= -->
+  <aside id="modal-world-manager" class="wb-modal-card hidden world-window">
+    <div class="modal-header">
+      <div class="name-row">
+        <h2>🌍 WORLD ARCHETYPES & REALM FORGE</h2>
+      </div>
+      <button class="btn-close-modal" onclick="closeWorldModal()">✖</button>
+    </div>
+
+    <!-- Active Realm Overview -->
+    <div class="active-realm-strip">
+      <div class="realm-badge">
+        <span class="realm-icon">🌐</span>
+        <div class="realm-info">
+          <div class="realm-title-row">
+            <span id="active-realm-name" class="realm-name-txt">World of Genesis</span>
+            <span id="active-realm-archetype-tag" class="realm-arch-pill">Grand Archipelago</span>
+          </div>
+          <div class="realm-sub-stats">
+            <span>Seed: <strong id="active-realm-seed">42</strong></span>
+            <span>•</span>
+            <span>Map ID: #<span id="active-realm-id">1</span></span>
+            <span>•</span>
+            <span>Age: <span id="active-realm-age">Year 1</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- World Archetype Selector Grid -->
+    <div class="world-section-title">CHOOSE PROCEDURAL REALM ARCHETYPE</div>
+    <div class="archetypes-grid">
+      <div class="archetype-card active" data-arch="GrandArchipelago" onclick="selectArchetype('GrandArchipelago')">
+        <div class="arch-card-top">
+          <span class="arch-glyph">🌍</span>
+          <span class="arch-title">Grand Archipelago</span>
+        </div>
+        <p class="arch-desc">Continental landmass encircled by deep ocean, split by the Great River and mountain spine.</p>
+        <span class="arch-badge">Default Genesis</span>
+      </div>
+
+      <div class="archetype-card" data-arch="Pangaea" onclick="selectArchetype('Pangaea')">
+        <div class="arch-card-top">
+          <span class="arch-glyph">🗺️</span>
+          <span class="arch-title">Pangaea Supercontinent</span>
+        </div>
+        <p class="arch-desc">Massive monolithic continent covering 75% of the world with inland freshwater seas and dense forests.</p>
+        <span class="arch-badge">Vast Heartland</span>
+      </div>
+
+      <div class="archetype-card" data-arch="ScatteredIslands" onclick="selectArchetype('ScatteredIslands')">
+        <div class="arch-card-top">
+          <span class="arch-glyph">🏝️</span>
+          <span class="arch-title">Scattered Islands</span>
+        </div>
+        <p class="arch-desc">Dozens of tropical, forested, and volcanic isles separated by turquoise ocean channels.</p>
+        <span class="arch-badge">Maritime Realm</span>
+      </div>
+
+      <div class="archetype-card" data-arch="RingAtoll" onclick="selectArchetype('RingAtoll')">
+        <div class="arch-card-top">
+          <span class="arch-glyph">⭕</span>
+          <span class="arch-title">Sacred Ring Atoll</span>
+        </div>
+        <p class="arch-desc">Grand circular volcanic atoll with a sheltered crystal interior lagoon and sacred central sanctuary.</p>
+        <span class="arch-badge">Lagoon Sanctum</span>
+      </div>
+
+      <div class="archetype-card" data-arch="TwinContinents" onclick="selectArchetype('TwinContinents')">
+        <div class="arch-card-top">
+          <span class="arch-glyph">⚖️</span>
+          <span class="arch-title">Twin Continents</span>
+        </div>
+        <p class="arch-desc">Two colossal rival continental plates separated by a Great Ocean Rift separating Sun and Moon.</p>
+        <span class="arch-badge">Rival Hemispheres</span>
+      </div>
+
+      <div class="archetype-card" data-arch="GlacialWastes" onclick="selectArchetype('GlacialWastes')">
+        <div class="arch-card-top">
+          <span class="arch-glyph">❄️</span>
+          <span class="arch-title">Glacial Wastes</span>
+        </div>
+        <p class="arch-desc">Subzero permafrost continent with frozen waterways, glacial blizzards, and pine taiga.</p>
+        <span class="arch-badge">Arctic Survival</span>
+      </div>
+
+      <div class="archetype-card" data-arch="VolcanicCaldera" onclick="selectArchetype('VolcanicCaldera')">
+        <div class="arch-card-top">
+          <span class="arch-glyph">🌋</span>
+          <span class="arch-title">Volcanic Caldera</span>
+        </div>
+        <p class="arch-desc">Smoldering volcanic crater with basalt ridges, magma cauldrons, obsidian spires, and ashlands.</p>
+        <span class="arch-badge">Infernal Wastes</span>
+      </div>
+    </div>
+
+    <!-- Parameter Modulation Controls -->
+    <div class="world-section-title">PROCEDURAL GENERATOR CONTROLS</div>
+    <div class="world-controls-box">
+      <div class="control-row">
+        <div class="control-label">
+          <span>World Generation Seed</span>
+          <span class="control-hint">Custom integer seed or randomize</span>
+        </div>
+        <div class="seed-input-group">
+          <input type="number" id="inp-world-seed" value="42" placeholder="Random Seed" />
+          <button class="btn-seed-random" onclick="randomizeSeed()" title="Randomize Seed">🎲 Random</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-label">
+          <span>Sea Level & Ocean Ratio</span>
+          <span id="lbl-sea-level" class="control-val">Standard (50%)</span>
+        </div>
+        <input type="range" id="slider-sea-level" min="0" max="100" value="50" oninput="updateSeaLevelLabel(this.value)" />
+        <div class="slider-marks">
+          <span>Dry Basin</span>
+          <span>Standard</span>
+          <span>High Seas</span>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-label">
+          <span>Mountain Ruggedness</span>
+          <span id="lbl-mountain-density" class="control-val">Moderate (50%)</span>
+        </div>
+        <input type="range" id="slider-mountain-density" min="0" max="100" value="50" oninput="updateMountainDensityLabel(this.value)" />
+        <div class="slider-marks">
+          <span>Rolling Hills</span>
+          <span>Moderate Crags</span>
+          <span>Extreme Peaks</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divine Actions Footer -->
+    <div class="world-actions-footer">
+      <button class="btn-world-action btn-danger-reset" onclick="confirmResetWorld()" title="Reset current map with fresh pioneers & altars">
+        <span class="btn-icon">🔄</span>
+        <div class="btn-text-col">
+          <strong>Reset Active World</strong>
+          <small>Restart civilization on same terrain</small>
+        </div>
+      </button>
+
+      <button class="btn-world-action btn-primary-forge" onclick="confirmGenerateNewMap()" title="Generate brand new terrain from selected archetype">
+        <span class="btn-icon">✨</span>
+        <div class="btn-text-col">
+          <strong>Forge New Map Realm</strong>
+          <small>Procedurally generate selected archetype</small>
+        </div>
+      </button>
     </div>
   </aside>
 

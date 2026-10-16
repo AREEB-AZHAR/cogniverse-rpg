@@ -8,7 +8,25 @@ let selectedAgentId = 1;
 let favoriteAgentId = null;
 let isFollowActive = false;
 let showKingdomBorders = true;
+let selectedMapArchetype = 'GrandArchipelago';
+let activeMapId = null;
 const terraformedTiles = new Map(); // key: "x,y" => BiomeType string
+
+const BIOME_LOOKUP = [
+  'SunlitPlains',         // 0
+  'WhisperingForest',     // 1
+  'CrystalRiverlands',    // 2
+  'IroncragMountains',    // 3
+  'AncientLeylineRuins',  // 4
+  'Savanna',              // 5
+  'Jungle',               // 6
+  'CorruptedLands',       // 7
+  'PermafrostTundra',     // 8
+  'Swamp',                // 9
+  'DeepOcean',            // 10
+  'CloseOcean',           // 11
+  'SandyCoast',           // 12
+];
 
 // Canvas & Viewport Setup
 const canvas = document.getElementById('world-canvas');
@@ -167,7 +185,7 @@ function paintTileToBuffer(bCtx, x, y, biome) {
     bCtx.fill();
     bCtx.fillStyle = '#78350f';
     bCtx.fillRect(px + tilePx * 0.45, py + tilePx * 0.72, 2, 3);
-  } else if (biome === 'SavannaGrasslands') {
+  } else if (biome === 'SavannaGrasslands' || biome === 'Savanna') {
     // Warm golden amber savanna grass
     bCtx.fillStyle = '#ca8a04';
     bCtx.fillRect(px, py, tilePx, tilePx);
@@ -182,7 +200,7 @@ function paintTileToBuffer(bCtx, x, y, biome) {
       bCtx.fillStyle = '#713f12';
       bCtx.fillRect(px + 4, py + 5, 3, 2);
     }
-  } else if (biome === 'VerdantJungle') {
+  } else if (biome === 'VerdantJungle' || biome === 'Jungle') {
     // Deep emerald tropical jungle canopy
     bCtx.fillStyle = '#064e3b';
     bCtx.fillRect(px, py, tilePx, tilePx);
@@ -197,8 +215,8 @@ function paintTileToBuffer(bCtx, x, y, biome) {
       bCtx.fillStyle = '#f43f5e';
       bCtx.fillRect(px + 6, py + 6, 2, 2);
     }
-  } else if (biome === 'CorruptedLands') {
-    // WorldBox Corrupted alien purple biomass
+  } else if (biome === 'CorruptedLands' || biome === 'CorruptedInfernal') {
+    // WorldBox Corrupted alien purple biomass / Infernal Wastes
     bCtx.fillStyle = '#3b0764';
     bCtx.fillRect(px, py, tilePx, tilePx);
     bCtx.fillStyle = '#581c87';
@@ -342,6 +360,7 @@ function connectWebSocket() {
 
   ws.onopen = () => {
     console.log('[*] Connected to Genesis Cogniverse WebSocket.');
+    sendMsg({ type: 'RequestFullMap' });
     if (selectedAgentId) {
       sendMsg({ type: 'SelectAgent', agent_id: selectedAgentId });
     }
@@ -850,6 +869,50 @@ function centerCameraOn(wx, wy) {
 // ----------------------------------------------------------------------------
 function renderTelemetry(data) {
   try {
+    // 0. Process Full Map Sync if received from server
+    if (data.full_map_sync && typeof data.full_map_sync === 'string') {
+      try {
+        const decoded = atob(data.full_map_sync);
+        terraformedTiles.clear();
+        for (let y = 0; y < WORLD_SIZE; y++) {
+          for (let x = 0; x < WORLD_SIZE; x++) {
+            const idx = y * WORLD_SIZE + x;
+            if (idx < decoded.length) {
+              const code = decoded.charCodeAt(idx);
+              const biome = BIOME_LOOKUP[code] || 'SunlitPlains';
+              terraformedTiles.set(`${x},${y}`, biome);
+              paintTileToBuffer(terrainCtx, x, y, biome);
+            }
+          }
+        }
+        isTerrainBufferBuilt = true;
+        showToast(`Realm Synchronized: ${data.map_name || 'Genesis'}`);
+      } catch (err) {
+        console.error('Error applying full map sync:', err);
+      }
+    }
+
+    if (data.map_name) {
+      const hudTitle = document.getElementById('hud-world-name');
+      if (hudTitle) hudTitle.textContent = data.map_name;
+      const modalTitle = document.getElementById('active-realm-name');
+      if (modalTitle) modalTitle.textContent = data.map_name;
+    }
+    if (data.map_archetype) {
+      const archTag = document.getElementById('active-realm-archetype-tag');
+      if (archTag) archTag.textContent = data.map_archetype;
+    }
+    if (data.map_id !== undefined && data.map_id !== null) {
+      const mapIdEl = document.getElementById('active-realm-id');
+      if (mapIdEl) mapIdEl.textContent = data.map_id;
+      if (activeMapId !== null && activeMapId !== data.map_id) {
+        activeMapId = data.map_id;
+        centerCamera();
+      } else {
+        activeMapId = data.map_id;
+      }
+    }
+
     // 1. Sync modified tiles to offscreen buffer
     if (data.modified_tiles && Array.isArray(data.modified_tiles)) {
       for (const [x, y, biome] of data.modified_tiles) {
@@ -2025,6 +2088,94 @@ function renderCodexDiscoveries(terranCulture, lunarCulture) {
     const el = document.createElement('div');
     el.textContent = d;
     list.appendChild(el);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// WORLD ARCHETYPES & GENERATION FORGE UI
+// ----------------------------------------------------------------------------
+function toggleWorldModal() {
+  const modal = document.getElementById('modal-world-manager');
+  if (!modal) return;
+  modal.classList.toggle('hidden');
+}
+
+function closeWorldModal() {
+  const modal = document.getElementById('modal-world-manager');
+  if (modal) modal.classList.add('hidden');
+}
+
+function selectArchetype(arch) {
+  selectedMapArchetype = arch;
+  document.querySelectorAll('.archetype-card').forEach(card => {
+    if (card.getAttribute('data-arch') === arch) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+}
+
+function randomizeSeed() {
+  const seedInp = document.getElementById('inp-world-seed');
+  if (seedInp) {
+    seedInp.value = Math.floor(Math.random() * 900000) + 1000;
+  }
+}
+
+function updateSeaLevelLabel(val) {
+  const lbl = document.getElementById('lbl-sea-level');
+  if (!lbl) return;
+  const num = parseInt(val, 10);
+  if (num < 35) {
+    lbl.textContent = `Dry Basin (${num}%)`;
+  } else if (num > 65) {
+    lbl.textContent = `High Seas (${num}%)`;
+  } else {
+    lbl.textContent = `Standard (${num}%)`;
+  }
+}
+
+function updateMountainDensityLabel(val) {
+  const lbl = document.getElementById('lbl-mountain-density');
+  if (!lbl) return;
+  const num = parseInt(val, 10);
+  if (num < 35) {
+    lbl.textContent = `Rolling Hills (${num}%)`;
+  } else if (num > 65) {
+    lbl.textContent = `Extreme Peaks (${num}%)`;
+  } else {
+    lbl.textContent = `Moderate Crags (${num}%)`;
+  }
+}
+
+function confirmResetWorld() {
+  if (confirm("Reset the active realm? All civilizational buildings, pioneers, and history will restart freshly on this map.")) {
+    sendMsg({ type: 'ResetWorld' });
+    showToast("Cosmic Will Invoked: Resetting active world...");
+    closeWorldModal();
+  }
+}
+
+function confirmGenerateNewMap() {
+  const seedInp = document.getElementById('inp-world-seed');
+  const seaSlider = document.getElementById('slider-sea-level');
+  const mtnSlider = document.getElementById('slider-mountain-density');
+
+  const seed = parseInt(seedInp ? seedInp.value : '42', 10) || 42;
+  const waterLevel = (parseInt(seaSlider ? seaSlider.value : '50', 10) || 50) / 100.0;
+  const mountainDensity = (parseInt(mtnSlider ? mtnSlider.value : '50', 10) || 50) / 100.0;
+
+  if (confirm(`Forge a new procedural realm: '${selectedMapArchetype}' (Seed ${seed})?\n\nThis will carve brand new terrain, reposition altars, and awaken fresh pioneer lineages.`)) {
+    sendMsg({
+      type: 'ChangeMap',
+      archetype: selectedMapArchetype,
+      seed: seed,
+      water_level: waterLevel,
+      mountain_density: mountainDensity
+    });
+    showToast(`Carving new realm: ${selectedMapArchetype}...`);
+    closeWorldModal();
   }
 }
 

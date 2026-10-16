@@ -3,6 +3,7 @@ use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
 use super::god_powers::DivineInterventionKind;
 use super::super::agent::CivilizationRace;
 use super::super::world::altar::Altar;
+pub use super::super::world::MapArchetype;
 use super::super::world::ecology::WeatherCondition;
 use super::super::world::tile::{BiomeType, ElevationLayer, FrozenState, StructureKind};
 use super::super::brain::desire::AmbitionArchetype;
@@ -68,6 +69,14 @@ pub enum ClientMessage {
         x: usize,
         y: usize,
     },
+    ResetWorld,
+    ChangeMap {
+        archetype: MapArchetype,
+        seed: Option<u64>,
+        water_level: Option<f32>,
+        mountain_density: Option<f32>,
+    },
+    RequestFullMap,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -189,6 +198,39 @@ pub struct WorldStateTelemetry {
     pub terran_treasury: u32,
     pub lunar_treasury: u32,
     pub diplomacy_status: String,
+    pub map_id: u64,
+    pub map_name: String,
+    pub map_archetype: MapArchetype,
+    pub full_map_sync: Option<String>,
+}
+
+pub fn encode_base64(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] } else { 0 };
+
+        let idx0 = (b0 >> 2) as usize;
+        let idx1 = (((b0 & 0x03) << 4) | (b1 >> 4)) as usize;
+        let idx2 = (((b1 & 0x0f) << 2) | (b2 >> 6)) as usize;
+        let idx3 = (b2 & 0x3f) as usize;
+
+        out.push(TABLE[idx0] as char);
+        out.push(TABLE[idx1] as char);
+        if chunk.len() > 1 {
+            out.push(TABLE[idx2] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() > 2 {
+            out.push(TABLE[idx3] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
 }
 
 

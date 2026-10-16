@@ -91,6 +91,30 @@ pub enum BiomeType {
 }
 
 impl BiomeType {
+    pub fn to_id(&self) -> u8 {
+        match self {
+            BiomeType::SunlitPlains => 0,
+            BiomeType::WhisperingForest => 1,
+            BiomeType::CrystalRiverlands => 2,
+            BiomeType::IroncragMountains => 3,
+            BiomeType::AncientLeylineRuins => 4,
+            BiomeType::Savanna => 5,
+            BiomeType::Jungle => 6,
+            BiomeType::CorruptedInfernal => 7,
+            BiomeType::PermafrostTundra => 8,
+            BiomeType::Swamp => 9,
+        }
+    }
+
+    pub fn to_render_code(&self, elevation_layer: ElevationLayer) -> u8 {
+        match elevation_layer {
+            ElevationLayer::DeepOcean => 10,
+            ElevationLayer::CloseOcean => 11,
+            ElevationLayer::Sand => 12,
+            _ => self.to_id(),
+        }
+    }
+
     pub fn display_name(&self) -> &'static str {
         match self {
             BiomeType::SunlitPlains => "Sunlit Plains",

@@ -10,7 +10,8 @@ use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
 use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
 use super::god_powers::DivineInterventionKind;
-use super::protocol::{AgentActivitySummary, AgentSummary, DemographicsTelemetry, PlacedStructureSummary, SelectedAgentDetail, TerraformBrush, WorldStateTelemetry};
+use std::sync::atomic::{AtomicBool, Ordering};
+use super::protocol::{AgentActivitySummary, AgentSummary, DemographicsTelemetry, PlacedStructureSummary, SelectedAgentDetail, TerraformBrush, WorldStateTelemetry, MapArchetype, encode_base64};
 
 pub struct SimulationEngine {
     pub world: WorldGrid,
@@ -27,6 +28,13 @@ pub struct SimulationEngine {
     pub births_total: u64,
     pub deaths_total: u64,
     pub modified_tiles: Vec<(usize, usize, BiomeType)>,
+    pub map_id: u64,
+    pub map_name: String,
+    pub map_archetype: MapArchetype,
+    pub map_seed: u64,
+    pub map_water_level: f32,
+    pub map_mountain_density: f32,
+    pub pending_map_sync: AtomicBool,
 }
 
 impl SimulationEngine {
@@ -89,7 +97,118 @@ impl SimulationEngine {
             births_total: 16,
             deaths_total: 0,
             modified_tiles: Vec::new(),
+            map_id: 1,
+            map_name: "World of Genesis (Seed 42)".into(),
+            map_archetype: MapArchetype::GrandArchipelago,
+            map_seed: 42,
+            map_water_level: 0.5,
+            map_mountain_density: 0.5,
+            pending_map_sync: AtomicBool::new(true),
         }
+    }
+
+    pub fn encode_map_base64(&self) -> String {
+        let mut bytes = Vec::with_capacity(self.world.width * self.world.height);
+        for tile in &self.world.tiles {
+            bytes.push(tile.biome.to_render_code(tile.elevation_layer));
+        }
+        encode_base64(&bytes)
+    }
+
+    pub fn request_full_map_sync(&self) {
+        self.pending_map_sync.store(true, Ordering::SeqCst);
+    }
+
+    pub fn reset_world(&mut self) {
+        let current_arch = self.map_archetype;
+        let current_seed = self.map_seed;
+        let current_wl = self.map_water_level;
+        let current_md = self.map_mountain_density;
+        self.change_map(current_arch, Some(current_seed), Some(current_wl), Some(current_md));
+    }
+
+    pub fn change_map(
+        &mut self,
+        archetype: MapArchetype,
+        seed: Option<u64>,
+        water_level: Option<f32>,
+        mountain_density: Option<f32>,
+    ) {
+        let chosen_seed = seed.unwrap_or_else(|| {
+            use rand::Rng;
+            rand::thread_rng().gen::<u32>() as u64
+        });
+        let wl = water_level.unwrap_or(0.5);
+        let md = mountain_density.unwrap_or(0.5);
+
+        self.map_archetype = archetype;
+        self.map_seed = chosen_seed;
+        self.map_water_level = wl;
+        self.map_mountain_density = md;
+
+        let map_title = self.world.reset_with_params(archetype, chosen_seed, wl, md);
+        self.map_name = map_title;
+        self.map_id += 1;
+        self.modified_tiles.clear();
+
+        // Re-spawn pioneers around newly positioned altars
+        let (solar_x, solar_y) = self.world.altars.iter()
+            .find(|a| a.deity == DeityAlignment::SolarPlayerGod)
+            .map(|a| (a.x, a.y))
+            .unwrap_or((38, 86));
+
+        let (lunar_x, lunar_y) = self.world.altars.iter()
+            .find(|a| a.deity == DeityAlignment::LunarShadowWeaver)
+            .map(|a| (a.x, a.y))
+            .unwrap_or((92, 34));
+
+        let mut agents = Vec::new();
+        let mut next_id = 1;
+
+        let terran_names = ["Kael", "Lyra", "Orion", "Aria", "Darek", "Elora", "Theron", "Mira"];
+        for (i, name) in terran_names.iter().enumerate() {
+            let x = ((solar_x as isize) + ((i as isize * 2) % 6 - 3)).clamp(0, (WORLD_WIDTH - 1) as isize) as usize;
+            let y = ((solar_y as isize) + ((i as isize * 3) % 6 - 3)).clamp(0, (WORLD_HEIGHT - 1) as isize) as usize;
+            let archetype = AmbitionArchetype::random_archetype();
+            let echo = self.akashic_core.maybe_awaken_echo();
+            agents.push(Agent::new(next_id, *name, CivilizationRace::SolarTerran, x, y, archetype, echo));
+            next_id += 1;
+        }
+
+        let lunar_names = ["Vane", "Nyx", "Malik", "Selene", "Corvus", "Morrigan", "Dusk", "Hesper"];
+        for (i, name) in lunar_names.iter().enumerate() {
+            let x = ((lunar_x as isize) + ((i as isize * 2) % 6 - 3)).clamp(0, (WORLD_WIDTH - 1) as isize) as usize;
+            let y = ((lunar_y as isize) + ((i as isize * 3) % 6 - 3)).clamp(0, (WORLD_HEIGHT - 1) as isize) as usize;
+            let archetype = AmbitionArchetype::random_archetype();
+            let echo = self.akashic_core.maybe_awaken_echo();
+            agents.push(Agent::new(next_id, *name, CivilizationRace::ChthonicLunarian, x, y, archetype, echo));
+            next_id += 1;
+        }
+
+        self.agents = agents;
+        self.civilizations = CivilizationsCoordinator::new();
+        self.covenants = vec![
+            DivineCovenant::new(
+                1,
+                QuestObjectiveType::PresentAltarOfferings,
+                3,
+                CovenantRewardType::RainOfManna,
+                "A chilling frost will descend upon the unfaithful.",
+                0,
+            )
+        ];
+        self.next_agent_id = next_id;
+        self.next_covenant_id = 2;
+        self.births_total = 16;
+        self.deaths_total = 0;
+        self.selected_agent_id = Some(1);
+
+        self.event_log.clear();
+        self.log_event(format!("A NEW AGE DAWNS: World carved into '{}'!", self.map_name));
+        self.log_event(format!("Solar Terrans settled near the Golden Sun Altar at ({}, {}).", solar_x, solar_y));
+        self.log_event(format!("Chthonic Lunarians established stronghold at ({}, {}).", lunar_x, lunar_y));
+
+        self.request_full_map_sync();
     }
 
     pub fn log_event(&mut self, text: impl Into<String>) {
@@ -1474,6 +1593,12 @@ impl SimulationEngine {
             }
         }).collect();
 
+        let full_map_sync = if self.pending_map_sync.swap(false, Ordering::SeqCst) {
+            Some(self.encode_map_base64())
+        } else {
+            None
+        };
+
         WorldStateTelemetry {
             world_tick: self.world.gaia.world_tick,
             speed_multiplier: self.speed_multiplier,
@@ -1499,6 +1624,10 @@ impl SimulationEngine {
             terran_treasury: self.civilizations.terran_treasury,
             lunar_treasury: self.civilizations.lunar_treasury,
             diplomacy_status: self.civilizations.diplomacy.display_name().to_string(),
+            map_id: self.map_id,
+            map_name: self.map_name.clone(),
+            map_archetype: self.map_archetype,
+            full_map_sync,
         }
     }
 }

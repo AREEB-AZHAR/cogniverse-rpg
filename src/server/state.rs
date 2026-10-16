@@ -9,7 +9,7 @@ use super::super::brain::desire::AmbitionArchetype;
 use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
 use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
-use super::god_powers::DivineInterventionKind;
+use crate::server::god_powers::DivineInterventionKind;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use super::protocol::{

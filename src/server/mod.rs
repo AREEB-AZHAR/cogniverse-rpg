@@ -3,6 +3,8 @@ pub mod god_powers;
 pub mod protocol;
 pub mod state;
 
+pub use god_powers::DivineInterventionKind;
+
 use std::sync::Arc;
 use std::time::Duration;
 use axum::{

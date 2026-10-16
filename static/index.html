@@ -712,67 +712,74 @@
     <!-- World Archetype Selector Grid -->
     <div class="world-section-title">CHOOSE PROCEDURAL REALM ARCHETYPE</div>
     <div class="archetypes-grid">
-      <div class="archetype-card active" data-arch="GrandArchipelago" onclick="selectArchetype('GrandArchipelago')">
+      <div class="archetype-card active" data-arch="GrandArchipelago" onclick="selectArchetype('GrandArchipelago')" ondblclick="forgeArchetypeDirect('GrandArchipelago', event)">
         <div class="arch-card-top">
           <span class="arch-glyph">🌍</span>
           <span class="arch-title">Grand Archipelago</span>
         </div>
         <p class="arch-desc">Continental landmass encircled by deep ocean, split by the Great River and mountain spine.</p>
         <span class="arch-badge">Default Genesis</span>
+        <button class="btn-card-quick-forge" onclick="forgeArchetypeDirect('GrandArchipelago', event)" title="Immediately forge this world archetype">✨ Forge This Realm</button>
       </div>
 
-      <div class="archetype-card" data-arch="Pangaea" onclick="selectArchetype('Pangaea')">
+      <div class="archetype-card" data-arch="Pangaea" onclick="selectArchetype('Pangaea')" ondblclick="forgeArchetypeDirect('Pangaea', event)">
         <div class="arch-card-top">
           <span class="arch-glyph">🗺️</span>
           <span class="arch-title">Pangaea Supercontinent</span>
         </div>
         <p class="arch-desc">Massive monolithic continent covering 75% of the world with inland freshwater seas and dense forests.</p>
         <span class="arch-badge">Vast Heartland</span>
+        <button class="btn-card-quick-forge" onclick="forgeArchetypeDirect('Pangaea', event)" title="Immediately forge this world archetype">✨ Forge This Realm</button>
       </div>
 
-      <div class="archetype-card" data-arch="ScatteredIslands" onclick="selectArchetype('ScatteredIslands')">
+      <div class="archetype-card" data-arch="ScatteredIslands" onclick="selectArchetype('ScatteredIslands')" ondblclick="forgeArchetypeDirect('ScatteredIslands', event)">
         <div class="arch-card-top">
           <span class="arch-glyph">🏝️</span>
           <span class="arch-title">Scattered Islands</span>
         </div>
         <p class="arch-desc">Dozens of tropical, forested, and volcanic isles separated by turquoise ocean channels.</p>
         <span class="arch-badge">Maritime Realm</span>
+        <button class="btn-card-quick-forge" onclick="forgeArchetypeDirect('ScatteredIslands', event)" title="Immediately forge this world archetype">✨ Forge This Realm</button>
       </div>
 
-      <div class="archetype-card" data-arch="RingAtoll" onclick="selectArchetype('RingAtoll')">
+      <div class="archetype-card" data-arch="RingAtoll" onclick="selectArchetype('RingAtoll')" ondblclick="forgeArchetypeDirect('RingAtoll', event)">
         <div class="arch-card-top">
           <span class="arch-glyph">⭕</span>
           <span class="arch-title">Sacred Ring Atoll</span>
         </div>
         <p class="arch-desc">Grand circular volcanic atoll with a sheltered crystal interior lagoon and sacred central sanctuary.</p>
         <span class="arch-badge">Lagoon Sanctum</span>
+        <button class="btn-card-quick-forge" onclick="forgeArchetypeDirect('RingAtoll', event)" title="Immediately forge this world archetype">✨ Forge This Realm</button>
       </div>
 
-      <div class="archetype-card" data-arch="TwinContinents" onclick="selectArchetype('TwinContinents')">
+      <div class="archetype-card" data-arch="TwinContinents" onclick="selectArchetype('TwinContinents')" ondblclick="forgeArchetypeDirect('TwinContinents', event)">
         <div class="arch-card-top">
           <span class="arch-glyph">⚖️</span>
           <span class="arch-title">Twin Continents</span>
         </div>
         <p class="arch-desc">Two colossal rival continental plates separated by a Great Ocean Rift separating Sun and Moon.</p>
         <span class="arch-badge">Rival Hemispheres</span>
+        <button class="btn-card-quick-forge" onclick="forgeArchetypeDirect('TwinContinents', event)" title="Immediately forge this world archetype">✨ Forge This Realm</button>
       </div>
 
-      <div class="archetype-card" data-arch="GlacialWastes" onclick="selectArchetype('GlacialWastes')">
+      <div class="archetype-card" data-arch="GlacialWastes" onclick="selectArchetype('GlacialWastes')" ondblclick="forgeArchetypeDirect('GlacialWastes', event)">
         <div class="arch-card-top">
           <span class="arch-glyph">❄️</span>
           <span class="arch-title">Glacial Wastes</span>
         </div>
         <p class="arch-desc">Subzero permafrost continent with frozen waterways, glacial blizzards, and pine taiga.</p>
         <span class="arch-badge">Arctic Survival</span>
+        <button class="btn-card-quick-forge" onclick="forgeArchetypeDirect('GlacialWastes', event)" title="Immediately forge this world archetype">✨ Forge This Realm</button>
       </div>
 
-      <div class="archetype-card" data-arch="VolcanicCaldera" onclick="selectArchetype('VolcanicCaldera')">
+      <div class="archetype-card" data-arch="VolcanicCaldera" onclick="selectArchetype('VolcanicCaldera')" ondblclick="forgeArchetypeDirect('VolcanicCaldera', event)">
         <div class="arch-card-top">
           <span class="arch-glyph">🌋</span>
           <span class="arch-title">Volcanic Caldera</span>
         </div>
         <p class="arch-desc">Smoldering volcanic crater with basalt ridges, magma cauldrons, obsidian spires, and ashlands.</p>
         <span class="arch-badge">Infernal Wastes</span>
+        <button class="btn-card-quick-forge" onclick="forgeArchetypeDirect('VolcanicCaldera', event)" title="Immediately forge this world archetype">✨ Forge This Realm</button>
       </div>
     </div>
 
@@ -869,17 +876,29 @@
         </div>
 
         <!-- Card 2: Forge New World -->
-        <div class="start-action-card hero-forge" onclick="openMapForgeFromStart()">
+        <div class="start-action-card hero-forge">
           <div class="card-icon">🌍</div>
           <div class="card-body">
             <h3>Forge New World</h3>
-            <p>Select from 6 procedural archetypes (Archipelago, Pangaea, Ring Atoll, Twin Continents, etc.) with custom seeds.</p>
+            <p>Carve a fresh procedural realm with new pioneer lineages, biomes, and altars.</p>
+            <select id="start-archetype-picker" class="start-select-control" onclick="event.stopPropagation()">
+              <option value="GrandArchipelago">🌍 Grand Archipelago</option>
+              <option value="Pangaea">🗺️ Pangaea Supercontinent</option>
+              <option value="ScatteredIslands">🏝️ Scattered Islands</option>
+              <option value="RingAtoll">⭕ Sacred Ring Atoll</option>
+              <option value="TwinContinents">⚖️ Twin Continents</option>
+              <option value="GlacialWastes">❄️ Glacial Wastes</option>
+              <option value="VolcanicCaldera">🌋 Volcanic Caldera</option>
+            </select>
             <div class="card-status-pill">
               <span class="status-dot gold"></span>
               <span>Procedural Fractal Map Engine</span>
             </div>
           </div>
-          <button class="btn-card-action">Open Map Forge ➔</button>
+          <div class="card-buttons-row">
+            <button class="btn-card-action btn-gold-launch" onclick="forgeNewWorldFromStart(event)">✨ Forge & Launch World ➔</button>
+            <button class="btn-card-subtle" onclick="openMapForgeFromStart(event)">⚙️ Advanced Map Sliders</button>
+          </div>
         </div>
 
         <!-- Card 3: Import Saved Chronicle -->

@@ -631,10 +631,22 @@ The God Player now has sovereign control to reset the living realm or forge enti
    * **Barracks**: Deploy military garrison forts housing up to 6 warriors.
    * **Stone Cabin & Cottage**: Erect peasant and noble residences.
    * **Watchtower & Granary**: Establish border fortifications and survival silos.
-5. **Divine Covenant & Quest Forge**:
-   * Issue commandments (deliver offerings, stockpile grain, forge iron tools, inscribe runes).
-   * Set promised rewards (Rain of Manna, Fertility blessing, Promethean inspiration).
-   * Observe whether NPCs zealously obey or heretically rebel!
+6. **🚀 Cogniverse Realm Hub & 1-Click World Creation**:
+   * **Instant World Forging**: Select any archetype directly from the Start Hub and click **`✨ Forge & Launch World`** to start a brand new procedural simulation in one click without dialog interruptions.
+   * **Archetype Card Direct Forging**: In the World Manager, double-click any archetype card or click **`✨ Forge This Realm`** for instantaneous procedural generation.
+   * **Full Connection Health Reporting**: Automatic WebSocket health detection with non-blocking visual toast feedback.
+7. **📂 Full-Fidelity JSON State Export & Import**:
+   * **Complete Multiversal Snapshots**: Save and restore full world states including AST genomes, Akashic memories, civilizational technologies, and historical demographic logs.
+   * **Client & Server Synchronized**: Instant client downloads and drag-and-drop file imports for seamless multi-world archiving.
+8. **📊 Multiversal Learning Analytics & Comparative Statistics**:
+   * **Cognitive Radar Chart**: Visualizes 5 core learning dimensions (Semantic Reflection, AST Complexity, Technological Mastery, Linguistic Dialect Cohesion, and Survival Efficiency).
+   * **Cross-Epoch Epoch Comparison**: Bar and line charts tracking knowledge growth across different worlds over simulated years.
+9. **⚡ Hardware-Adaptive GPU Tier Scaling**:
+   * **Low (30 FPS)**: Battery-saver and low-spec hardware optimization.
+   * **Medium (Smooth 60 FPS)**: Full particle effects and double-buffered canvas rendering.
+   * **High (Ultra 60+ FPS)**: Dynamic celestial ambient lighting, water wave distortion, and particle trails.
+10. **🎨 Obsidian Charcoal & Burnished Gold Theme Engine**:
+    * Clean departure from generic blue tones into an elegant Obsidian Charcoal (`#0b0c0e`, `#14171d`), Burnished Amber Gold (`#f59e0b`), Emerald Jade, and Crimson Ruby palette.
 
 ---
 

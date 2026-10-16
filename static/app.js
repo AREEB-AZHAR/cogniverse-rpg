@@ -388,6 +388,11 @@ function connectWebSocket() {
 function sendMsg(obj) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(obj));
+    return true;
+  } else {
+    console.warn('Cannot send message, WebSocket is not OPEN:', ws ? ws.readyState : 'no ws', obj);
+    showToast('⚠️ Reconnecting to world simulation server... please wait');
+    return false;
   }
 }
 
@@ -2119,6 +2124,8 @@ function selectArchetype(arch) {
       card.classList.remove('active');
     }
   });
+  const picker = document.getElementById('start-archetype-picker');
+  if (picker) picker.value = arch;
 }
 
 function randomizeSeed() {
@@ -2155,11 +2162,11 @@ function updateMountainDensityLabel(val) {
 }
 
 function confirmResetWorld() {
-  if (confirm("Reset the active realm? All civilizational buildings, pioneers, and history will restart freshly on this map.")) {
-    sendMsg({ type: 'ResetWorld' });
-    showToast("Cosmic Will Invoked: Resetting active world...");
-    closeWorldModal();
-  }
+  sendMsg({ type: 'ResetWorld' });
+  playSound('chime');
+  showToast("🔄 Cosmic Will Invoked: Resetting active world...");
+  closeWorldModal();
+  setSpeed(1);
 }
 
 function confirmGenerateNewMap() {
@@ -2167,21 +2174,50 @@ function confirmGenerateNewMap() {
   const seaSlider = document.getElementById('slider-sea-level');
   const mtnSlider = document.getElementById('slider-mountain-density');
 
-  const seed = parseInt(seedInp ? seedInp.value : '42', 10) || 42;
+  const seed = parseInt(seedInp ? seedInp.value : '42', 10) || Math.floor(Math.random() * 900000) + 1000;
   const waterLevel = (parseInt(seaSlider ? seaSlider.value : '50', 10) || 50) / 100.0;
   const mountainDensity = (parseInt(mtnSlider ? mtnSlider.value : '50', 10) || 50) / 100.0;
 
-  if (confirm(`Forge a new procedural realm: '${selectedMapArchetype}' (Seed ${seed})?\n\nThis will carve brand new terrain, reposition altars, and awaken fresh pioneer lineages.`)) {
-    sendMsg({
-      type: 'ChangeMap',
-      archetype: selectedMapArchetype,
-      seed: seed,
-      water_level: waterLevel,
-      mountain_density: mountainDensity
-    });
-    showToast(`Carving new realm: ${selectedMapArchetype}...`);
-    closeWorldModal();
-  }
+  sendMsg({
+    type: 'ChangeMap',
+    archetype: selectedMapArchetype,
+    seed: seed,
+    water_level: waterLevel,
+    mountain_density: mountainDensity
+  });
+  playSound('chime');
+  showToast(`✨ Carving new realm: ${selectedMapArchetype} (Seed ${seed})...`);
+  closeWorldModal();
+  closeStartModal();
+  setSpeed(1);
+}
+
+function forgeNewWorldFromStart(event) {
+  if (event) event.stopPropagation();
+  const picker = document.getElementById('start-archetype-picker');
+  const archetype = picker ? picker.value : selectedMapArchetype;
+  selectedMapArchetype = archetype;
+  const randomSeed = Math.floor(Math.random() * 900000) + 1000;
+
+  sendMsg({
+    type: 'ChangeMap',
+    archetype: archetype,
+    seed: randomSeed,
+    water_level: 0.5,
+    mountain_density: 0.5
+  });
+
+  playSound('chime');
+  showToast(`✨ Forging new realm: ${archetype} (Seed ${randomSeed})...`);
+  closeStartModal();
+  closeWorldModal();
+  setSpeed(1);
+}
+
+function forgeArchetypeDirect(arch, event) {
+  if (event) event.stopPropagation();
+  selectArchetype(arch);
+  confirmGenerateNewMap();
 }
 
 // ----------------------------------------------------------------------------
@@ -2426,14 +2462,14 @@ function loadArchivedRun(id) {
   const run = archive.find(r => r.id === id);
   if (!run || !run.rawSnapshot) return;
 
-  if (confirm(`Load saved chronicle '${run.title}' (Year ${run.year})? This will replace the active realm.`)) {
-    sendMsg({
-      type: 'ImportState',
-      snapshot_json: JSON.stringify(run.rawSnapshot)
-    });
-    showToast(`📂 Restored realm: ${run.title}`);
-    closeStartModal();
-  }
+  sendMsg({
+    type: 'ImportState',
+    snapshot_json: JSON.stringify(run.rawSnapshot)
+  });
+  playSound('chime');
+  showToast(`📂 Restored realm: ${run.title}`);
+  closeStartModal();
+  setSpeed(1);
 }
 
 function deleteArchivedRun(id, event) {

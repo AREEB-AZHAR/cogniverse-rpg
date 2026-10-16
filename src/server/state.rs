@@ -32,7 +32,7 @@ pub struct SimulationEngine {
     pub next_covenant_id: usize,
     pub births_total: u64,
     pub deaths_total: u64,
-    pub modified_tiles: Vec<(usize, usize, BiomeType)>,
+    pub modified_tiles: Mutex<Vec<(usize, usize, BiomeType)>>,
     pub map_id: u64,
     pub map_name: String,
     pub map_archetype: MapArchetype,
@@ -102,7 +102,7 @@ impl SimulationEngine {
             next_covenant_id: 2,
             births_total: 16,
             deaths_total: 0,
-            modified_tiles: Vec::new(),
+            modified_tiles: Mutex::new(Vec::new()),
             map_id: 1,
             map_name: "World of Genesis (Seed 42)".into(),
             map_archetype: MapArchetype::GrandArchipelago,
@@ -193,9 +193,7 @@ impl SimulationEngine {
         self.births_total = snapshot.milestones.total_births;
         self.deaths_total = snapshot.milestones.total_deaths;
         self.event_log = snapshot.event_log;
-        self.selected_agent_id = self.agents.first().map(|a| a.id);
-        self.modified_tiles.clear();
-
+        self.modified_tiles.lock().clear();
         self.log_event(format!(
             "CHRONICLE RESTORED: Realm '{}' reinstated from save archive (Tick {}, {} citizens)!",
             self.map_name, snapshot.metadata.world_tick, self.agents.len()
@@ -241,8 +239,7 @@ impl SimulationEngine {
         let map_title = self.world.reset_with_params(archetype, chosen_seed, wl, md);
         self.map_name = map_title;
         self.map_id += 1;
-        self.modified_tiles.clear();
-
+        self.modified_tiles.lock().clear();
         // Re-spawn pioneers around newly positioned altars
         let (solar_x, solar_y) = self.world.altars.iter()
             .find(|a| a.deity == DeityAlignment::SolarPlayerGod)
@@ -322,7 +319,7 @@ impl SimulationEngine {
         let cellular_mods = self.world.tick_cellular();
         for (mx, my) in cellular_mods {
             let b = self.world.tile_at(mx, my).biome;
-            self.modified_tiles.push((mx, my, b));
+            self.modified_tiles.lock().push((mx, my, b));
         }
 
         // 2. Tick civilizations and Rival AI God
@@ -1210,7 +1207,7 @@ impl SimulationEngine {
                 };
                 let tile = self.world.tile_at_mut(center_x, center_y);
                 tile.structure = Some(PlacedStructure::new(kind));
-                self.modified_tiles.push((center_x, center_y, tile.biome));
+                self.modified_tiles.lock().push((center_x, center_y, tile.biome));
                 self.log_event(format!(
                     "ARCHITECTURE: Divine mandate erected {} at ({}, {}).",
                     kind.display_name(), center_x, center_y
@@ -1319,7 +1316,7 @@ impl SimulationEngine {
                     }
                     _ => {}
                 }
-                self.modified_tiles.push((x, y, tile.biome));
+                self.modified_tiles.lock().push((x, y, tile.biome));
             }
         }
 
@@ -1497,7 +1494,7 @@ impl SimulationEngine {
                         if let Some(ref mut s) = tile.structure {
                             s.health = (s.health - 25.0).max(10.0);
                         }
-                        self.modified_tiles.push((qx, qy, tile.biome));
+                        self.modified_tiles.lock().push((qx, qy, tile.biome));
                     }
                 }
                 self.log_event(format!(
@@ -1708,7 +1705,7 @@ impl SimulationEngine {
             rival_god_directive: self.civilizations.rival_god.active_directive.clone(),
             event_log: self.event_log.clone(),
             selected_agent: selected_agent_detail,
-            modified_tiles: self.modified_tiles.clone(),
+            modified_tiles: std::mem::take(&mut *self.modified_tiles.lock()),
             dynamic_tiles,
             activities,
             terran_culture: self.civilizations.terran_culture.clone(),

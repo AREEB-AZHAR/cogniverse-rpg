@@ -972,26 +972,30 @@ function renderTelemetry(data) {
       }
     }
 
-    // 4. Render Character Sheet Details if open
-    if (data.selected_agent) {
+    // 4. Render Character Sheet Details if modal is open
+    const charSheetModal = document.getElementById('modal-character-sheet');
+    if (charSheetModal && !charSheetModal.classList.contains('hidden') && data.selected_agent) {
       updateCharacterSheet(data.selected_agent);
     }
 
-    // 6. Covenants & Altars
+    // 6. Covenants, Altars & Chronicle (efficient delta rendering)
     renderCovenants(data.active_covenants);
     renderAltars(data.altars);
     renderChronicle(data.event_log);
 
-    // 7. Knowledge & Activity Codex
-    if (data.activities) {
-      renderCodexActivities(data.activities);
-    }
-    if (data.terran_culture || data.lunar_culture) {
-      renderCodexTechTree(data.terran_culture, data.lunar_culture);
-      renderCodexDiscoveries(data.terran_culture, data.lunar_culture);
-    }
-    if (data.active_plots) {
-      renderCodexPlots(data.active_plots, data.terran_treasury, data.lunar_treasury, data.diplomacy_status);
+    // 7. Knowledge & Activity Codex (ONLY render if modal is open to avoid DOM thrashing)
+    const codexModal = document.getElementById('modal-codex');
+    if (codexModal && !codexModal.classList.contains('hidden')) {
+      if (data.activities) {
+        renderCodexActivities(data.activities);
+      }
+      if (data.terran_culture || data.lunar_culture) {
+        renderCodexTechTree(data.terran_culture, data.lunar_culture);
+        renderCodexDiscoveries(data.terran_culture, data.lunar_culture);
+      }
+      if (data.active_plots) {
+        renderCodexPlots(data.active_plots, data.terran_treasury, data.lunar_treasury, data.diplomacy_status);
+      }
     }
   } catch (err) {
     console.error('Telemetry render error:', err);
@@ -1779,9 +1783,14 @@ function issueCovenant() {
   showToast(`📜 Divine Covenant forged: ${obj}`);
 }
 
+let lastCovenantsHash = '';
 function renderCovenants(covs) {
   const list = document.getElementById('covenants-list');
   if (!list) return;
+  const hash = covs ? covs.map(c => `${c.id}:${c.current_progress}`).join('|') : '';
+  if (hash === lastCovenantsHash) return;
+  lastCovenantsHash = hash;
+
   list.innerHTML = '';
   if (!covs || covs.length === 0) {
     list.innerHTML = '<span class="text-dim" style="font-size:0.65rem">No active covenants. Forge one above!</span>';
@@ -1794,10 +1803,15 @@ function renderCovenants(covs) {
   }
 }
 
+let lastAltarsHash = '';
 function renderAltars(altars) {
   const sBox = document.getElementById('solar-offerings');
   const lBox = document.getElementById('lunar-offerings');
   if (!sBox || !lBox || !altars) return;
+  const hash = altars.map(a => `${a.id}:${a.active_offerings ? a.active_offerings.length : 0}`).join('|');
+  if (hash === lastAltarsHash) return;
+  lastAltarsHash = hash;
+
   sBox.innerHTML = '';
   lBox.innerHTML = '';
 
@@ -1816,9 +1830,14 @@ function renderAltars(altars) {
   }
 }
 
+let lastChronicleHash = '';
 function renderChronicle(logs) {
   const stream = document.getElementById('event-log-stream');
-  if (!stream || !logs) return;
+  if (!stream || !logs || logs.length === 0) return;
+  const latestKey = logs[logs.length - 1] + '_' + logs.length;
+  if (latestKey === lastChronicleHash) return;
+  lastChronicleHash = latestKey;
+
   stream.innerHTML = '';
   for (let i = logs.length - 1; i >= Math.max(0, logs.length - 20); i--) {
     const d = document.createElement('div');

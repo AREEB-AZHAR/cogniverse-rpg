@@ -39,14 +39,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Paused
                 tokio::time::sleep(Duration::from_millis(100)).await;
             } else if speed >= 1000.0 {
-                // Uncapped Turbo: execute batch of ticks before yielding
+                // Sonic Turbo: execute smooth batch of ticks and yield cooperatively to prevent lock starvation
                 {
                     let mut engine = sim_ticker.write();
-                    for _ in 0..50 {
+                    for _ in 0..15 {
                         engine.tick();
                     }
                 }
-                tokio::task::yield_now().await;
+                tokio::time::sleep(Duration::from_millis(2)).await;
             } else {
                 // Dynamic tick pace
                 {

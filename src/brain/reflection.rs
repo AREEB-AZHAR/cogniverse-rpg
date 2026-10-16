@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::memory::MemoryHierarchy;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BeliefStatement {
@@ -33,7 +33,7 @@ impl KnowledgeGraph {
             for m in salient.iter().take(3) {
                 let concept_tag = m.tags.first().cloned().unwrap_or_else(|| "Survival".into());
                 let belief_text = format!("Reflected from experience: {}", m.description);
-                
+
                 // Add or update belief
                 if !self.beliefs.iter().any(|b| b.concept == concept_tag) {
                     self.beliefs.push(BeliefStatement {

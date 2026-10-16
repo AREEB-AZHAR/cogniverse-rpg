@@ -2,12 +2,18 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NeuromodulationState {
-    pub dopamine: f32,       // 0.0 to 1.0 (Reward Prediction Error & drive)
-    pub serotonin: f32,      // 0.0 to 1.0 (Patience, long-term horizon & inhibition)
-    pub noradrenaline: f32,  // 0.0 to 1.0 (Surprise, vigilance & plasticity)
-    
+    pub dopamine: f32,      // 0.0 to 1.0 (Reward Prediction Error & drive)
+    pub serotonin: f32,     // 0.0 to 1.0 (Patience, long-term horizon & inhibition)
+    pub noradrenaline: f32, // 0.0 to 1.0 (Surprise, vigilance & plasticity)
+
     pub rolling_prediction_error: f32,
     pub previous_value_estimate: f32,
+}
+
+impl Default for NeuromodulationState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl NeuromodulationState {
@@ -40,12 +46,17 @@ impl NeuromodulationState {
         let shelter_bonus = if has_shelter { 0.2 } else { 0.0 };
         let threat_penalty = if is_threatened { 0.4 } else { 0.0 };
         let raw_serotonin = current_satiation * 0.6 + shelter_bonus - threat_penalty;
-        self.serotonin = (self.serotonin * 0.8 + raw_serotonin.clamp(0.1, 0.95) * 0.2).clamp(0.05, 0.95);
+        self.serotonin =
+            (self.serotonin * 0.8 + raw_serotonin.clamp(0.1, 0.95) * 0.2).clamp(0.05, 0.95);
 
         // 3. Noradrenaline: Unexpected uncertainty & variance of TD error
         let error_magnitude = td_error.abs();
-        self.rolling_prediction_error = self.rolling_prediction_error * 0.85 + error_magnitude * 0.15;
-        let surprise = (self.rolling_prediction_error + environmental_surprise + if is_threatened { 0.5 } else { 0.0 }).clamp(0.0, 1.0);
+        self.rolling_prediction_error =
+            self.rolling_prediction_error * 0.85 + error_magnitude * 0.15;
+        let surprise = (self.rolling_prediction_error
+            + environmental_surprise
+            + if is_threatened { 0.5 } else { 0.0 })
+        .clamp(0.0, 1.0);
         self.noradrenaline = (self.noradrenaline * 0.75 + surprise * 0.25).clamp(0.05, 0.95);
     }
 }

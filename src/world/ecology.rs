@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::tile::{BiomeType, Tile};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WeatherCondition {
@@ -43,6 +43,12 @@ pub struct GaiaEngine {
     pub rain_rate: f32,
 }
 
+impl Default for GaiaEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GaiaEngine {
     pub fn new() -> Self {
         Self {
@@ -58,7 +64,7 @@ impl GaiaEngine {
 
     pub fn is_daytime(&self) -> bool {
         let time_of_day = self.world_tick % self.day_length;
-        time_of_day >= 200 && time_of_day <= 800
+        (200..=800).contains(&time_of_day)
     }
 
     pub fn tick(&mut self, tiles: &mut [Tile]) {
@@ -82,7 +88,7 @@ impl GaiaEngine {
         self.global_temperature_offset = solar_temp_impact + weather_temp_impact;
 
         // 4. Update tiles and flora regrowth every 25 ticks
-        if self.world_tick % 25 == 0 {
+        if self.world_tick.is_multiple_of(25) {
             for tile in tiles.iter_mut() {
                 // Adjust local temperature
                 let base = tile.biome.base_temperature();
@@ -95,32 +101,37 @@ impl GaiaEngine {
 
                 if self.solar_intensity > 0.15 {
                     let growth_factor = tile.soil_fertility * (0.8 + 0.4 * self.solar_intensity);
-                    
-                    if (tile.biome == BiomeType::SunlitPlains || tile.biome == BiomeType::Savanna) && tile.grain_amount < 25 {
-                        if (growth_factor * 10.0) as u32 > 5 {
-                            tile.grain_amount += 1;
-                        }
+
+                    if (tile.biome == BiomeType::SunlitPlains || tile.biome == BiomeType::Savanna)
+                        && tile.grain_amount < 25
+                        && (growth_factor * 10.0) as u32 > 5
+                    {
+                        tile.grain_amount += 1;
                     }
 
-                    if (tile.biome == BiomeType::WhisperingForest || tile.biome == BiomeType::SunlitPlains || tile.biome == BiomeType::Jungle)
+                    if (tile.biome == BiomeType::WhisperingForest
+                        || tile.biome == BiomeType::SunlitPlains
+                        || tile.biome == BiomeType::Jungle)
                         && tile.berry_amount < 25
+                        && (growth_factor * 8.0) as u32 > 4
                     {
-                        if (growth_factor * 8.0) as u32 > 4 {
-                            tile.berry_amount += 1;
-                        }
+                        tile.berry_amount += 1;
                     }
 
                     // Mountain cave berries and lichen regrowth
-                    if tile.biome == BiomeType::IroncragMountains && tile.berry_amount < 15 {
-                        if (growth_factor * 6.0) as u32 > 3 {
-                            tile.berry_amount += 1;
-                        }
+                    if tile.biome == BiomeType::IroncragMountains
+                        && tile.berry_amount < 15
+                        && (growth_factor * 6.0) as u32 > 3
+                    {
+                        tile.berry_amount += 1;
                     }
 
-                    if (tile.biome == BiomeType::WhisperingForest || tile.biome == BiomeType::Jungle) && tile.wood_amount < 60 {
-                        if (growth_factor * 5.0) as u32 > 3 {
-                            tile.wood_amount += 1;
-                        }
+                    if (tile.biome == BiomeType::WhisperingForest
+                        || tile.biome == BiomeType::Jungle)
+                        && tile.wood_amount < 60
+                        && (growth_factor * 5.0) as u32 > 3
+                    {
+                        tile.wood_amount += 1;
                     }
                 }
             }
@@ -131,7 +142,7 @@ impl GaiaEngine {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let roll: f32 = rng.gen();
-        
+
         self.current_weather = if roll < 0.50 {
             WeatherCondition::ClearSun
         } else if roll < 0.75 {

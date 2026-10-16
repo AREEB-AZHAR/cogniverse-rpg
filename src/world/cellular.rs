@@ -1,4 +1,4 @@
-use super::tile::{ElevationLayer, FrozenState, Tile, StructureKind};
+use super::tile::{ElevationLayer, FrozenState, StructureKind, Tile};
 use rand::Rng;
 
 pub struct CellularAutomataEngine;
@@ -15,22 +15,28 @@ impl CellularAutomataEngine {
         let mut modified_coords = Vec::new();
 
         // 1. Fire Propagation & Burn Decay (every 2 ticks)
-        if current_tick % 2 == 0 {
+        if current_tick.is_multiple_of(2) {
             Self::tick_fire(tiles, width, height, &mut modified_coords);
         }
 
         // 2. Lava Flow & Water Solidification into Basalt (every 4 ticks)
-        if current_tick % 4 == 0 {
+        if current_tick.is_multiple_of(4) {
             Self::tick_lava(tiles, width, height, &mut modified_coords);
         }
 
         // 3. Temperature Diffusion, Freezing to Ice & Thawing (every 8 ticks)
-        if current_tick % 8 == 0 {
-            Self::tick_freeze_thaw(tiles, width, height, global_temp_offset, &mut modified_coords);
+        if current_tick.is_multiple_of(8) {
+            Self::tick_freeze_thaw(
+                tiles,
+                width,
+                height,
+                global_temp_offset,
+                &mut modified_coords,
+            );
         }
 
         // 4. Biome Creep & Competitive Overgrowth (every 10 ticks)
-        if current_tick % 10 == 0 {
+        if current_tick.is_multiple_of(10) {
             Self::tick_biome_creep(tiles, width, height, &mut modified_coords);
         }
 
@@ -54,10 +60,8 @@ impl CellularAutomataEngine {
                 let tile = &tiles[idx];
 
                 // Ash recovery: burned ground slowly regenerates fertility
-                if tile.burned_stages > 0 && !tile.is_on_fire {
-                    if rng.gen_bool(0.15) {
-                        modified.push((x, y));
-                    }
+                if tile.burned_stages > 0 && !tile.is_on_fire && rng.gen_bool(0.15) {
+                    modified.push((x, y));
                 }
 
                 if !tile.is_on_fire {
@@ -101,8 +105,12 @@ impl CellularAutomataEngine {
                 t.is_on_fire = true;
                 t.fire_ticks = rng.gen_range(20..45);
                 // Consume flammable surface resources
-                if t.wood_amount > 0 { t.wood_amount = t.wood_amount.saturating_sub(2); }
-                if t.grain_amount > 0 { t.grain_amount = 0; }
+                if t.wood_amount > 0 {
+                    t.wood_amount = t.wood_amount.saturating_sub(2);
+                }
+                if t.grain_amount > 0 {
+                    t.grain_amount = 0;
+                }
                 modified.push((x, y));
             }
         }
@@ -114,11 +122,9 @@ impl CellularAutomataEngine {
                 let t = &mut tiles[idx];
 
                 // Ash gradual recovery
-                if t.burned_stages > 0 && !t.is_on_fire {
-                    if rng.gen_bool(0.10) {
-                        t.burned_stages = t.burned_stages.saturating_sub(1);
-                        t.soil_fertility = (t.soil_fertility + 0.15).min(0.9);
-                    }
+                if t.burned_stages > 0 && !t.is_on_fire && rng.gen_bool(0.10) {
+                    t.burned_stages = t.burned_stages.saturating_sub(1);
+                    t.soil_fertility = (t.soil_fertility + 0.15).min(0.9);
                 }
 
                 if t.is_on_fire {
@@ -126,7 +132,12 @@ impl CellularAutomataEngine {
                         t.fire_ticks -= 1;
                         // Fire damages wood buildings on tile
                         if let Some(ref mut s) = t.structure {
-                            if matches!(s.kind, StructureKind::WoodCottage | StructureKind::Granary | StructureKind::Campfire) {
+                            if matches!(
+                                s.kind,
+                                StructureKind::WoodCottage
+                                    | StructureKind::Granary
+                                    | StructureKind::Campfire
+                            ) {
                                 s.health = (s.health - 4.0).max(0.0);
                             }
                         }
@@ -177,7 +188,9 @@ impl CellularAutomataEngine {
                 ];
 
                 for (nx, ny, valid) in neighbors {
-                    if !valid { continue; }
+                    if !valid {
+                        continue;
+                    }
                     let n_idx = ny * width + nx;
                     let n_tile = &tiles[n_idx];
 
@@ -188,10 +201,12 @@ impl CellularAutomataEngine {
                     }
 
                     // 2. FLOW DOWNHILL: Lava flows downhill into lower adjacent ground
-                    if n_tile.elevation <= current_elev && n_tile.lava_level < lava_level && lava_level > 1 {
-                        if rng.gen_bool(0.40) {
-                            lava_creations.push((n_idx, nx, ny, lava_level - 1));
-                        }
+                    if n_tile.elevation <= current_elev
+                        && n_tile.lava_level < lava_level
+                        && lava_level > 1
+                        && rng.gen_bool(0.40)
+                    {
+                        lava_creations.push((n_idx, nx, ny, lava_level - 1));
                     }
 
                     // Lava melts ice
@@ -256,7 +271,7 @@ impl CellularAutomataEngine {
             for x in 0..width {
                 let idx = y * width + x;
                 let t = &mut tiles[idx];
-                
+
                 // Summit is perpetually frozen
                 if t.elevation_layer == ElevationLayer::Summit {
                     if t.frozen_state != FrozenState::Snow {
@@ -270,19 +285,24 @@ impl CellularAutomataEngine {
 
                 if effective_temp < -2.0 {
                     // Freezing conditions
-                    if t.elevation_layer == ElevationLayer::ShallowWaters && t.frozen_state != FrozenState::Ice {
+                    if t.elevation_layer == ElevationLayer::ShallowWaters
+                        && t.frozen_state != FrozenState::Ice
+                    {
                         t.frozen_state = FrozenState::Ice; // Solid walkable ice!
                         modified.push((x, y));
-                    } else if (t.elevation_layer == ElevationLayer::Sand || t.elevation_layer == ElevationLayer::SoilLow) && t.frozen_state != FrozenState::Snow {
+                    } else if (t.elevation_layer == ElevationLayer::Sand
+                        || t.elevation_layer == ElevationLayer::SoilLow)
+                        && t.frozen_state != FrozenState::Snow
+                    {
                         t.frozen_state = FrozenState::Snow;
                         modified.push((x, y));
                     }
                 } else if effective_temp > 4.0 {
                     // Thawing conditions
-                    if t.frozen_state == FrozenState::Ice {
-                        t.frozen_state = FrozenState::None;
-                        modified.push((x, y));
-                    } else if t.frozen_state == FrozenState::Snow && t.elevation_layer != ElevationLayer::Summit {
+                    if t.frozen_state == FrozenState::Ice
+                        || (t.frozen_state == FrozenState::Snow
+                            && t.elevation_layer != ElevationLayer::Summit)
+                    {
                         t.frozen_state = FrozenState::None;
                         modified.push((x, y));
                     }
@@ -313,7 +333,11 @@ impl CellularAutomataEngine {
             let source_tile = &tiles[idx];
 
             let str_source = source_tile.biome.grow_strength();
-            if str_source == 0 || source_tile.burned_stages > 0 || source_tile.is_on_fire || source_tile.lava_level > 0 {
+            if str_source == 0
+                || source_tile.burned_stages > 0
+                || source_tile.is_on_fire
+                || source_tile.lava_level > 0
+            {
                 continue;
             }
 
@@ -326,28 +350,33 @@ impl CellularAutomataEngine {
             ];
 
             let (nx, ny, valid) = neighbors[rng.gen_range(0..4)];
-            if !valid { continue; }
+            if !valid {
+                continue;
+            }
 
             let n_idx = ny * width + nx;
             let target_tile = &tiles[n_idx];
 
             // Only creep onto soil or plateau land
-            if matches!(target_tile.elevation_layer, ElevationLayer::SoilLow | ElevationLayer::SoilHigh) && target_tile.burned_stages == 0 {
-                if target_tile.biome != source_tile.biome {
-                    let str_target = target_tile.biome.grow_strength();
-                    let can_overgrow = if str_target == 0 {
-                        true
-                    } else if str_source > str_target {
-                        rng.gen_bool(0.65)
-                    } else if str_source == str_target {
-                        rng.gen_bool(0.25)
-                    } else {
-                        rng.gen_bool(0.08)
-                    };
+            if matches!(
+                target_tile.elevation_layer,
+                ElevationLayer::SoilLow | ElevationLayer::SoilHigh
+            ) && target_tile.burned_stages == 0
+                && target_tile.biome != source_tile.biome
+            {
+                let str_target = target_tile.biome.grow_strength();
+                let can_overgrow = if str_target == 0 {
+                    true
+                } else if str_source > str_target {
+                    rng.gen_bool(0.65)
+                } else if str_source == str_target {
+                    rng.gen_bool(0.25)
+                } else {
+                    rng.gen_bool(0.08)
+                };
 
-                    if can_overgrow {
-                        conversions.push((n_idx, nx, ny, source_tile.biome));
-                    }
+                if can_overgrow {
+                    conversions.push((n_idx, nx, ny, source_tile.biome));
                 }
             }
         }

@@ -1,15 +1,15 @@
-use serde::{Deserialize, Serialize};
-use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
-use super::god_powers::DivineInterventionKind;
 use super::super::agent::CivilizationRace;
+use super::super::brain::ast::BehavioralGenome;
+use super::super::brain::desire::AmbitionArchetype;
+use super::super::brain::memory::EpisodicMemory;
+use super::super::brain::neuromod::NeuromodulationState;
 use super::super::world::altar::Altar;
-pub use super::super::world::MapArchetype;
 use super::super::world::ecology::WeatherCondition;
 use super::super::world::tile::{BiomeType, ElevationLayer, FrozenState, StructureKind};
-use super::super::brain::desire::AmbitionArchetype;
-use super::super::brain::ast::BehavioralGenome;
-use super::super::brain::neuromod::NeuromodulationState;
-use super::super::brain::memory::EpisodicMemory;
+pub use super::super::world::MapArchetype;
+use super::covenants::{CovenantRewardType, DivineCovenant, QuestObjectiveType};
+use super::god_powers::DivineInterventionKind;
+use serde::{Deserialize, Serialize};
 
 use super::super::factions::CivilizationCulture;
 
@@ -46,7 +46,9 @@ pub enum TerraformBrush {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
-    SetSpeedMultiplier { speed: f32 },
+    SetSpeedMultiplier {
+        speed: f32,
+    },
     StepSingleTick,
     IssueCovenant {
         objective: QuestObjectiveType,
@@ -54,10 +56,20 @@ pub enum ClientMessage {
         reward: CovenantRewardType,
         punishment: String,
     },
-    BlessOffering { altar_id: usize, offering_id: usize },
-    SmiteOffering { altar_id: usize, offering_id: usize },
-    TriggerIntervention { intervention: DivineInterventionKind },
-    SelectAgent { agent_id: usize },
+    BlessOffering {
+        altar_id: usize,
+        offering_id: usize,
+    },
+    SmiteOffering {
+        altar_id: usize,
+        offering_id: usize,
+    },
+    TriggerIntervention {
+        intervention: DivineInterventionKind,
+    },
+    SelectAgent {
+        agent_id: usize,
+    },
     TerraformArea {
         center_x: usize,
         center_y: usize,
@@ -78,7 +90,9 @@ pub enum ClientMessage {
     },
     RequestFullMap,
     ExportState,
-    ImportState { snapshot_json: String },
+    ImportState {
+        snapshot_json: String,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -242,7 +256,7 @@ pub struct CivilizationRunSnapshot {
 
 pub fn encode_base64(bytes: &[u8]) -> String {
     const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b0 = chunk[0];
         let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
@@ -268,5 +282,3 @@ pub fn encode_base64(bytes: &[u8]) -> String {
     }
     out
 }
-
-

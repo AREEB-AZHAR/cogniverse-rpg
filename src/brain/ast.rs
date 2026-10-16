@@ -122,7 +122,9 @@ impl BehavioralGenome {
                     Box::new(Expr::Constant(2.0)),
                 ),
                 Box::new(Stmt::Act(ActionChoice::ForageFood)),
-                Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::FoodSource))),
+                Box::new(Stmt::Act(ActionChoice::MoveToNearest(
+                    EntityFilter::FoodSource,
+                ))),
             )),
             Box::new(Stmt::IfElse(
                 Expr::BinaryOp(
@@ -137,7 +139,9 @@ impl BehavioralGenome {
                         Box::new(Expr::Constant(2.0)),
                     ),
                     Box::new(Stmt::Act(ActionChoice::DrinkWater)),
-                    Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::WaterSource))),
+                    Box::new(Stmt::Act(ActionChoice::MoveToNearest(
+                        EntityFilter::WaterSource,
+                    ))),
                 )),
                 Box::new(Stmt::IfElse(
                     Expr::BinaryOp(
@@ -160,7 +164,9 @@ impl BehavioralGenome {
                                     Box::new(Expr::Constant(2.5)),
                                 ),
                                 Box::new(Stmt::Act(ActionChoice::MakeAltarOffering)),
-                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::Altar))),
+                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(
+                                    EntityFilter::Altar,
+                                ))),
                             ),
                         ),
                         (
@@ -176,7 +182,9 @@ impl BehavioralGenome {
                             Stmt::IfElse(
                                 Expr::HasItemInInventory("Stone".into()),
                                 Box::new(Stmt::Act(ActionChoice::BuildShelter)),
-                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::StoneRock))),
+                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(
+                                    EntityFilter::StoneRock,
+                                ))),
                             ),
                         ),
                         (
@@ -188,7 +196,9 @@ impl BehavioralGenome {
                                     Box::new(Expr::Constant(1.8)),
                                 ),
                                 Box::new(Stmt::Act(ActionChoice::ChopWood)),
-                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(EntityFilter::Tree))),
+                                Box::new(Stmt::Act(ActionChoice::MoveToNearest(
+                                    EntityFilter::Tree,
+                                ))),
                             ),
                         ),
                     ])),
@@ -234,20 +244,52 @@ impl BehavioralGenome {
                 let l_val = Self::eval_expr(left, ctx, gas);
                 let r_val = Self::eval_expr(right, ctx, gas);
                 match op {
-                    Op::GreaterThan => if l_val > r_val { 1.0 } else { 0.0 },
-                    Op::LessThan => if l_val < r_val { 1.0 } else { 0.0 },
-                    Op::Equal => if (l_val - r_val).abs() < 0.001 { 1.0 } else { 0.0 },
-                    Op::And => if l_val > 0.5 && r_val > 0.5 { 1.0 } else { 0.0 },
-                    Op::Or => if l_val > 0.5 || r_val > 0.5 { 1.0 } else { 0.0 },
+                    Op::GreaterThan => {
+                        if l_val > r_val {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    Op::LessThan => {
+                        if l_val < r_val {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    Op::Equal => {
+                        if (l_val - r_val).abs() < 0.001 {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    Op::And => {
+                        if l_val > 0.5 && r_val > 0.5 {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    Op::Or => {
+                        if l_val > 0.5 || r_val > 0.5 {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
                     Op::Add => l_val + r_val,
                     Op::Subtract => l_val - r_val,
                 }
             }
-            Expr::DistanceTo(filter) => {
-                *ctx.nearest_distances.get(filter).unwrap_or(&999.0)
-            }
+            Expr::DistanceTo(filter) => *ctx.nearest_distances.get(filter).unwrap_or(&999.0),
             Expr::HasItemInInventory(item_name) => {
-                if (ctx.inventory_has)(item_name) { 1.0 } else { 0.0 }
+                if (ctx.inventory_has)(item_name) {
+                    1.0
+                } else {
+                    0.0
+                }
             }
             Expr::Neuromod(nm) => match nm {
                 NeuromodType::Dopamine => ctx.dopamine,
@@ -257,7 +299,12 @@ impl BehavioralGenome {
         }
     }
 
-    fn eval_stmt(stmt: &Stmt, ctx: &AstVmContext, gas: &mut u32, action_out: &mut Option<ActionChoice>) {
+    fn eval_stmt(
+        stmt: &Stmt,
+        ctx: &AstVmContext,
+        gas: &mut u32,
+        action_out: &mut Option<ActionChoice>,
+    ) {
         if *gas == 0 || action_out.is_some() {
             return;
         }

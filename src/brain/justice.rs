@@ -47,7 +47,13 @@ impl SocialJusticeLedger {
         *self.reputations.get(&agent_id).unwrap_or(&0.5)
     }
 
-    pub fn report_crime(&mut self, offender_id: usize, victim_id: usize, crime: CrimeType, tick: u64) {
+    pub fn report_crime(
+        &mut self,
+        offender_id: usize,
+        victim_id: usize,
+        crime: CrimeType,
+        tick: u64,
+    ) {
         let severity = crime.severity();
         let rep = self.reputations.entry(offender_id).or_insert(0.5);
         *rep = (*rep - severity).clamp(-1.0, 1.0);

@@ -1,19 +1,20 @@
-pub mod tile;
-pub mod items;
 pub mod altar;
+pub mod cellular;
+pub mod commands;
 pub mod ecology;
 pub mod fauna;
-pub mod cellular;
 pub mod generation;
+pub mod items;
+pub mod tile;
 
-use serde::{Deserialize, Serialize};
-use tile::{BiomeType, Tile};
 use altar::Altar;
+use cellular::CellularAutomataEngine;
 use ecology::GaiaEngine;
 use fauna::{AnimalSpecies, WildlifeEntity};
-use generation::MapGenerator;
 pub use generation::MapArchetype;
-use cellular::CellularAutomataEngine;
+use generation::MapGenerator;
+use serde::{Deserialize, Serialize};
+use tile::{BiomeType, Tile};
 
 pub const WORLD_WIDTH: usize = 128;
 pub const WORLD_HEIGHT: usize = 128;
@@ -27,6 +28,12 @@ pub struct WorldGrid {
     pub altars: Vec<Altar>,
     pub wildlife: Vec<WildlifeEntity>,
     pub next_entity_id: usize,
+}
+
+impl Default for WorldGrid {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WorldGrid {
@@ -91,10 +98,8 @@ impl WorldGrid {
                 if (t.x * 5 + t.y * 2) % 23 == 0 {
                     t.mithril_amount += 30; // Mithril Gem Pocket
                 }
-            } else if t.biome == BiomeType::AncientLeylineRuins {
-                if (t.x + t.y) % 7 == 0 {
-                    t.mithril_amount += 35;
-                }
+            } else if t.biome == BiomeType::AncientLeylineRuins && (t.x + t.y) % 7 == 0 {
+                t.mithril_amount += 35;
             }
         }
     }
@@ -107,7 +112,12 @@ impl WorldGrid {
         for i in 0..28 {
             let wx = 14 + (i * 5) % 40;
             let wy = 16 + (i * 7) % 65;
-            wildlife.push(WildlifeEntity::new(next_id, AnimalSpecies::ForestDeer, wx, wy));
+            wildlife.push(WildlifeEntity::new(
+                next_id,
+                AnimalSpecies::ForestDeer,
+                wx,
+                wy,
+            ));
             next_id += 1;
         }
 
@@ -115,7 +125,12 @@ impl WorldGrid {
         for i in 0..14 {
             let wx = 75 + (i * 4) % 42;
             let wy = 14 + (i * 6) % 40;
-            wildlife.push(WildlifeEntity::new(next_id, AnimalSpecies::DireWolf, wx, wy));
+            wildlife.push(WildlifeEntity::new(
+                next_id,
+                AnimalSpecies::DireWolf,
+                wx,
+                wy,
+            ));
             next_id += 1;
         }
 
@@ -131,7 +146,12 @@ impl WorldGrid {
         for i in 0..12 {
             let wx = 70 + (i * 5) % 45;
             let wy = 20 + (i * 6) % 35;
-            wildlife.push(WildlifeEntity::new(next_id, AnimalSpecies::MountainBear, wx, wy));
+            wildlife.push(WildlifeEntity::new(
+                next_id,
+                AnimalSpecies::MountainBear,
+                wx,
+                wy,
+            ));
             next_id += 1;
         }
 
@@ -176,7 +196,7 @@ impl WorldGrid {
         self.wildlife.retain(|a| a.is_alive);
 
         // Wildlife reproduction if population drops below carrying capacity
-        if self.wildlife.len() < 60 && self.gaia.world_tick % 80 == 0 {
+        if self.wildlife.len() < 60 && self.gaia.world_tick.is_multiple_of(80) {
             use rand::Rng;
             let mut rng = rand::thread_rng();
             let rx = rng.gen_range(12..w - 12);

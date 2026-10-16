@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use super::tile::{BiomeType, ElevationLayer, Tile, PlacedStructure, StructureKind};
 use super::altar::{Altar, DeityAlignment};
+use super::tile::{BiomeType, ElevationLayer, PlacedStructure, StructureKind, Tile};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MapArchetype {
@@ -73,18 +73,22 @@ impl MapGenerator {
         height: usize,
         archetype: MapArchetype,
         seed: u64,
-        water_level: f32,       // 0.0 = Dry, 0.5 = Standard, 1.0 = Flooded
-        mountain_density: f32,  // 0.0 = Flat, 0.5 = Moderate, 1.0 = Rugged
+        water_level: f32,      // 0.0 = Dry, 0.5 = Standard, 1.0 = Flooded
+        mountain_density: f32, // 0.0 = Flat, 0.5 = Moderate, 1.0 = Rugged
     ) -> (Vec<Tile>, Vec<Altar>, String) {
         let mut tiles = Vec::with_capacity(width * height);
         let center_x = width as f32 / 2.0;
         let center_y = height as f32 / 2.0;
 
         // Deterministic pseudo-random seed offsets
-        let s = (seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407) >> 16) as f32 * 0.0001;
+        let s = (seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407)
+            >> 16) as f32
+            * 0.0001;
         let p1 = (s * 1.6180339).sin() * 40.0;
-        let p2 = (s * 2.7182818).cos() * 40.0;
-        let p3 = (s * 3.1415926).sin() * 40.0;
+        let p2 = (s * std::f32::consts::E).cos() * 40.0;
+        let p3 = (s * std::f32::consts::PI).sin() * 40.0;
 
         // Sea level adjustment offset: positive water_level pushes elevations down
         let water_offset = (0.5 - water_level.clamp(0.0, 1.0)) * 0.22;
@@ -95,10 +99,15 @@ impl MapGenerator {
                 let fx = x as f32 / width as f32;
                 let fy = y as f32 / height as f32;
 
+                use std::f32::consts::TAU;
                 // Multi-octave coherent harmonics
-                let n1 = ((fx * 6.28 * 2.0 + p1).sin() * (fy * 6.28 * 2.0 + p2).cos()) * 0.5 + 0.5;
-                let n2 = ((fx * 6.28 * 4.5 + p2 + 1.2).cos() * (fy * 6.28 * 4.5 + p3 + 0.8).sin()) * 0.5 + 0.5;
-                let n3 = ((fx * 6.28 * 9.0 + p3 + 2.5).sin() * (fy * 6.28 * 9.0 + p1 + 3.1).cos()) * 0.5 + 0.5;
+                let n1 = ((fx * TAU * 2.0 + p1).sin() * (fy * TAU * 2.0 + p2).cos()) * 0.5 + 0.5;
+                let n2 = ((fx * TAU * 4.5 + p2 + 1.2).cos() * (fy * TAU * 4.5 + p3 + 0.8).sin())
+                    * 0.5
+                    + 0.5;
+                let n3 = ((fx * TAU * 9.0 + p3 + 2.5).sin() * (fy * TAU * 9.0 + p1 + 3.1).cos())
+                    * 0.5
+                    + 0.5;
                 let raw_noise = n1 * 0.55 + n2 * 0.30 + n3 * 0.15;
 
                 let dx_norm = (x as f32 - center_x) / (center_x * 0.94);
@@ -115,7 +124,9 @@ impl MapGenerator {
                         elevation = raw_noise * land_mask + water_offset;
 
                         // River system
-                        let main_river_center = 56.0 + (y as f32 * 0.08 + p1).sin() * 14.0 + (y as f32 * 0.22).cos() * 5.0;
+                        let main_river_center = 56.0
+                            + (y as f32 * 0.08 + p1).sin() * 14.0
+                            + (y as f32 * 0.22).cos() * 5.0;
                         let dist_to_main = (x as f32 - main_river_center).abs();
                         let is_edge = x < 9 || x >= width - 9 || y < 9 || y >= height - 9;
                         if dist_to_main <= 2.2 && elevation > 0.20 && !is_edge {
@@ -152,7 +163,9 @@ impl MapGenerator {
                     MapArchetype::ScatteredIslands => {
                         // High-frequency cellular island clusters
                         let island_harmonics = ((fx * 14.0 + p1).sin() * (fy * 14.0 + p2).cos()
-                            + (fx * 10.0 - p2).cos() * (fy * 10.0 + p3).sin()) * 0.5 + 0.5;
+                            + (fx * 10.0 - p2).cos() * (fy * 10.0 + p3).sin())
+                            * 0.5
+                            + 0.5;
                         let combined = raw_noise * 0.35 + island_harmonics * 0.65;
                         let mask = (1.0 - dist_from_center.powf(2.6)).clamp(0.0, 1.0);
                         elevation = (combined * 1.5 - 0.50 + water_offset) * mask;
@@ -181,10 +194,12 @@ impl MapGenerator {
                         let dist_to_rift = (fx - rift_center).abs();
                         let rift_carve = (dist_to_rift / 0.15).min(1.0).powf(1.8);
 
-                        let margin_mask = (1.05 - ((fx - 0.5).abs() * 1.9).powf(3.0)).clamp(0.0, 1.0)
+                        let margin_mask = (1.05 - ((fx - 0.5).abs() * 1.9).powf(3.0))
+                            .clamp(0.0, 1.0)
                             * (1.05 - ((fy - 0.5).abs() * 1.9).powf(3.0)).clamp(0.0, 1.0);
 
-                        elevation = (raw_noise * 0.90 + 0.10) * margin_mask * rift_carve + water_offset;
+                        elevation =
+                            (raw_noise * 0.90 + 0.10) * margin_mask * rift_carve + water_offset;
 
                         if fx > 0.62 && elevation > 0.45 {
                             // Eastern continent has towering jagged mountain stronghold
@@ -245,9 +260,11 @@ impl MapGenerator {
                     } else {
                         fb
                     }
-                } else if is_fresh_river {
-                    BiomeType::CrystalRiverlands
-                } else if is_outer_edge || elevation_layer == ElevationLayer::DeepOcean || elevation_layer == ElevationLayer::CloseOcean {
+                } else if is_fresh_river
+                    || is_outer_edge
+                    || elevation_layer == ElevationLayer::DeepOcean
+                    || elevation_layer == ElevationLayer::CloseOcean
+                {
                     BiomeType::CrystalRiverlands
                 } else if elevation >= 0.82 {
                     BiomeType::IroncragMountains
@@ -284,7 +301,10 @@ impl MapGenerator {
 
                 let mut tile = Tile::new(x, y, biome, elevation, moisture);
 
-                if is_outer_edge || elevation_layer == ElevationLayer::DeepOcean || elevation_layer == ElevationLayer::CloseOcean {
+                if is_outer_edge
+                    || elevation_layer == ElevationLayer::DeepOcean
+                    || elevation_layer == ElevationLayer::CloseOcean
+                {
                     tile.has_fresh_water = false;
                     tile.berry_amount = 0;
                     tile.grain_amount = 0;
@@ -299,13 +319,26 @@ impl MapGenerator {
 
         // Adaptive Settlement Placement: Find optimal locations for Solar and Lunar altars
         let (solar_x, solar_y) = Self::find_optimal_terran_site(&tiles, width, height);
-        let (lunar_x, lunar_y) = Self::find_optimal_lunar_site(&tiles, width, height, solar_x, solar_y);
+        let (lunar_x, lunar_y) =
+            Self::find_optimal_lunar_site(&tiles, width, height, solar_x, solar_y);
 
         let mut altars = Vec::new();
-        let mut solar_altar = Altar::new(0, solar_x, solar_y, DeityAlignment::SolarPlayerGod, "The Golden Sun Altar");
+        let mut solar_altar = Altar::new(
+            0,
+            solar_x,
+            solar_y,
+            DeityAlignment::SolarPlayerGod,
+            "The Golden Sun Altar",
+        );
         solar_altar.consecrated_level = 2;
 
-        let mut lunar_altar = Altar::new(1, lunar_x, lunar_y, DeityAlignment::LunarShadowWeaver, "The Obsidian Moon Altar");
+        let mut lunar_altar = Altar::new(
+            1,
+            lunar_x,
+            lunar_y,
+            DeityAlignment::LunarShadowWeaver,
+            "The Obsidian Moon Altar",
+        );
         lunar_altar.consecrated_level = 2;
 
         // Place Altar structures
@@ -419,7 +452,8 @@ impl MapGenerator {
                 }
 
                 // Slight preference for southwestern region
-                let dist_from_preferred = ((x as f32 - 40.0).powi(2) + (y as f32 - 80.0).powi(2)).sqrt();
+                let dist_from_preferred =
+                    ((x as f32 - 40.0).powi(2) + (y as f32 - 80.0).powi(2)).sqrt();
                 score -= dist_from_preferred * 0.15;
 
                 if score > best_score {
@@ -450,7 +484,9 @@ impl MapGenerator {
                     continue;
                 }
 
-                let dist_from_solar = ((x as f32 - solar_x as f32).powi(2) + (y as f32 - solar_y as f32).powi(2)).sqrt();
+                let dist_from_solar = ((x as f32 - solar_x as f32).powi(2)
+                    + (y as f32 - solar_y as f32).powi(2))
+                .sqrt();
                 if dist_from_solar < 28.0 {
                     continue; // Must have sufficient geopolitical distance
                 }
@@ -469,7 +505,8 @@ impl MapGenerator {
                 }
 
                 // Preference for northeastern region
-                let dist_from_preferred = ((x as f32 - 90.0).powi(2) + (y as f32 - 35.0).powi(2)).sqrt();
+                let dist_from_preferred =
+                    ((x as f32 - 90.0).powi(2) + (y as f32 - 35.0).powi(2)).sqrt();
                 score -= dist_from_preferred * 0.15;
 
                 if score > best_score {

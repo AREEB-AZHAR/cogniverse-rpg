@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::agent::CivilizationRace;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlotType {

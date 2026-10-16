@@ -1,12 +1,12 @@
-use serde::{Deserialize, Serialize};
+use super::brain::ast::EntityFilter;
+use super::brain::desire::AmbitionArchetype;
+use super::brain::memory::AncestralEcho;
+use super::brain::CognitiveBrain;
 use super::world::altar::DeityAlignment;
 use super::world::items::{Inventory, ItemId};
 use super::world::tile::Tile;
 use super::world::WorldGrid;
-use super::brain::ast::EntityFilter;
-use super::brain::memory::AncestralEcho;
-use super::brain::desire::AmbitionArchetype;
-use super::brain::CognitiveBrain;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CivilizationRace {
@@ -24,7 +24,7 @@ impl CivilizationRace {
 
     pub fn badge_color(&self) -> &'static str {
         match self {
-            CivilizationRace::SolarTerran => "#eab308",     // Radiant gold
+            CivilizationRace::SolarTerran => "#eab308", // Radiant gold
             CivilizationRace::ChthonicLunarian => "#a855f7", // Mystical violet
         }
     }
@@ -37,7 +37,7 @@ pub struct Agent {
     pub race: CivilizationRace,
     pub x: usize,
     pub y: usize,
-    
+
     // Physiological Vitals
     pub health: f32,
     pub max_health: f32,
@@ -46,19 +46,19 @@ pub struct Agent {
     pub energy: f32,      // 0.0 (exhausted) to 1.0 (energized)
     pub warmth: f32,      // 0.0 (freezing) to 1.0 (comfortably warm)
     pub social_need: f32, // 0.0 (content) to 1.0 (lonely)
-    
+
     // Inventory & Tools
     pub inventory: Inventory,
-    
+
     // The Cognitive Brain (AST, Memory, Neuromodulators, Desires)
     pub brain: CognitiveBrain,
-    
+
     // Lineage & Social Ties
     pub partner_id: Option<usize>,
     pub children_count: u32,
     pub ancestral_echo: Option<AncestralEcho>,
     pub traits: Vec<String>,
-    
+
     pub is_alive: bool,
     pub age_ticks: u64,
 }
@@ -85,7 +85,10 @@ impl Agent {
             brain.piety += echo.innate_piety_bonus;
             brain.memory.log_episodic_event(
                 0,
-                format!("Awakened with Ancestral Echo of {}: {}", echo.hero_name, echo.gift_description),
+                format!(
+                    "Awakened with Ancestral Echo of {}: {}",
+                    echo.hero_name, echo.gift_description
+                ),
                 vec!["Akashic".into(), "Destiny".into()],
                 10.0,
             );
@@ -157,7 +160,10 @@ impl Agent {
     }
 
     /// Computes distances to nearest interesting entities on the 64x64 grid
-    pub fn compute_sensory_distances(&self, world: &WorldGrid) -> std::collections::HashMap<EntityFilter, f32> {
+    pub fn compute_sensory_distances(
+        &self,
+        world: &WorldGrid,
+    ) -> std::collections::HashMap<EntityFilter, f32> {
         let mut map = std::collections::HashMap::new();
         let ax = self.x as f32;
         let ay = self.y as f32;
@@ -209,11 +215,16 @@ impl Agent {
 
         // Check nearest altar (preferring faction altar)
         for altar in &world.altars {
-            let matches_faction = match (self.race, altar.deity) {
-                (CivilizationRace::SolarTerran, DeityAlignment::SolarPlayerGod) => true,
-                (CivilizationRace::ChthonicLunarian, DeityAlignment::LunarShadowWeaver) => true,
-                _ => false,
-            };
+            let matches_faction = matches!(
+                (self.race, altar.deity),
+                (
+                    CivilizationRace::SolarTerran,
+                    DeityAlignment::SolarPlayerGod
+                ) | (
+                    CivilizationRace::ChthonicLunarian,
+                    DeityAlignment::LunarShadowWeaver
+                )
+            );
             let penalty = if matches_faction { 0.0 } else { 200.0 };
             let d = (altar.x as f32 - ax).hypot(altar.y as f32 - ay) + penalty;
             if d < min_altar {
@@ -259,11 +270,15 @@ impl Agent {
             if self.inventory.count(ItemId::Berry) > 0 {
                 self.inventory.remove(ItemId::Berry, 1);
                 self.hunger = (self.hunger - 0.40).max(0.0);
-                self.brain.neuromod.update(0.3, 1.0 - self.hunger, false, false, 0.0);
+                self.brain
+                    .neuromod
+                    .update(0.3, 1.0 - self.hunger, false, false, 0.0);
             } else if self.inventory.count(ItemId::Grain) > 0 {
                 self.inventory.remove(ItemId::Grain, 1);
                 self.hunger = (self.hunger - 0.30).max(0.0);
-                self.brain.neuromod.update(0.2, 1.0 - self.hunger, false, false, 0.0);
+                self.brain
+                    .neuromod
+                    .update(0.2, 1.0 - self.hunger, false, false, 0.0);
             }
         }
 

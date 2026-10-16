@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::ast::BehavioralGenome;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CourtshipProposal {
@@ -27,7 +27,10 @@ impl ReproductionManager {
     }
 
     /// Creates child genome by combining parents' genomes via crossover and mutation
-    pub fn create_child_genome(parent_a_genome: &BehavioralGenome, parent_b_genome: &BehavioralGenome) -> BehavioralGenome {
+    pub fn create_child_genome(
+        parent_a_genome: &BehavioralGenome,
+        parent_b_genome: &BehavioralGenome,
+    ) -> BehavioralGenome {
         let mut child = BehavioralGenome::crossover(parent_a_genome, parent_b_genome);
         // Epigenetic mutation
         child.mutate(0.2);

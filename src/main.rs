@@ -1,10 +1,10 @@
+use parking_lot::RwLock;
 use std::sync::Arc;
 use std::time::Duration;
-use parking_lot::RwLock;
 use tokio::net::TcpListener;
 
-use cogniverse_rpg::server::state::SimulationEngine;
 use cogniverse_rpg::server::create_router;
+use cogniverse_rpg::server::state::SimulationEngine;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,7 +67,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(&addr).await?;
 
     println!("[*] Simulation server running at http://localhost:{}", port);
-    println!("[*] Open http://localhost:{} in your browser to view the God Console.", port);
+    println!(
+        "[*] Open http://localhost:{} in your browser to view the God Console.",
+        port
+    );
 
     axum::serve(listener, app).await?;
 

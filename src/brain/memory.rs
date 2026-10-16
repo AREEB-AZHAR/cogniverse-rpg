@@ -30,7 +30,13 @@ impl MemoryHierarchy {
         }
     }
 
-    pub fn log_episodic_event(&mut self, tick: u64, description: impl Into<String>, tags: Vec<String>, importance: f32) {
+    pub fn log_episodic_event(
+        &mut self,
+        tick: u64,
+        description: impl Into<String>,
+        tags: Vec<String>,
+        importance: f32,
+    ) {
         self.episodic_stream.push(EpisodicMemory {
             tick,
             description: description.into(),
@@ -47,7 +53,12 @@ impl MemoryHierarchy {
 
     /// Retrieves memories based on Stanford Generative Agents scoring:
     /// Score = w_rec * exp(-lambda * delta_t) + w_imp * (I/10) + w_rel * tag_match
-    pub fn query_memories(&self, current_tick: u64, query_tag: &str, limit: usize) -> Vec<&EpisodicMemory> {
+    pub fn query_memories(
+        &self,
+        current_tick: u64,
+        query_tag: &str,
+        limit: usize,
+    ) -> Vec<&EpisodicMemory> {
         let mut scored: Vec<(f32, &EpisodicMemory)> = self
             .episodic_stream
             .iter()
@@ -95,7 +106,8 @@ impl AkashicCore {
                     hero_name: "Ignis the First Smith".into(),
                     title: "Father of Metallurgy".into(),
                     generation: 1,
-                    gift_description: "Innate instinct for locating iron veins and stone crafting".into(),
+                    gift_description: "Innate instinct for locating iron veins and stone crafting"
+                        .into(),
                     innate_piety_bonus: 0.1,
                     innate_craft_bonus: 0.3,
                 },
@@ -103,7 +115,8 @@ impl AkashicCore {
                     hero_name: "Sylva the Far-Seer".into(),
                     title: "Mistress of Whispers".into(),
                     generation: 1,
-                    gift_description: "Deep affinity with nature, berries, and medicinal popppies".into(),
+                    gift_description: "Deep affinity with nature, berries, and medicinal popppies"
+                        .into(),
                     innate_piety_bonus: 0.2,
                     innate_craft_bonus: 0.1,
                 },

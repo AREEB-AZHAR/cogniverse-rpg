@@ -1,21 +1,21 @@
 pub mod ast;
-pub mod neuromod;
-pub mod memory;
-pub mod reflection;
-pub mod world_model;
 pub mod desire;
 pub mod justice;
 pub mod magic;
+pub mod memory;
+pub mod neuromod;
+pub mod reflection;
 pub mod reproduction;
+pub mod world_model;
 
-use serde::{Deserialize, Serialize};
 use ast::{ActionChoice, AstVmContext, BehavioralGenome, EntityFilter};
-use neuromod::NeuromodulationState;
-use memory::MemoryHierarchy;
-use reflection::KnowledgeGraph;
-use world_model::WorldModel;
 use desire::DesireEngine;
 use justice::SocialJusticeLedger;
+use memory::MemoryHierarchy;
+use neuromod::NeuromodulationState;
+use reflection::KnowledgeGraph;
+use serde::{Deserialize, Serialize};
+use world_model::WorldModel;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CognitiveBrain {
@@ -54,6 +54,7 @@ impl CognitiveBrain {
     }
 
     /// Evaluates perception and runs the gas-metered AST
+    #[allow(clippy::too_many_arguments)]
     pub fn decide_action(
         &mut self,
         hunger: f32,
@@ -68,7 +69,7 @@ impl CognitiveBrain {
         agent_name: &str,
     ) -> ActionChoice {
         // 1. Periodic reflection
-        if current_tick % 100 == 0 {
+        if current_tick.is_multiple_of(100) {
             self.knowledge.reflect(&self.memory, current_tick);
         }
 

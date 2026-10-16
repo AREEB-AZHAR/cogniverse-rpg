@@ -37,7 +37,10 @@ impl ElevationLayer {
     }
 
     pub fn is_water(&self) -> bool {
-        matches!(self, ElevationLayer::DeepOcean | ElevationLayer::CloseOcean | ElevationLayer::ShallowWaters)
+        matches!(
+            self,
+            ElevationLayer::DeepOcean | ElevationLayer::CloseOcean | ElevationLayer::ShallowWaters
+        )
     }
 
     pub fn display_name(&self) -> &'static str {
@@ -132,16 +135,16 @@ impl BiomeType {
 
     pub fn color_hex(&self) -> &'static str {
         match self {
-            BiomeType::SunlitPlains => "#4d7c0f",       // Lush grassy green
-            BiomeType::WhisperingForest => "#14532d",   // Deep forest green
-            BiomeType::CrystalRiverlands => "#0284c7",  // Azure water blue
-            BiomeType::IroncragMountains => "#78716c",  // Stone mountain gray
+            BiomeType::SunlitPlains => "#4d7c0f",      // Lush grassy green
+            BiomeType::WhisperingForest => "#14532d",  // Deep forest green
+            BiomeType::CrystalRiverlands => "#0284c7", // Azure water blue
+            BiomeType::IroncragMountains => "#78716c", // Stone mountain gray
             BiomeType::AncientLeylineRuins => "#7e22ce", // Arcane mystical purple
-            BiomeType::Savanna => "#ca8a04",            // Golden savanna yellow
-            BiomeType::Jungle => "#15803d",             // Vivid emerald jungle
-            BiomeType::CorruptedInfernal => "#991b1b",   // Ash volcanic red
-            BiomeType::PermafrostTundra => "#e0f2fe",   // Pale frosted snow
-            BiomeType::Swamp => "#3f6212",              // Murky moss olive
+            BiomeType::Savanna => "#ca8a04",           // Golden savanna yellow
+            BiomeType::Jungle => "#15803d",            // Vivid emerald jungle
+            BiomeType::CorruptedInfernal => "#991b1b", // Ash volcanic red
+            BiomeType::PermafrostTundra => "#e0f2fe",  // Pale frosted snow
+            BiomeType::Swamp => "#3f6212",             // Murky moss olive
         }
     }
 
@@ -176,10 +179,14 @@ impl BiomeType {
     }
 
     pub fn is_flammable(&self) -> bool {
-        match self {
-            BiomeType::WhisperingForest | BiomeType::SunlitPlains | BiomeType::Savanna | BiomeType::Jungle | BiomeType::Swamp => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            BiomeType::WhisperingForest
+                | BiomeType::SunlitPlains
+                | BiomeType::Savanna
+                | BiomeType::Jungle
+                | BiomeType::Swamp
+        )
     }
 }
 
@@ -188,20 +195,20 @@ pub struct Tile {
     pub x: usize,
     pub y: usize,
     pub biome: BiomeType,
-    pub elevation: f32,             // 0.0 to 1.0
+    pub elevation: f32, // 0.0 to 1.0
     pub elevation_layer: ElevationLayer,
-    pub moisture: f32,              // 0.0 to 1.0
-    pub soil_fertility: f32,        // 0.0 to 1.0
-    pub temperature: f32,           // Celsius
-    pub mana_density: f32,          // 0.0 to 1.0 (Leyline concentration)
-    
+    pub moisture: f32,       // 0.0 to 1.0
+    pub soil_fertility: f32, // 0.0 to 1.0
+    pub temperature: f32,    // Celsius
+    pub mana_density: f32,   // 0.0 to 1.0 (Leyline concentration)
+
     // Cellular Automata Dynamic States
     pub is_on_fire: bool,
     pub fire_ticks: u16,
-    pub burned_stages: u8,          // 0 = healthy, 1..5 = ash recovering
-    pub lava_level: u8,             // 0 = none, 1..3 = molten lava flow
-    pub frozen_state: FrozenState,  // None, Ice, Snow
-    
+    pub burned_stages: u8,         // 0 = healthy, 1..5 = ash recovering
+    pub lava_level: u8,            // 0 = none, 1..3 = molten lava flow
+    pub frozen_state: FrozenState, // None, Ice, Snow
+
     // Natural harvestable resources present on tile
     pub wood_amount: u32,
     pub stone_amount: u32,
@@ -212,7 +219,7 @@ pub struct Tile {
     pub grain_amount: u32,
     pub berry_amount: u32,
     pub has_fresh_water: bool,
-    
+
     // Constructed structure on this tile (if any)
     pub structure: Option<PlacedStructure>,
 }
@@ -240,7 +247,10 @@ impl Tile {
         if self.frozen_state == FrozenState::Ice {
             return true;
         }
-        !matches!(self.elevation_layer, ElevationLayer::DeepOcean | ElevationLayer::CloseOcean)
+        !matches!(
+            self.elevation_layer,
+            ElevationLayer::DeepOcean | ElevationLayer::CloseOcean
+        )
     }
 
     pub fn can_catch_fire(&self) -> bool {
@@ -251,7 +261,10 @@ impl Tile {
             return true;
         }
         if let Some(ref s) = self.structure {
-            matches!(s.kind, StructureKind::WoodCottage | StructureKind::Granary | StructureKind::Campfire)
+            matches!(
+                s.kind,
+                StructureKind::WoodCottage | StructureKind::Granary | StructureKind::Campfire
+            )
         } else {
             false
         }
@@ -272,6 +285,9 @@ pub enum StructureKind {
     SolarAltar,
     LunarAltar,
     StoneWall,
+    Fence,
+    AnimalPen,
+    Barn,
 }
 
 impl StructureKind {
@@ -289,6 +305,9 @@ impl StructureKind {
             StructureKind::SolarAltar => "Golden Sun Altar",
             StructureKind::LunarAltar => "Obsidian Moon Altar",
             StructureKind::StoneWall => "Fortified Stone Wall",
+            StructureKind::Fence => "Wooden Fence",
+            StructureKind::AnimalPen => "Pasture Animal Pen",
+            StructureKind::Barn => "Livestock Barn",
         }
     }
 
@@ -317,16 +336,20 @@ impl StructureKind {
             StructureKind::SolarAltar => "☀️",
             StructureKind::LunarAltar => "🌙",
             StructureKind::StoneWall => "🧱",
+            StructureKind::Fence => "🪵",
+            StructureKind::AnimalPen => "🐑",
+            StructureKind::Barn => "🏚️",
         }
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PlacedStructure {
     pub kind: StructureKind,
     pub owner_id: Option<usize>,
     pub health: f32,
     pub max_health: f32,
+    pub custom_type: Option<String>,
 }
 
 impl PlacedStructure {
@@ -343,12 +366,26 @@ impl PlacedStructure {
             StructureKind::Campfire => 80.0,
             StructureKind::LeanTo => 50.0,
             StructureKind::StoneWall => 200.0,
+            StructureKind::Fence => 60.0,
+            StructureKind::AnimalPen => 120.0,
+            StructureKind::Barn => 200.0,
         };
         Self {
             kind,
             owner_id: None,
             health: max_hp,
             max_health: max_hp,
+            custom_type: None,
+        }
+    }
+
+    pub fn new_mine(mine_id: impl Into<String>) -> Self {
+        Self {
+            kind: StructureKind::MineShaft,
+            owner_id: None,
+            health: 200.0,
+            max_health: 200.0,
+            custom_type: Some(mine_id.into()),
         }
     }
 }
@@ -408,7 +445,9 @@ impl Tile {
         };
 
         // Populate natural resources according to biome and elevation layer
-        if elevation_layer == ElevationLayer::DeepOcean || elevation_layer == ElevationLayer::CloseOcean {
+        if elevation_layer == ElevationLayer::DeepOcean
+            || elevation_layer == ElevationLayer::CloseOcean
+        {
             // Salt ocean water - cannot be drunk, no surface trees or land berries
             tile.has_fresh_water = false;
             tile.wood_amount = 0;
@@ -457,8 +496,8 @@ impl Tile {
                 tile.wood_amount = 3;
                 // Mountain cave berries, lichen, and underground springs
                 // prevent Lunarians from starving or fleeing across the continent to (0, 0)!
-                tile.berry_amount = 8; 
-                tile.has_fresh_water = (x + y) % 3 == 0;
+                tile.berry_amount = 8;
+                tile.has_fresh_water = (x + y).is_multiple_of(3);
             }
             BiomeType::AncientLeylineRuins => {
                 tile.stone_amount = 25;
@@ -467,7 +506,7 @@ impl Tile {
                 tile.gold_ore_amount = 10;
                 tile.mithril_amount = 22;
                 tile.berry_amount = 6;
-                tile.has_fresh_water = (x + y) % 4 == 0;
+                tile.has_fresh_water = (x + y).is_multiple_of(4);
             }
             BiomeType::CorruptedInfernal => {
                 tile.stone_amount = 20;

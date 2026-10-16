@@ -5,8 +5,6 @@ pub mod state;
 
 pub use god_powers::DivineInterventionKind;
 
-use std::sync::Arc;
-use std::time::Duration;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -18,6 +16,8 @@ use axum::{
 };
 use futures_util::{SinkExt, StreamExt};
 use parking_lot::RwLock;
+use std::sync::Arc;
+use std::time::Duration;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
@@ -34,7 +34,10 @@ pub fn create_router(sim: SharedSimulation) -> Router {
         .with_state(sim)
 }
 
-async fn ws_handler(ws: WebSocketUpgrade, State(sim): State<SharedSimulation>) -> impl IntoResponse {
+async fn ws_handler(
+    ws: WebSocketUpgrade,
+    State(sim): State<SharedSimulation>,
+) -> impl IntoResponse {
     ws.on_upgrade(|socket| handle_socket(socket, sim))
 }
 
@@ -74,7 +77,12 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                         ClientMessage::StepSingleTick => {
                             engine.single_step = true;
                         }
-                        ClientMessage::IssueCovenant { objective, target_amount, reward, punishment } => {
+                        ClientMessage::IssueCovenant {
+                            objective,
+                            target_amount,
+                            reward,
+                            punishment,
+                        } => {
                             let next_id = engine.next_covenant_id;
                             engine.next_covenant_id += 1;
                             let current_tick = engine.world.gaia.world_tick;
@@ -86,29 +94,52 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                                 punishment,
                                 current_tick,
                             );
-                            engine.log_event(format!("A NEW DIVINE COVENANT HAS BEEN FORGED: '{}'", covenant.title));
+                            engine.log_event(format!(
+                                "A NEW DIVINE COVENANT HAS BEEN FORGED: '{}'",
+                                covenant.title
+                            ));
                             engine.covenants.push(covenant);
                         }
-                        ClientMessage::BlessOffering { altar_id, offering_id } => {
-                            if let Some(altar) = engine.world.altars.iter_mut().find(|a| a.id == altar_id) {
-                                if let Some(offering) = altar.recent_offerings.iter_mut().find(|o| o.offering_id == offering_id) {
+                        ClientMessage::BlessOffering {
+                            altar_id,
+                            offering_id,
+                        } => {
+                            if let Some(altar) =
+                                engine.world.altars.iter_mut().find(|a| a.id == altar_id)
+                            {
+                                if let Some(offering) = altar
+                                    .recent_offerings
+                                    .iter_mut()
+                                    .find(|o| o.offering_id == offering_id)
+                                {
                                     offering.resolved = true;
-                                    offering.outcome = Some(crate::world::altar::OfferingOutcome::Blessed {
-                                        boon_type: "Vitality & Abundant Manna".into(),
-                                        potency: 1.0,
-                                    });
+                                    offering.outcome =
+                                        Some(crate::world::altar::OfferingOutcome::Blessed {
+                                            boon_type: "Vitality & Abundant Manna".into(),
+                                            potency: 1.0,
+                                        });
                                 }
                             }
                             engine.log_event("You stretched forth your holy hand and BLESSED the altar sacrifice!");
                         }
-                        ClientMessage::SmiteOffering { altar_id, offering_id } => {
-                            if let Some(altar) = engine.world.altars.iter_mut().find(|a| a.id == altar_id) {
-                                if let Some(offering) = altar.recent_offerings.iter_mut().find(|o| o.offering_id == offering_id) {
+                        ClientMessage::SmiteOffering {
+                            altar_id,
+                            offering_id,
+                        } => {
+                            if let Some(altar) =
+                                engine.world.altars.iter_mut().find(|a| a.id == altar_id)
+                            {
+                                if let Some(offering) = altar
+                                    .recent_offerings
+                                    .iter_mut()
+                                    .find(|o| o.offering_id == offering_id)
+                                {
                                     offering.resolved = true;
-                                    offering.outcome = Some(crate::world::altar::OfferingOutcome::Smitten {
-                                        retribution_type: "Wrathful Retribution".into(),
-                                        severity: 1.0,
-                                    });
+                                    offering.outcome =
+                                        Some(crate::world::altar::OfferingOutcome::Smitten {
+                                            retribution_type: "Wrathful Retribution".into(),
+                                            severity: 1.0,
+                                        });
                                 }
                             }
                             engine.log_event("You struck the offering with divine DISPLEASURE!");
@@ -119,7 +150,12 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                         ClientMessage::SelectAgent { agent_id } => {
                             engine.selected_agent_id = Some(agent_id);
                         }
-                        ClientMessage::TerraformArea { center_x, center_y, brush, radius } => {
+                        ClientMessage::TerraformArea {
+                            center_x,
+                            center_y,
+                            brush,
+                            radius,
+                        } => {
                             engine.terraform_area(center_x, center_y, brush, radius);
                         }
                         ClientMessage::SpawnAgentAt { race, x, y } => {
@@ -127,9 +163,16 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                         }
                         ClientMessage::ResetWorld => {
                             engine.reset_world();
-                            engine.log_event("The cosmos shivers as the Divine Will RESETS the living realm!");
+                            engine.log_event(
+                                "The cosmos shivers as the Divine Will RESETS the living realm!",
+                            );
                         }
-                        ClientMessage::ChangeMap { archetype, seed, water_level, mountain_density } => {
+                        ClientMessage::ChangeMap {
+                            archetype,
+                            seed,
+                            water_level,
+                            mountain_density,
+                        } => {
                             engine.change_map(archetype, seed, water_level, mountain_density);
                         }
                         ClientMessage::RequestFullMap => {
@@ -142,10 +185,10 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                         ClientMessage::ImportState { snapshot_json } => {
                             match engine.import_run_snapshot_json(&snapshot_json) {
                                 Ok(summary) => {
-                                    engine.log_event(&format!("Import successful: {}", summary));
+                                    engine.log_event(format!("Import successful: {}", summary));
                                 }
                                 Err(err) => {
-                                    engine.log_event(&format!("Import failed: {}", err));
+                                    engine.log_event(format!("Import failed: {}", err));
                                 }
                             }
                         }

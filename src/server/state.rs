@@ -1,22 +1,22 @@
-use super::super::world::{WorldGrid, WORLD_WIDTH, WORLD_HEIGHT};
-use super::super::world::tile::{BiomeType, PlacedStructure, StructureKind};
-use super::super::world::altar::DeityAlignment;
-use super::super::world::items::ItemId;
 use super::super::agent::{Agent, CivilizationRace};
 use super::super::brain::ast::{ActionChoice, EntityFilter};
-use super::super::brain::memory::AkashicCore;
 use super::super::brain::desire::AmbitionArchetype;
+use super::super::brain::memory::AkashicCore;
 use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
-use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
+use super::super::world::altar::DeityAlignment;
+use super::super::world::items::ItemId;
+use super::super::world::tile::{BiomeType, PlacedStructure, StructureKind};
+use super::super::world::{WorldGrid, WORLD_HEIGHT, WORLD_WIDTH};
+use super::covenants::{CovenantRewardType, DivineCovenant, QuestObjectiveType};
 pub use super::god_powers::DivineInterventionKind;
+use super::protocol::{
+    encode_base64, AgentActivitySummary, AgentSummary, CivilizationRunSnapshot,
+    DemographicsTelemetry, LearningMilestonesSnapshot, MapArchetype, PlacedStructureSummary,
+    SelectedAgentDetail, TerraformBrush, WorldMetadataSnapshot, WorldStateTelemetry,
+};
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
-use super::protocol::{
-    AgentActivitySummary, AgentSummary, DemographicsTelemetry, PlacedStructureSummary,
-    SelectedAgentDetail, TerraformBrush, WorldStateTelemetry, MapArchetype, encode_base64,
-    CivilizationRunSnapshot, WorldMetadataSnapshot, LearningMilestonesSnapshot,
-};
 
 pub struct SimulationEngine {
     pub world: WorldGrid,
@@ -43,6 +43,12 @@ pub struct SimulationEngine {
     pub pending_exported_snapshot: Mutex<Option<String>>,
 }
 
+impl Default for SimulationEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SimulationEngine {
     pub fn new() -> Self {
         let world = WorldGrid::new();
@@ -51,42 +57,63 @@ impl SimulationEngine {
         let mut next_id = 1;
 
         // Spawn initial Solar Terrans near Sun Altar (x: 38, y: 86)
-        let terran_names = ["Kael", "Lyra", "Orion", "Aria", "Darek", "Elora", "Theron", "Mira"];
+        let terran_names = [
+            "Kael", "Lyra", "Orion", "Aria", "Darek", "Elora", "Theron", "Mira",
+        ];
         for (i, name) in terran_names.iter().enumerate() {
             let x = 34 + (i * 2) % 10;
             let y = 82 + (i * 3) % 8;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = akashic_core.maybe_awaken_echo();
-            agents.push(Agent::new(next_id, *name, CivilizationRace::SolarTerran, x, y, archetype, echo));
+            agents.push(Agent::new(
+                next_id,
+                *name,
+                CivilizationRace::SolarTerran,
+                x,
+                y,
+                archetype,
+                echo,
+            ));
             next_id += 1;
         }
 
         // Spawn initial Chthonic Lunarians near Moon Altar (x: 92, y: 34)
-        let lunar_names = ["Vane", "Nyx", "Malik", "Selene", "Corvus", "Morrigan", "Dusk", "Hesper"];
+        let lunar_names = [
+            "Vane", "Nyx", "Malik", "Selene", "Corvus", "Morrigan", "Dusk", "Hesper",
+        ];
         for (i, name) in lunar_names.iter().enumerate() {
             let x = 88 + (i * 2) % 10;
             let y = 30 + (i * 3) % 8;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = akashic_core.maybe_awaken_echo();
-            agents.push(Agent::new(next_id, *name, CivilizationRace::ChthonicLunarian, x, y, archetype, echo));
+            agents.push(Agent::new(
+                next_id,
+                *name,
+                CivilizationRace::ChthonicLunarian,
+                x,
+                y,
+                archetype,
+                echo,
+            ));
             next_id += 1;
         }
 
         // Initial default covenant
-        let mut covenants = Vec::new();
-        covenants.push(DivineCovenant::new(
+        let covenants = vec![DivineCovenant::new(
             1,
             QuestObjectiveType::PresentAltarOfferings,
             3,
             CovenantRewardType::RainOfManna,
             "A chilling frost will descend upon the unfaithful.",
             0,
-        ));
+        )];
 
-        let mut event_log = Vec::new();
-        event_log.push("The Genesis Cogniverse has awakened! The 128x128 grand continental world is alive.".into());
-        event_log.push("Solar Terrans settled near the Golden Sun Altar (38, 86).".into());
-        event_log.push("Chthonic Lunarians established presence at the Obsidian Moon Altar (92, 34).".into());
+        let event_log = vec![
+            "The Genesis Cogniverse has awakened! The 128x128 grand continental world is alive."
+                .into(),
+            "Solar Terrans settled near the Golden Sun Altar (38, 86).".into(),
+            "Chthonic Lunarians established presence at the Obsidian Moon Altar (92, 34).".into(),
+        ];
 
         Self {
             world,
@@ -127,11 +154,28 @@ impl SimulationEngine {
     }
 
     pub fn export_run_snapshot(&self) -> CivilizationRunSnapshot {
-        let total_unlocked = self.civilizations.terran_culture.technologies.iter().filter(|t| t.is_unlocked).count()
-            + self.civilizations.lunar_culture.technologies.iter().filter(|t| t.is_unlocked).count();
+        let total_unlocked = self
+            .civilizations
+            .terran_culture
+            .technologies
+            .iter()
+            .filter(|t| t.is_unlocked)
+            .count()
+            + self
+                .civilizations
+                .lunar_culture
+                .technologies
+                .iter()
+                .filter(|t| t.is_unlocked)
+                .count();
         let total_discoveries = self.civilizations.terran_culture.discoveries.len()
             + self.civilizations.lunar_culture.discoveries.len();
-        let peak_gen = self.agents.iter().map(|a| a.brain.genome.generation).max().unwrap_or(1);
+        let peak_gen = self
+            .agents
+            .iter()
+            .map(|a| a.brain.genome.generation)
+            .max()
+            .unwrap_or(1);
         let total_wealth: f32 = self.agents.iter().map(|a| a.inventory.total_wealth()).sum();
         let elapsed_years = (self.world.gaia.world_tick / 1000) + 1;
 
@@ -145,7 +189,10 @@ impl SimulationEngine {
                 map_mountain_density: self.map_mountain_density,
                 world_tick: self.world.gaia.world_tick,
                 elapsed_years,
-                export_timestamp: format!("Year {}, Tick {}", elapsed_years, self.world.gaia.world_tick),
+                export_timestamp: format!(
+                    "Year {}, Tick {}",
+                    elapsed_years, self.world.gaia.world_tick
+                ),
             },
             milestones: LearningMilestonesSnapshot {
                 total_technologies_unlocked: total_unlocked,
@@ -172,7 +219,10 @@ impl SimulationEngine {
         *self.pending_exported_snapshot.lock() = Some(json);
     }
 
-    pub fn import_run_snapshot(&mut self, snapshot: CivilizationRunSnapshot) -> Result<String, String> {
+    pub fn import_run_snapshot(
+        &mut self,
+        snapshot: CivilizationRunSnapshot,
+    ) -> Result<String, String> {
         let _ = self.world.reset_with_params(
             snapshot.metadata.map_archetype,
             snapshot.metadata.map_seed,
@@ -196,7 +246,9 @@ impl SimulationEngine {
         self.modified_tiles.lock().clear();
         self.log_event(format!(
             "CHRONICLE RESTORED: Realm '{}' reinstated from save archive (Tick {}, {} citizens)!",
-            self.map_name, snapshot.metadata.world_tick, self.agents.len()
+            self.map_name,
+            snapshot.metadata.world_tick,
+            self.agents.len()
         ));
         self.request_full_map_sync();
 
@@ -214,7 +266,12 @@ impl SimulationEngine {
         let current_seed = self.map_seed;
         let current_wl = self.map_water_level;
         let current_md = self.map_mountain_density;
-        self.change_map(current_arch, Some(current_seed), Some(current_wl), Some(current_md));
+        self.change_map(
+            current_arch,
+            Some(current_seed),
+            Some(current_wl),
+            Some(current_md),
+        );
     }
 
     pub fn change_map(
@@ -241,12 +298,18 @@ impl SimulationEngine {
         self.map_id += 1;
         self.modified_tiles.lock().clear();
         // Re-spawn pioneers around newly positioned altars
-        let (solar_x, solar_y) = self.world.altars.iter()
+        let (solar_x, solar_y) = self
+            .world
+            .altars
+            .iter()
             .find(|a| a.deity == DeityAlignment::SolarPlayerGod)
             .map(|a| (a.x, a.y))
             .unwrap_or((38, 86));
 
-        let (lunar_x, lunar_y) = self.world.altars.iter()
+        let (lunar_x, lunar_y) = self
+            .world
+            .altars
+            .iter()
             .find(|a| a.deity == DeityAlignment::LunarShadowWeaver)
             .map(|a| (a.x, a.y))
             .unwrap_or((92, 34));
@@ -254,38 +317,60 @@ impl SimulationEngine {
         let mut agents = Vec::new();
         let mut next_id = 1;
 
-        let terran_names = ["Kael", "Lyra", "Orion", "Aria", "Darek", "Elora", "Theron", "Mira"];
+        let terran_names = [
+            "Kael", "Lyra", "Orion", "Aria", "Darek", "Elora", "Theron", "Mira",
+        ];
         for (i, name) in terran_names.iter().enumerate() {
-            let x = ((solar_x as isize) + ((i as isize * 2) % 6 - 3)).clamp(0, (WORLD_WIDTH - 1) as isize) as usize;
-            let y = ((solar_y as isize) + ((i as isize * 3) % 6 - 3)).clamp(0, (WORLD_HEIGHT - 1) as isize) as usize;
+            let x = ((solar_x as isize) + ((i as isize * 2) % 6 - 3))
+                .clamp(0, (WORLD_WIDTH - 1) as isize) as usize;
+            let y = ((solar_y as isize) + ((i as isize * 3) % 6 - 3))
+                .clamp(0, (WORLD_HEIGHT - 1) as isize) as usize;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = self.akashic_core.maybe_awaken_echo();
-            agents.push(Agent::new(next_id, *name, CivilizationRace::SolarTerran, x, y, archetype, echo));
+            agents.push(Agent::new(
+                next_id,
+                *name,
+                CivilizationRace::SolarTerran,
+                x,
+                y,
+                archetype,
+                echo,
+            ));
             next_id += 1;
         }
 
-        let lunar_names = ["Vane", "Nyx", "Malik", "Selene", "Corvus", "Morrigan", "Dusk", "Hesper"];
+        let lunar_names = [
+            "Vane", "Nyx", "Malik", "Selene", "Corvus", "Morrigan", "Dusk", "Hesper",
+        ];
         for (i, name) in lunar_names.iter().enumerate() {
-            let x = ((lunar_x as isize) + ((i as isize * 2) % 6 - 3)).clamp(0, (WORLD_WIDTH - 1) as isize) as usize;
-            let y = ((lunar_y as isize) + ((i as isize * 3) % 6 - 3)).clamp(0, (WORLD_HEIGHT - 1) as isize) as usize;
+            let x = ((lunar_x as isize) + ((i as isize * 2) % 6 - 3))
+                .clamp(0, (WORLD_WIDTH - 1) as isize) as usize;
+            let y = ((lunar_y as isize) + ((i as isize * 3) % 6 - 3))
+                .clamp(0, (WORLD_HEIGHT - 1) as isize) as usize;
             let archetype = AmbitionArchetype::random_archetype();
             let echo = self.akashic_core.maybe_awaken_echo();
-            agents.push(Agent::new(next_id, *name, CivilizationRace::ChthonicLunarian, x, y, archetype, echo));
+            agents.push(Agent::new(
+                next_id,
+                *name,
+                CivilizationRace::ChthonicLunarian,
+                x,
+                y,
+                archetype,
+                echo,
+            ));
             next_id += 1;
         }
 
         self.agents = agents;
         self.civilizations = CivilizationsCoordinator::new();
-        self.covenants = vec![
-            DivineCovenant::new(
-                1,
-                QuestObjectiveType::PresentAltarOfferings,
-                3,
-                CovenantRewardType::RainOfManna,
-                "A chilling frost will descend upon the unfaithful.",
-                0,
-            )
-        ];
+        self.covenants = vec![DivineCovenant::new(
+            1,
+            QuestObjectiveType::PresentAltarOfferings,
+            3,
+            CovenantRewardType::RainOfManna,
+            "A chilling frost will descend upon the unfaithful.",
+            0,
+        )];
         self.next_agent_id = next_id;
         self.next_covenant_id = 2;
         self.births_total = 16;
@@ -293,9 +378,18 @@ impl SimulationEngine {
         self.selected_agent_id = Some(1);
 
         self.event_log.clear();
-        self.log_event(format!("A NEW AGE DAWNS: World carved into '{}'!", self.map_name));
-        self.log_event(format!("Solar Terrans settled near the Golden Sun Altar at ({}, {}).", solar_x, solar_y));
-        self.log_event(format!("Chthonic Lunarians established stronghold at ({}, {}).", lunar_x, lunar_y));
+        self.log_event(format!(
+            "A NEW AGE DAWNS: World carved into '{}'!",
+            self.map_name
+        ));
+        self.log_event(format!(
+            "Solar Terrans settled near the Golden Sun Altar at ({}, {}).",
+            solar_x, solar_y
+        ));
+        self.log_event(format!(
+            "Chthonic Lunarians established stronghold at ({}, {}).",
+            lunar_x, lunar_y
+        ));
 
         self.request_full_map_sync();
     }
@@ -323,9 +417,20 @@ impl SimulationEngine {
         }
 
         // 2. Tick civilizations and Rival AI God
-        let terran_count = self.agents.iter().filter(|a| a.is_alive && a.race == CivilizationRace::SolarTerran).count();
-        let lunarian_count = self.agents.iter().filter(|a| a.is_alive && a.race == CivilizationRace::ChthonicLunarian).count();
-        if let Some(rival_msg) = self.civilizations.tick(current_tick, terran_count, lunarian_count) {
+        let terran_count = self
+            .agents
+            .iter()
+            .filter(|a| a.is_alive && a.race == CivilizationRace::SolarTerran)
+            .count();
+        let lunarian_count = self
+            .agents
+            .iter()
+            .filter(|a| a.is_alive && a.race == CivilizationRace::ChthonicLunarian)
+            .count();
+        if let Some(rival_msg) = self
+            .civilizations
+            .tick(current_tick, terran_count, lunarian_count)
+        {
             self.log_event(rival_msg);
         }
 
@@ -336,7 +441,15 @@ impl SimulationEngine {
         }
 
         // 2b. Emergent plot hatching by ambitious agents
-        if current_tick % 150 == 0 && self.civilizations.active_plots.iter().filter(|p| !p.is_resolved).count() < 5 {
+        if current_tick.is_multiple_of(150)
+            && self
+                .civilizations
+                .active_plots
+                .iter()
+                .filter(|p| !p.is_resolved)
+                .count()
+                < 5
+        {
             use rand::seq::SliceRandom;
             let mut rng = rand::thread_rng();
             if let Some(agent) = self.agents.choose(&mut rng) {
@@ -372,8 +485,18 @@ impl SimulationEngine {
                         "Cooperative resource gathering agreements between settlements.",
                     ),
                 };
-                self.civilizations.hatch_plot(agent.id, agent.name.clone(), agent.race, plot_type, title.clone(), desc);
-                self.log_event(format!("📜 A secret plot was hatched: '{}' by {}!", title, agent.name));
+                self.civilizations.hatch_plot(
+                    agent.id,
+                    agent.name.clone(),
+                    agent.race,
+                    plot_type,
+                    title.clone(),
+                    desc,
+                );
+                self.log_event(format!(
+                    "📜 A secret plot was hatched: '{}' by {}!",
+                    title, agent.name
+                ));
             }
         }
 
@@ -384,8 +507,19 @@ impl SimulationEngine {
             self.births_total += 1;
             let name = format!("Solar Pioneer #{}", id);
             let echo = self.akashic_core.maybe_awaken_echo();
-            let pioneer = Agent::new(id, name.clone(), CivilizationRace::SolarTerran, 38, 86, AmbitionArchetype::CommunityBuilder, echo);
-            self.log_event(format!("A new nomadic tribe of Solar Terrans has arrived in the valley: {}!", name));
+            let pioneer = Agent::new(
+                id,
+                name.clone(),
+                CivilizationRace::SolarTerran,
+                38,
+                86,
+                AmbitionArchetype::CommunityBuilder,
+                echo,
+            );
+            self.log_event(format!(
+                "A new nomadic tribe of Solar Terrans has arrived in the valley: {}!",
+                name
+            ));
             self.agents.push(pioneer);
         }
         if lunarian_count == 0 {
@@ -394,8 +528,19 @@ impl SimulationEngine {
             self.births_total += 1;
             let name = format!("Lunar Exile #{}", id);
             let echo = self.akashic_core.maybe_awaken_echo();
-            let pioneer = Agent::new(id, name.clone(), CivilizationRace::ChthonicLunarian, 92, 34, AmbitionArchetype::AsceticHermit, echo);
-            self.log_event(format!("A mysterious Chthonic Lunarian wanderer has emerged from the cavern ruins: {}!", name));
+            let pioneer = Agent::new(
+                id,
+                name.clone(),
+                CivilizationRace::ChthonicLunarian,
+                92,
+                34,
+                AmbitionArchetype::AsceticHermit,
+                echo,
+            );
+            self.log_event(format!(
+                "A mysterious Chthonic Lunarian wanderer has emerged from the cavern ruins: {}!",
+                name
+            ));
             self.agents.push(pioneer);
         }
 
@@ -421,7 +566,10 @@ impl SimulationEngine {
                     "Wood" => agent.inventory.count(ItemId::Wood) > 0,
                     "Stone" => agent.inventory.count(ItemId::Stone) > 0,
                     "Iron" => agent.inventory.count(ItemId::IronOre) > 0,
-                    "Food" => agent.inventory.count(ItemId::Berry) > 0 || agent.inventory.count(ItemId::Grain) > 0,
+                    "Food" => {
+                        agent.inventory.count(ItemId::Berry) > 0
+                            || agent.inventory.count(ItemId::Grain) > 0
+                    }
                     _ => false,
                 }
             };
@@ -490,21 +638,33 @@ impl SimulationEngine {
                         if !is_sheltered {
                             a.energy = (a.energy + 0.06).min(1.0);
                         }
-                        a.brain.neuromod.update(0.1, 1.0 - a.hunger, false, false, 0.0);
+                        a.brain
+                            .neuromod
+                            .update(0.1, 1.0 - a.hunger, false, false, 0.0);
                         (a.x, a.y, a.id, a.energy, a.hunger, a.thirst)
                     };
                     // WorldBox Roaming: if rested and vitals good, wander towards home settlement or explore
                     if a_energy > 0.50 && a_hunger < 0.60 && a_thirst < 0.60 {
-                        let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                        let altar_target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::Altar,
+                        );
                         if let Some((hx, hy)) = altar_target {
-                            if (ax as isize - hx as isize).abs() + (ay as isize - hy as isize).abs() > 8 {
+                            if (ax as isize - hx as isize).abs() + (ay as isize - hy as isize).abs()
+                                > 8
+                            {
                                 self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
                             } else {
                                 // Close to home: gentle patrol around settlement perimeter
                                 let r_dx = (current_tick as isize % 3) - 1;
                                 let r_dy = ((a_id + current_tick as usize) as isize % 3) - 1;
-                                let tx = (hx as isize + r_dx * 3).clamp(5, WORLD_WIDTH as isize - 6) as usize;
-                                let ty = (hy as isize + r_dy * 3).clamp(5, WORLD_HEIGHT as isize - 6) as usize;
+                                let tx = (hx as isize + r_dx * 3).clamp(5, WORLD_WIDTH as isize - 6)
+                                    as usize;
+                                let ty = (hy as isize + r_dy * 3)
+                                    .clamp(5, WORLD_HEIGHT as isize - 6)
+                                    as usize;
                                 self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                             }
                         }
@@ -520,7 +680,12 @@ impl SimulationEngine {
                         agent.step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                     } else {
                         // Fallback: roam towards home altar if specific target filter not found
-                        let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                        let altar_target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::Altar,
+                        );
                         if let Some((hx, hy)) = altar_target {
                             self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
                         }
@@ -534,17 +699,34 @@ impl SimulationEngine {
                         let agent = &mut self.agents[idx];
                         agent.inventory.add(ItemId::Berry, 1);
                         agent.hunger = (agent.hunger - 0.35).max(0.0);
-                        agent.brain.neuromod.update(0.5, 1.0 - agent.hunger, false, false, 0.0);
-                        agent.brain.memory.record_observation("Foraged delicious wild berries.");
+                        agent
+                            .brain
+                            .neuromod
+                            .update(0.5, 1.0 - agent.hunger, false, false, 0.0);
+                        agent
+                            .brain
+                            .memory
+                            .record_observation("Foraged delicious wild berries.");
                     } else if tile.grain_amount > 0 {
                         tile.grain_amount -= 1;
                         let agent = &mut self.agents[idx];
                         agent.inventory.add(ItemId::Grain, 1);
                         agent.hunger = (agent.hunger - 0.25).max(0.0);
-                        agent.brain.neuromod.update(0.3, 1.0 - agent.hunger, false, false, 0.0);
-                        agent.brain.memory.record_observation("Harvested wild grain.");
+                        agent
+                            .brain
+                            .neuromod
+                            .update(0.3, 1.0 - agent.hunger, false, false, 0.0);
+                        agent
+                            .brain
+                            .memory
+                            .record_observation("Harvested wild grain.");
                     } else {
-                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::FoodSource);
+                        let target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::FoodSource,
+                        );
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                         } else {
@@ -564,32 +746,51 @@ impl SimulationEngine {
                     for dy in -2..=2 {
                         for dx in -2..=2 {
                             let qx = (ax as isize + dx).clamp(0, WORLD_WIDTH as isize - 1) as usize;
-                            let qy = (ay as isize + dy).clamp(0, WORLD_HEIGHT as isize - 1) as usize;
+                            let qy =
+                                (ay as isize + dy).clamp(0, WORLD_HEIGHT as isize - 1) as usize;
                             if self.world.tile_at(qx, qy).has_fresh_water {
                                 has_water = true;
                                 break;
                             }
                         }
-                        if has_water { break; }
+                        if has_water {
+                            break;
+                        }
                     }
                     if has_water {
                         let should_step_home = {
                             let agent = &mut self.agents[idx];
                             agent.thirst = (agent.thirst - 0.65).max(0.0);
-                            agent.brain.neuromod.update(0.4, 1.0 - agent.thirst, false, false, 0.0);
-                            agent.brain.memory.record_observation("Drank cold, clean mountain/river water.");
+                            agent
+                                .brain
+                                .neuromod
+                                .update(0.4, 1.0 - agent.thirst, false, false, 0.0);
+                            agent
+                                .brain
+                                .memory
+                                .record_observation("Drank cold, clean mountain/river water.");
                             agent.thirst < 0.25
                         };
 
                         // Once thirst is satisfied, step away from water edge towards home settlement
                         if should_step_home {
-                            let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                            let altar_target = Self::find_nearest_target_coords(
+                                &self.world,
+                                &self.agents,
+                                &self.agents[idx],
+                                EntityFilter::Altar,
+                            );
                             if let Some((hx, hy)) = altar_target {
                                 self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
                             }
                         }
                     } else {
-                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::WaterSource);
+                        let target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::WaterSource,
+                        );
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                         } else {
@@ -612,11 +813,21 @@ impl SimulationEngine {
                         agent.energy = (agent.energy - 0.03).max(0.0);
                         agent.brain.neuromod.update(0.3, 0.5, false, false, 0.0);
                     } else {
-                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Tree);
+                        let target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::Tree,
+                        );
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                         } else {
-                            let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                            let altar_target = Self::find_nearest_target_coords(
+                                &self.world,
+                                &self.agents,
+                                &self.agents[idx],
+                                EntityFilter::Altar,
+                            );
                             if let Some((hx, hy)) = altar_target {
                                 self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
                             }
@@ -633,7 +844,12 @@ impl SimulationEngine {
                         agent.energy = (agent.energy - 0.04).max(0.0);
                         agent.brain.neuromod.update(0.3, 0.5, false, false, 0.0);
                     } else {
-                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::StoneRock);
+                        let target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::StoneRock,
+                        );
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                         }
@@ -655,8 +871,12 @@ impl SimulationEngine {
                             9.0,
                         );
                         let newly_unlocked = match agent.race {
-                            CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(25),
-                            CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(25),
+                            CivilizationRace::SolarTerran => {
+                                self.civilizations.terran_culture.add_knowledge(25)
+                            }
+                            CivilizationRace::ChthonicLunarian => {
+                                self.civilizations.lunar_culture.add_knowledge(25)
+                            }
                         };
                         for msg in newly_unlocked {
                             self.log_event(msg);
@@ -674,8 +894,12 @@ impl SimulationEngine {
                             10.0,
                         );
                         let newly_unlocked = match agent.race {
-                            CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(35),
-                            CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(35),
+                            CivilizationRace::SolarTerran => {
+                                self.civilizations.terran_culture.add_knowledge(35)
+                            }
+                            CivilizationRace::ChthonicLunarian => {
+                                self.civilizations.lunar_culture.add_knowledge(35)
+                            }
                         };
                         for msg in newly_unlocked {
                             self.log_event(msg);
@@ -693,14 +917,23 @@ impl SimulationEngine {
                             7.5,
                         );
                         let newly_unlocked = match agent.race {
-                            CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(15),
-                            CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(15),
+                            CivilizationRace::SolarTerran => {
+                                self.civilizations.terran_culture.add_knowledge(15)
+                            }
+                            CivilizationRace::ChthonicLunarian => {
+                                self.civilizations.lunar_culture.add_knowledge(15)
+                            }
                         };
                         for msg in newly_unlocked {
                             self.log_event(msg);
                         }
                     } else {
-                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::IronVein);
+                        let target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::IronVein,
+                        );
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                         }
@@ -714,7 +947,9 @@ impl SimulationEngine {
                     let tile = self.world.tile_at_mut(ax, ay);
                     if tile.structure.is_none() && !tile.has_fresh_water {
                         let agent = &mut self.agents[idx];
-                        if agent.inventory.count(ItemId::Wood) >= 2 && agent.inventory.count(ItemId::Stone) >= 1 {
+                        if agent.inventory.count(ItemId::Wood) >= 2
+                            && agent.inventory.count(ItemId::Stone) >= 1
+                        {
                             agent.inventory.remove(ItemId::Wood, 2);
                             agent.inventory.remove(ItemId::Stone, 1);
                             tile.structure = Some(PlacedStructure {
@@ -722,6 +957,7 @@ impl SimulationEngine {
                                 owner_id: Some(agent.id),
                                 health: 120.0,
                                 max_health: 120.0,
+                                custom_type: None,
                             });
                             agent.brain.neuromod.update(0.9, 0.8, false, false, 0.1);
                             agent.brain.memory.log_episodic_event(
@@ -730,10 +966,17 @@ impl SimulationEngine {
                                 vec!["Building".into(), "Settlement".into()],
                                 8.5,
                             );
-                            self.log_event(format!("🏡 {} built a new Stone Cabin at ({}, {})!", a_name, ax, ay));
+                            self.log_event(format!(
+                                "🏡 {} built a new Stone Cabin at ({}, {})!",
+                                a_name, ax, ay
+                            ));
                             let newly_unlocked = match a_race {
-                                CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(30),
-                                CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(30),
+                                CivilizationRace::SolarTerran => {
+                                    self.civilizations.terran_culture.add_knowledge(30)
+                                }
+                                CivilizationRace::ChthonicLunarian => {
+                                    self.civilizations.lunar_culture.add_knowledge(30)
+                                }
                             };
                             for msg in newly_unlocked {
                                 self.log_event(msg);
@@ -745,20 +988,33 @@ impl SimulationEngine {
                                 owner_id: Some(agent.id),
                                 health: 60.0,
                                 max_health: 60.0,
+                                custom_type: None,
                             });
                             agent.warmth = (agent.warmth + 0.3).min(1.0);
                             agent.brain.neuromod.update(0.5, 0.6, false, false, 0.0);
-                            self.log_event(format!("🔥 {} lit a warm Campfire at ({}, {})!", a_name, ax, ay));
+                            self.log_event(format!(
+                                "🔥 {} lit a warm Campfire at ({}, {})!",
+                                a_name, ax, ay
+                            ));
                             let newly_unlocked = match a_race {
-                                CivilizationRace::SolarTerran => self.civilizations.terran_culture.add_knowledge(10),
-                                CivilizationRace::ChthonicLunarian => self.civilizations.lunar_culture.add_knowledge(10),
+                                CivilizationRace::SolarTerran => {
+                                    self.civilizations.terran_culture.add_knowledge(10)
+                                }
+                                CivilizationRace::ChthonicLunarian => {
+                                    self.civilizations.lunar_culture.add_knowledge(10)
+                                }
                             };
                             for msg in newly_unlocked {
                                 self.log_event(msg);
                             }
                         }
                     } else {
-                        let altar_target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::Altar);
+                        let altar_target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::Altar,
+                        );
                         if let Some((hx, hy)) = altar_target {
                             self.agents[idx].step_towards(hx, hy, WORLD_WIDTH, WORLD_HEIGHT);
                         }
@@ -766,7 +1022,9 @@ impl SimulationEngine {
                 }
                 ActionChoice::CraftTool => {
                     let agent = &mut self.agents[idx];
-                    if agent.inventory.count(ItemId::Wood) >= 1 && agent.inventory.count(ItemId::Flint) >= 1 {
+                    if agent.inventory.count(ItemId::Wood) >= 1
+                        && agent.inventory.count(ItemId::Flint) >= 1
+                    {
                         agent.inventory.remove(ItemId::Wood, 1);
                         agent.inventory.remove(ItemId::Flint, 1);
                         agent.inventory.add(ItemId::PrimitiveChopper, 1);
@@ -782,13 +1040,22 @@ impl SimulationEngine {
                 ActionChoice::CourtNearestMate => {
                     let (ax, ay, a_name, a_race, a_char, a_wealth, a_health) = {
                         let a = &self.agents[idx];
-                        (a.x, a.y, a.name.clone(), a.race, a.brain.charisma, a.inventory.total_wealth(), a.health)
+                        (
+                            a.x,
+                            a.y,
+                            a.name.clone(),
+                            a.race,
+                            a.brain.charisma,
+                            a.inventory.total_wealth(),
+                            a.health,
+                        )
                     };
 
                     let mut mate_idx = None;
                     for (other_idx, other) in self.agents.iter().enumerate() {
                         if other_idx != idx && other.is_alive && other.race == a_race {
-                            let d = (other.x as isize - ax as isize).abs() + (other.y as isize - ay as isize).abs();
+                            let d = (other.x as isize - ax as isize).abs()
+                                + (other.y as isize - ay as isize).abs();
                             if d <= 6 {
                                 mate_idx = Some(other_idx);
                                 break;
@@ -800,17 +1067,25 @@ impl SimulationEngine {
                         let attraction = ReproductionManager::calculate_attraction(
                             a_char,
                             a_wealth,
-                            self.agents[m_idx].brain.social_ledger.get_reputation(self.agents[idx].id),
+                            self.agents[m_idx]
+                                .brain
+                                .social_ledger
+                                .get_reputation(self.agents[idx].id),
                             a_health,
                         );
 
                         if attraction > 0.45 {
-                            self.agents[idx].social_need = (self.agents[idx].social_need - 0.5).max(0.0);
-                            self.agents[m_idx].social_need = (self.agents[m_idx].social_need - 0.5).max(0.0);
+                            self.agents[idx].social_need =
+                                (self.agents[idx].social_need - 0.5).max(0.0);
+                            self.agents[m_idx].social_need =
+                                (self.agents[m_idx].social_need - 0.5).max(0.0);
                             self.agents[idx].partner_id = Some(self.agents[m_idx].id);
                             self.agents[m_idx].partner_id = Some(self.agents[idx].id);
 
-                            if self.agents[idx].hunger < 0.70 && self.agents[m_idx].hunger < 0.70 && self.agents.len() < 160 {
+                            if self.agents[idx].hunger < 0.70
+                                && self.agents[m_idx].hunger < 0.70
+                                && self.agents.len() < 160
+                            {
                                 let child_genome = ReproductionManager::create_child_genome(
                                     &self.agents[idx].brain.genome,
                                     &self.agents[m_idx].brain.genome,
@@ -832,7 +1107,12 @@ impl SimulationEngine {
                             }
                         }
                     } else {
-                        let target = Self::find_nearest_target_coords(&self.world, &self.agents, &self.agents[idx], EntityFilter::PotentialMate);
+                        let target = Self::find_nearest_target_coords(
+                            &self.world,
+                            &self.agents,
+                            &self.agents[idx],
+                            EntityFilter::PotentialMate,
+                        );
                         if let Some((tx, ty)) = target {
                             self.agents[idx].step_towards(tx, ty, WORLD_WIDTH, WORLD_HEIGHT);
                         }
@@ -841,25 +1121,42 @@ impl SimulationEngine {
                 ActionChoice::MakeAltarOffering => {
                     let (ax, ay, a_id, a_name, a_piety, a_wealth) = {
                         let a = &self.agents[idx];
-                        (a.x, a.y, a.id, a.name.clone(), a.brain.piety, a.inventory.total_wealth())
+                        (
+                            a.x,
+                            a.y,
+                            a.id,
+                            a.name.clone(),
+                            a.brain.piety,
+                            a.inventory.total_wealth(),
+                        )
                     };
 
                     for (altar_idx, altar) in self.world.altars.iter().enumerate() {
-                        let d = (altar.x as isize - ax as isize).abs() + (altar.y as isize - ay as isize).abs();
+                        let d = (altar.x as isize - ax as isize).abs()
+                            + (altar.y as isize - ay as isize).abs();
                         if d <= 2 {
-                            let item_to_give = if self.agents[idx].inventory.count(ItemId::IronOre) > 0 {
-                                Some((ItemId::IronOre, 1))
-                            } else if self.agents[idx].inventory.count(ItemId::Berry) > 0 {
-                                Some((ItemId::Berry, 1))
-                            } else if self.agents[idx].inventory.count(ItemId::Wood) > 0 {
-                                Some((ItemId::Wood, 1))
-                            } else {
-                                None
-                            };
+                            let item_to_give =
+                                if self.agents[idx].inventory.count(ItemId::IronOre) > 0 {
+                                    Some((ItemId::IronOre, 1))
+                                } else if self.agents[idx].inventory.count(ItemId::Berry) > 0 {
+                                    Some((ItemId::Berry, 1))
+                                } else if self.agents[idx].inventory.count(ItemId::Wood) > 0 {
+                                    Some((ItemId::Wood, 1))
+                                } else {
+                                    None
+                                };
 
                             if let Some((item, count)) = item_to_give {
                                 self.agents[idx].inventory.remove(item, count);
-                                offerings_to_record.push((altar_idx, a_id, a_name.clone(), item, count, a_wealth, a_piety));
+                                offerings_to_record.push((
+                                    altar_idx,
+                                    a_id,
+                                    a_name.clone(),
+                                    item,
+                                    count,
+                                    a_wealth,
+                                    a_piety,
+                                ));
                             }
                             break;
                         }
@@ -885,18 +1182,21 @@ impl SimulationEngine {
 
             self.log_event(format!(
                 "{} brought an offering of {}x {} to {}! (Sincerity: {:.2})",
-                a_name, count, item.display_name(), self.world.altars[altar_idx].name, sincerity
+                a_name,
+                count,
+                item.display_name(),
+                self.world.altars[altar_idx].name,
+                sincerity
             ));
 
             let mut completed_covenants = Vec::new();
             for cov in self.covenants.iter_mut() {
-                if cov.objective == QuestObjectiveType::PresentAltarOfferings {
-                    if cov.advance(1) {
-                        completed_covenants.push(format!(
-                            "DIVINE COVENANT FULFILLED! '{}' was completed! Granted {}",
-                            cov.title, cov.promised_reward.display_name()
-                        ));
-                    }
+                if cov.objective == QuestObjectiveType::PresentAltarOfferings && cov.advance(1) {
+                    completed_covenants.push(format!(
+                        "DIVINE COVENANT FULFILLED! '{}' was completed! Granted {}",
+                        cov.title,
+                        cov.promised_reward.display_name()
+                    ));
                 }
             }
             for msg in completed_covenants {
@@ -931,9 +1231,16 @@ impl SimulationEngine {
                 if agent.age_ticks > 400 {
                     self.akashic_core.record_legend(
                         agent.name.clone(),
-                        format!("Elder of the {}th generation", agent.brain.genome.generation),
+                        format!(
+                            "Elder of the {}th generation",
+                            agent.brain.genome.generation
+                        ),
                         agent.brain.genome.generation,
-                        format!("Survived {} ticks and mastered the art of {}", agent.age_ticks, agent.brain.desire.archetype.display_name()),
+                        format!(
+                            "Survived {} ticks and mastered the art of {}",
+                            agent.age_ticks,
+                            agent.brain.desire.archetype.display_name()
+                        ),
                     );
                 }
                 agent.age_ticks = 0;
@@ -956,11 +1263,16 @@ impl SimulationEngine {
                 let ax = agent.x as f32;
                 let ay = agent.y as f32;
                 for altar in &world.altars {
-                    let matches_faction = match (agent.race, altar.deity) {
-                        (CivilizationRace::SolarTerran, DeityAlignment::SolarPlayerGod) => true,
-                        (CivilizationRace::ChthonicLunarian, DeityAlignment::LunarShadowWeaver) => true,
-                        _ => false,
-                    };
+                    let matches_faction = matches!(
+                        (agent.race, altar.deity),
+                        (
+                            CivilizationRace::SolarTerran,
+                            DeityAlignment::SolarPlayerGod
+                        ) | (
+                            CivilizationRace::ChthonicLunarian,
+                            DeityAlignment::LunarShadowWeaver
+                        )
+                    );
                     let dx = altar.x as f32 - ax;
                     let dy = altar.y as f32 - ay;
                     let mut d_sq = dx * dx + dy * dy;
@@ -995,7 +1307,9 @@ impl SimulationEngine {
                             if d_sq < best_dist_sq {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
-                                if d_sq <= 4 { return best; }
+                                if d_sq <= 4 {
+                                    return best;
+                                }
                             }
                         }
                     }
@@ -1023,7 +1337,9 @@ impl SimulationEngine {
                             if d_sq < best_dist_sq {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
-                                if d_sq <= 4 { return best; }
+                                if d_sq <= 4 {
+                                    return best;
+                                }
                             }
                         }
                     }
@@ -1051,7 +1367,9 @@ impl SimulationEngine {
                             if d_sq < best_dist_sq {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
-                                if d_sq <= 4 { return best; }
+                                if d_sq <= 4 {
+                                    return best;
+                                }
                             }
                         }
                     }
@@ -1079,7 +1397,9 @@ impl SimulationEngine {
                             if d_sq < best_dist_sq {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
-                                if d_sq <= 4 { return best; }
+                                if d_sq <= 4 {
+                                    return best;
+                                }
                             }
                         }
                     }
@@ -1107,7 +1427,9 @@ impl SimulationEngine {
                             if d_sq < best_dist_sq {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
-                                if d_sq <= 4 { return best; }
+                                if d_sq <= 4 {
+                                    return best;
+                                }
                             }
                         }
                     }
@@ -1171,7 +1493,9 @@ impl SimulationEngine {
                             if d_sq < best_dist_sq {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
-                                if d_sq <= 4 { return best; }
+                                if d_sq <= 4 {
+                                    return best;
+                                }
                             }
                         }
                     }
@@ -1183,7 +1507,13 @@ impl SimulationEngine {
     }
 
     /// God Terraforming Brush tool: alters terrain and resources across a radius
-    pub fn terraform_area(&mut self, center_x: usize, center_y: usize, brush: TerraformBrush, radius: usize) {
+    pub fn terraform_area(
+        &mut self,
+        center_x: usize,
+        center_y: usize,
+        brush: TerraformBrush,
+        radius: usize,
+    ) {
         // Direct architectural structure placement at clicked tile
         match brush {
             TerraformBrush::BuildCabin
@@ -1207,10 +1537,14 @@ impl SimulationEngine {
                 };
                 let tile = self.world.tile_at_mut(center_x, center_y);
                 tile.structure = Some(PlacedStructure::new(kind));
-                self.modified_tiles.lock().push((center_x, center_y, tile.biome));
+                self.modified_tiles
+                    .lock()
+                    .push((center_x, center_y, tile.biome));
                 self.log_event(format!(
                     "ARCHITECTURE: Divine mandate erected {} at ({}, {}).",
-                    kind.display_name(), center_x, center_y
+                    kind.display_name(),
+                    center_x,
+                    center_y
                 ));
                 return;
             }
@@ -1339,16 +1673,33 @@ impl SimulationEngine {
 
         let archetype = AmbitionArchetype::random_archetype();
         let echo = self.akashic_core.maybe_awaken_echo();
-        let agent = Agent::new(id, name.clone(), race, x.min(WORLD_WIDTH - 1), y.min(WORLD_HEIGHT - 1), archetype, echo);
+        let agent = Agent::new(
+            id,
+            name.clone(),
+            race,
+            x.min(WORLD_WIDTH - 1),
+            y.min(WORLD_HEIGHT - 1),
+            archetype,
+            echo,
+        );
         self.agents.push(agent);
-        self.log_event(format!("DIVINE CREATION: Created new {} at ({}, {}).", name, x, y));
+        self.log_event(format!(
+            "DIVINE CREATION: Created new {} at ({}, {}).",
+            name, x, y
+        ));
     }
 
     /// Handles a God intervention from the Admin Console
-    pub fn execute_intervention(&mut self, intervention: super::god_powers::DivineInterventionKind) {
+    pub fn execute_intervention(
+        &mut self,
+        intervention: super::god_powers::DivineInterventionKind,
+    ) {
         use super::god_powers::DivineInterventionKind;
         match intervention {
-            DivineInterventionKind::DivineWhisper { target_agent_id, message } => {
+            DivineInterventionKind::DivineWhisper {
+                target_agent_id,
+                message,
+            } => {
                 if let Some(target_id) = target_agent_id {
                     let mut found_name = None;
                     if let Some(agent) = self.agents.iter_mut().find(|a| a.id == target_id) {
@@ -1361,18 +1712,27 @@ impl SimulationEngine {
                         found_name = Some(agent.name.clone());
                     }
                     if let Some(name) = found_name {
-                        self.log_event(format!("You whispered directly into {}'s mind: '{}'", name, message));
+                        self.log_event(format!(
+                            "You whispered directly into {}'s mind: '{}'",
+                            name, message
+                        ));
                     }
                 } else {
                     for agent in self.agents.iter_mut() {
                         agent.brain.memory.log_episodic_event(
                             self.world.gaia.world_tick,
-                            format!("A booming divine voice echoed from the heavens: '{}'", message),
+                            format!(
+                                "A booming divine voice echoed from the heavens: '{}'",
+                                message
+                            ),
                             vec!["DivineWhisper".into(), "HeavenlyRevelation".into()],
                             10.0,
                         );
                     }
-                    self.log_event(format!("You spoke from the heavens to all living souls: '{}'", message));
+                    self.log_event(format!(
+                        "You spoke from the heavens to all living souls: '{}'",
+                        message
+                    ));
                 }
             }
             DivineInterventionKind::MiracleManna { x, y } => {
@@ -1381,13 +1741,17 @@ impl SimulationEngine {
                 let tile = self.world.tile_at_mut(x, y);
                 tile.berry_amount += 30;
                 tile.grain_amount += 30;
-                self.log_event(format!("MIRACLE: Manna fell from the heavens at coordinates ({}, {})!", x, y));
+                self.log_event(format!(
+                    "MIRACLE: Manna fell from the heavens at coordinates ({}, {})!",
+                    x, y
+                ));
             }
             DivineInterventionKind::SmiteLightning { x, y } => {
                 let x = x.min(WORLD_WIDTH - 1);
                 let y = y.min(WORLD_HEIGHT - 1);
                 for agent in self.agents.iter_mut() {
-                    let d = (agent.x as isize - x as isize).abs() + (agent.y as isize - y as isize).abs();
+                    let d = (agent.x as isize - x as isize).abs()
+                        + (agent.y as isize - y as isize).abs();
                     if d <= 2 {
                         agent.health -= 45.0;
                         agent.brain.neuromod.noradrenaline = 0.95;
@@ -1399,7 +1763,10 @@ impl SimulationEngine {
                         );
                     }
                 }
-                self.log_event(format!("WRATH: A blinding lightning bolt smote the earth at ({}, {})!", x, y));
+                self.log_event(format!(
+                    "WRATH: A blinding lightning bolt smote the earth at ({}, {})!",
+                    x, y
+                ));
             }
             DivineInterventionKind::TowerOfBabel => {
                 for agent in self.agents.iter_mut() {
@@ -1418,7 +1785,8 @@ impl SimulationEngine {
                 let y = y.min(WORLD_HEIGHT - 1);
                 let mut blessed_names = Vec::new();
                 for agent in self.agents.iter_mut() {
-                    let d = (agent.x as isize - x as isize).abs() + (agent.y as isize - y as isize).abs();
+                    let d = (agent.x as isize - x as isize).abs()
+                        + (agent.y as isize - y as isize).abs();
                     if d <= 5 {
                         agent.brain.neuromod.dopamine = 0.95;
                         agent.brain.neuromod.serotonin = 0.90;
@@ -1432,7 +1800,11 @@ impl SimulationEngine {
                         agent.brain.memory.log_episodic_event(
                             self.world.gaia.world_tick,
                             "Received a glorious surge of Divine Inspiration from the Creator!",
-                            vec!["Inspiration".into(), "Enlightenment".into(), "Blessing".into()],
+                            vec![
+                                "Inspiration".into(),
+                                "Enlightenment".into(),
+                                "Blessing".into(),
+                            ],
                             10.0,
                         );
                         blessed_names.push(agent.name.clone());
@@ -1450,7 +1822,8 @@ impl SimulationEngine {
                 let y = y.min(WORLD_HEIGHT - 1);
                 let mut affected_count = 0;
                 for agent in self.agents.iter_mut() {
-                    let d = (agent.x as isize - x as isize).abs() + (agent.y as isize - y as isize).abs();
+                    let d = (agent.x as isize - x as isize).abs()
+                        + (agent.y as isize - y as isize).abs();
                     if d <= 4 {
                         agent.brain.piety = (agent.brain.piety - 0.35).max(0.05);
                         agent.brain.neuromod.noradrenaline = 0.85;
@@ -1503,7 +1876,8 @@ impl SimulationEngine {
                 ));
             }
             DivineInterventionKind::GoldenAgePeace => {
-                self.civilizations.diplomacy = super::super::factions::DiplomaticStatus::CommercialAlliance;
+                self.civilizations.diplomacy =
+                    super::super::factions::DiplomaticStatus::CommercialAlliance;
                 self.civilizations.terran_treasury += 200;
                 self.civilizations.lunar_treasury += 200;
                 for agent in self.agents.iter_mut() {
@@ -1567,9 +1941,21 @@ impl SimulationEngine {
             .collect();
 
         let total_pop = self.agents.len();
-        let avg_health = if total_pop > 0 { total_health / total_pop as f32 } else { 0.0 };
-        let avg_hunger = if total_pop > 0 { total_hunger / total_pop as f32 } else { 0.0 };
-        let avg_piety = if total_pop > 0 { total_piety / total_pop as f32 } else { 0.0 };
+        let avg_health = if total_pop > 0 {
+            total_health / total_pop as f32
+        } else {
+            0.0
+        };
+        let avg_hunger = if total_pop > 0 {
+            total_hunger / total_pop as f32
+        } else {
+            0.0
+        };
+        let avg_piety = if total_pop > 0 {
+            total_piety / total_pop as f32
+        } else {
+            0.0
+        };
 
         let demographics = DemographicsTelemetry {
             total_population: total_pop,
@@ -1607,8 +1993,22 @@ impl SimulationEngine {
                     .map(|(k, v)| (k.display_name().to_string(), *v))
                     .collect();
 
-                let beliefs = a.brain.knowledge.beliefs.iter().map(|b| b.concept.clone()).collect();
-                let recent_memories = a.brain.memory.episodic_stream.iter().rev().take(10).cloned().collect();
+                let beliefs = a
+                    .brain
+                    .knowledge
+                    .beliefs
+                    .iter()
+                    .map(|b| b.concept.clone())
+                    .collect();
+                let recent_memories = a
+                    .brain
+                    .memory
+                    .episodic_stream
+                    .iter()
+                    .rev()
+                    .take(10)
+                    .cloned()
+                    .collect();
 
                 SelectedAgentDetail {
                     id: a.id,
@@ -1633,7 +2033,10 @@ impl SimulationEngine {
                     genome: a.brain.genome.clone(),
                     partner_id: a.partner_id,
                     children_count: a.children_count,
-                    ancestral_echo: a.ancestral_echo.as_ref().map(|e| format!("{}: {}", e.hero_name, e.gift_description)),
+                    ancestral_echo: a
+                        .ancestral_echo
+                        .as_ref()
+                        .map(|e| format!("{}: {}", e.hero_name, e.gift_description)),
                     traits: a.traits.clone(),
                 }
             })
@@ -1666,22 +2069,31 @@ impl SimulationEngine {
             })
             .collect();
 
-        let dynamic_tiles: Vec<super::protocol::DynamicTileSummary> = self.world.tiles.iter().filter_map(|t| {
-            if t.is_on_fire || t.burned_stages > 0 || t.lava_level > 0 || t.frozen_state != super::super::world::tile::FrozenState::None {
-                Some(super::protocol::DynamicTileSummary {
-                    x: t.x,
-                    y: t.y,
-                    biome: t.biome,
-                    elevation_layer: t.elevation_layer,
-                    is_on_fire: t.is_on_fire,
-                    burned_stages: t.burned_stages,
-                    lava_level: t.lava_level,
-                    frozen_state: t.frozen_state,
-                })
-            } else {
-                None
-            }
-        }).collect();
+        let dynamic_tiles: Vec<super::protocol::DynamicTileSummary> = self
+            .world
+            .tiles
+            .iter()
+            .filter_map(|t| {
+                if t.is_on_fire
+                    || t.burned_stages > 0
+                    || t.lava_level > 0
+                    || t.frozen_state != super::super::world::tile::FrozenState::None
+                {
+                    Some(super::protocol::DynamicTileSummary {
+                        x: t.x,
+                        y: t.y,
+                        biome: t.biome,
+                        elevation_layer: t.elevation_layer,
+                        is_on_fire: t.is_on_fire,
+                        burned_stages: t.burned_stages,
+                        lava_level: t.lava_level,
+                        frozen_state: t.frozen_state,
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         let full_map_sync = if self.pending_map_sync.swap(false, Ordering::SeqCst) {
             Some(self.encode_map_base64())

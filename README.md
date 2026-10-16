@@ -652,6 +652,61 @@ The God Player now has sovereign control to reset the living realm or forge enti
 
 ---
 
+## 🏛️ Civilization Simulator Evolution: Phase 0 Verification & Known Bugs Fixed
+
+In accordance with the Pixel-Art Civilization Simulator specification, **Phase 0** has been completed with all acceptance criteria satisfied, regression tests verified, and quality gates passing.
+
+### 🐛 Bug Fixes & Architectural Implementations
+
+| Bug ID | Problem Description | Root Cause | Solution Implemented | Test Coverage |
+|---|---|---|---|---|
+| **Bug 1** | **World terrain cannot be changed** | Terrain mutations bypassed a unified pipeline, causing tile states, render meshes, and path caches to desynchronize. | Implemented unified `EditCommand` pipeline (`src/world/commands.rs`) with `PaintTerrain`, `ModifyElevation`, `DirtyChunks` tracker, `ChunkMeshCache`, and `PathCostCache` supporting full undo/redo. | `test_bug_1_command_pipeline_updates_tiles_mesh_and_path_cache_with_undo_redo` |
+| **Bug 2** | **Not all mine types can be added** | Mine kinds were hardcoded to a single enum variant without data-driven support for varied ore types. | Created data-driven `assets/data/mines.ron` supporting all 12 mine types (`stone`, `clay`, `coal`, `copper`, `tin`, `iron`, `silver`, `gold`, `gems`, `mithril`, `adamantite`, `mana_crystal`), with `MineDef` struct, tool tiers, yield ranges, and `PlaceMineCommand`. | `test_bug_2_data_driven_mines_load_and_spawn_all_required_types` |
+| **Bug 3** | **Animals cannot be spawned & no farming** | Animals lacked data-driven definitions, spawn validation pipeline, and farming systems (taming, pens, breeding, harvesting). | Created `assets/data/animals.ron` with diet, herd size, lifespan, aggression, domesticability, and products; added `SpawnAnimalRequest` event, `AnimalSpawningSystem` with biome & regional capacity validation, predator-prey ecology, and animal farming (`Fence`, `AnimalPen`, `Barn`). | `test_bug_3_data_driven_animal_species_spawning_validation_and_farming` |
+
+### 🛠️ Phase 0 Verification & Acceptance Gates
+
+All four acceptance gates pass cleanly:
+```bash
+# 1. Format check
+cargo fmt --check
+
+# 2. Strict lints & zero warnings
+cargo clippy --all-targets -- -D warnings
+
+# 3. Full test suite (27 passing tests)
+cargo test
+
+# 4. Production release build (LTO, codegen-units = 1)
+cargo build --release
+```
+
+---
+
+## 🚀 Getting Started & Local Installation
+
+### Prerequisites
+- **Rust Toolchain**: Stable Rust (pinned via `rust-toolchain.toml`, `1.85+` or `1.97+`)
+- **C/C++ Build Tools**: MSVC on Windows (`x86_64-pc-windows-msvc`)
+- **Git**
+
+### Clone & Run
+```bash
+# Clone the repository
+git clone <repo-url>
+cd cogniverse-rpg
+
+# Verify environment and run tests
+cargo test
+
+# Run the simulation server locally
+cargo run --release
+```
+Once running, open `http://localhost:3000` in any modern web browser to access the God Console.
+
+---
+
 ## 📜 License
 
 MIT License. Designed and built with research in Artificial Life, Multi-Agent Reinforcement Learning, and Neuro-Symbolic Self-Improving AI.
+

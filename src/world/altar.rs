@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::items::ItemId;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DeityAlignment {
@@ -22,8 +22,14 @@ pub struct SacrificialOffering {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum OfferingOutcome {
-    Blessed { boon_type: String, potency: f32 },
-    Smitten { retribution_type: String, severity: f32 },
+    Blessed {
+        boon_type: String,
+        potency: f32,
+    },
+    Smitten {
+        retribution_type: String,
+        severity: f32,
+    },
     Ignored,
 }
 
@@ -40,7 +46,13 @@ pub struct Altar {
 }
 
 impl Altar {
-    pub fn new(id: usize, x: usize, y: usize, deity: DeityAlignment, name: impl Into<String>) -> Self {
+    pub fn new(
+        id: usize,
+        x: usize,
+        y: usize,
+        deity: DeityAlignment,
+        name: impl Into<String>,
+    ) -> Self {
         Self {
             id,
             x,
@@ -54,13 +66,19 @@ impl Altar {
     }
 
     /// Calculates sincerity score: high if the agent gave something rare relative to their wealth, multiplied by piety
-    pub fn calculate_sincerity(item: ItemId, amount: u32, agent_wealth: f32, agent_piety: f32) -> f32 {
+    pub fn calculate_sincerity(
+        item: ItemId,
+        amount: u32,
+        agent_wealth: f32,
+        agent_piety: f32,
+    ) -> f32 {
         let item_value = item.rarity_value() * (amount as f32);
         let sacrifice_ratio = (item_value / (agent_wealth + 5.0)).clamp(0.05, 1.0);
         let raw_score = sacrifice_ratio * (0.5 + 0.5 * agent_piety.clamp(0.0, 1.0));
         (raw_score * 1.5).clamp(0.0, 1.0)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn receive_offering(
         &mut self,
         offering_id: usize,

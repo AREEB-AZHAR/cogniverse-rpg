@@ -16,13 +16,13 @@ pub enum ItemId {
     Fur,
     Clay,
     ManaCrystal,
-    
+
     // Processed & Intermediate Materials
     TimberPlanks,
     IronIngot,
     Bread,
     ClayTablet,
-    
+
     // Tools & Equipment
     PrimitiveChopper,
     StonePickaxe,
@@ -30,7 +30,7 @@ pub enum ItemId {
     Firestriker,
     HuntingBow,
     IronSword,
-    
+
     // Arcane Inscribed Runes
     RuneSolarIgnition,
     RunePurifyingAura,
@@ -128,7 +128,10 @@ impl Inventory {
     }
 
     pub fn total_wealth(&self) -> f32 {
-        self.items.iter().map(|(id, count)| id.rarity_value() * (*count as f32)).sum()
+        self.items
+            .iter()
+            .map(|(id, count)| id.rarity_value() * (*count as f32))
+            .sum()
     }
 }
 
@@ -166,12 +169,22 @@ impl RecipeId {
             RecipeId::CraftIronPickaxe => &[(ItemId::Wood, 2), (ItemId::IronIngot, 2)],
             RecipeId::CraftIronSword => &[(ItemId::Wood, 1), (ItemId::IronIngot, 3)],
             RecipeId::InscribeSolarRune => &[(ItemId::ClayTablet, 1), (ItemId::ManaCrystal, 1)],
-            RecipeId::InscribePurifyingRune => &[(ItemId::ClayTablet, 1), (ItemId::ManaCrystal, 1), (ItemId::FreshWater, 1)],
+            RecipeId::InscribePurifyingRune => &[
+                (ItemId::ClayTablet, 1),
+                (ItemId::ManaCrystal, 1),
+                (ItemId::FreshWater, 1),
+            ],
             RecipeId::InscribeStoneWallRune => &[(ItemId::ClayTablet, 1), (ItemId::Stone, 2)],
-            RecipeId::InscribeShadowVeilRune => &[(ItemId::ClayTablet, 1), (ItemId::ManaCrystal, 1), (ItemId::Fur, 1)],
+            RecipeId::InscribeShadowVeilRune => &[
+                (ItemId::ClayTablet, 1),
+                (ItemId::ManaCrystal, 1),
+                (ItemId::Fur, 1),
+            ],
             RecipeId::BuildCampfire => &[(ItemId::Wood, 3), (ItemId::Stone, 1)],
             RecipeId::BuildLeanTo => &[(ItemId::Wood, 5), (ItemId::Fur, 1)],
-            RecipeId::BuildStoneCabin => &[(ItemId::Stone, 10), (ItemId::Wood, 6), (ItemId::Clay, 3)],
+            RecipeId::BuildStoneCabin => {
+                &[(ItemId::Stone, 10), (ItemId::Wood, 6), (ItemId::Clay, 3)]
+            }
             RecipeId::BuildGranary => &[(ItemId::Wood, 12), (ItemId::Clay, 4)],
             RecipeId::ErectSolarAltar => &[(ItemId::Stone, 15), (ItemId::ManaCrystal, 1)],
             RecipeId::ErectLunarAltar => &[(ItemId::Stone, 15), (ItemId::ManaCrystal, 1)],
@@ -193,8 +206,12 @@ impl RecipeId {
             RecipeId::InscribeStoneWallRune => Some((ItemId::RuneStoneWall, 1)),
             RecipeId::InscribeShadowVeilRune => Some((ItemId::RuneShadowVeil, 1)),
             // Structures don't produce inventory items; they are placed in world
-            RecipeId::BuildCampfire | RecipeId::BuildLeanTo | RecipeId::BuildStoneCabin |
-            RecipeId::BuildGranary | RecipeId::ErectSolarAltar | RecipeId::ErectLunarAltar => None,
+            RecipeId::BuildCampfire
+            | RecipeId::BuildLeanTo
+            | RecipeId::BuildStoneCabin
+            | RecipeId::BuildGranary
+            | RecipeId::ErectSolarAltar
+            | RecipeId::ErectLunarAltar => None,
         }
     }
 }

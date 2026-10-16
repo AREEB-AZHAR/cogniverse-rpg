@@ -11,6 +11,12 @@ pub struct RivalGodState {
     pub ticks_since_last_intervention: u64,
 }
 
+impl Default for RivalGodState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RivalGodState {
     pub fn new() -> Self {
         Self {
@@ -18,7 +24,8 @@ impl RivalGodState {
             title: "Architect of the Lunar Abyss".into(),
             shadow_favor_meter: 65.0,
             lunarian_population: 12,
-            active_directive: "Harvest flint and iron from Ironcrag crags to forge shadow blades.".into(),
+            active_directive: "Harvest flint and iron from Ironcrag crags to forge shadow blades."
+                .into(),
             wrath_level: 0.1,
             ticks_since_last_intervention: 0,
         }
@@ -43,7 +50,9 @@ impl RivalGodState {
         // If Terrans outnumber Lunarians significantly, grant dark blessings
         if terran_count > lunarian_count + 3 {
             self.shadow_favor_meter = (self.shadow_favor_meter + 15.0).min(100.0);
-            self.active_directive = "Terran light encroaches! Rally at the Obsidian Altar for a boon of vitality.".into();
+            self.active_directive =
+                "Terran light encroaches! Rally at the Obsidian Altar for a boon of vitality."
+                    .into();
             Some(format!(
                 "{} whispered across the shadows: 'Children of Dusk, grow strong against the dawn!' (Lunarians blessed with endurance)",
                 self.name
@@ -55,7 +64,8 @@ impl RivalGodState {
                 self.name
             ))
         } else {
-            self.active_directive = "Prowl the deep forests and gather mana crystals from the ruins.".into();
+            self.active_directive =
+                "Prowl the deep forests and gather mana crystals from the ruins.".into();
             None
         }
     }

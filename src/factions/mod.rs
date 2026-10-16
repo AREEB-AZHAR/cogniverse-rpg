@@ -1,10 +1,10 @@
-pub mod rival_god;
 pub mod plots;
+pub mod rival_god;
 
-use serde::{Deserialize, Serialize};
-use rival_god::RivalGodState;
-use plots::{CivilPlot, PlotType};
 use crate::agent::CivilizationRace;
+use plots::{CivilPlot, PlotType};
+use rival_god::RivalGodState;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiplomaticStatus {
@@ -57,7 +57,8 @@ impl CivilizationCulture {
                 tier: 1,
                 knowledge_required: 25,
                 is_unlocked: false,
-                description: "Knapping flint choppers and axes to accelerate resource gathering.".into(),
+                description: "Knapping flint choppers and axes to accelerate resource gathering."
+                    .into(),
                 effect: "+50% wood and foraging speed".into(),
             },
             CulturalTech {
@@ -67,7 +68,8 @@ impl CivilizationCulture {
                 tier: 1,
                 knowledge_required: 50,
                 is_unlocked: false,
-                description: "Kindling village campfires for communal warmth and cooked meals.".into(),
+                description: "Kindling village campfires for communal warmth and cooked meals."
+                    .into(),
                 effect: "Enables Campfire construction and thermal protection".into(),
             },
             CulturalTech {
@@ -97,7 +99,8 @@ impl CivilizationCulture {
                 tier: 3,
                 knowledge_required: 280,
                 is_unlocked: false,
-                description: "Extracting raw iron ore from mountain crags to forge steel implements.".into(),
+                description:
+                    "Extracting raw iron ore from mountain crags to forge steel implements.".into(),
                 effect: "Unlocks Iron Pickaxes and forged weapons".into(),
             },
             CulturalTech {
@@ -107,7 +110,8 @@ impl CivilizationCulture {
                 tier: 3,
                 knowledge_required: 400,
                 is_unlocked: false,
-                description: "Minting gold bullion into standard coins for trade and dowries.".into(),
+                description: "Minting gold bullion into standard coins for trade and dowries."
+                    .into(),
                 effect: "Unlocks market trading and wealth-based courtship bonuses".into(),
             },
             CulturalTech {
@@ -117,7 +121,8 @@ impl CivilizationCulture {
                 tier: 4,
                 knowledge_required: 550,
                 is_unlocked: false,
-                description: "Solemn sacrificial altar ceremonies and divine covenant rituals.".into(),
+                description: "Solemn sacrificial altar ceremonies and divine covenant rituals."
+                    .into(),
                 effect: "+100% divine blessing potency from altar offerings".into(),
             },
             CulturalTech {
@@ -127,7 +132,8 @@ impl CivilizationCulture {
                 tier: 4,
                 knowledge_required: 750,
                 is_unlocked: false,
-                description: "Infusing leyline mithril crystals into self-rewriting Gödel ASTs.".into(),
+                description: "Infusing leyline mithril crystals into self-rewriting Gödel ASTs."
+                    .into(),
                 effect: "Agents autonomously rewrite their decision code".into(),
             },
         ];
@@ -190,27 +196,34 @@ pub struct CivilizationsCoordinator {
     pub next_plot_id: usize,
 }
 
+impl Default for CivilizationsCoordinator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CivilizationsCoordinator {
     pub fn new() -> Self {
-        let mut plots = Vec::new();
-        plots.push(CivilPlot::new(
-            1,
-            7,
-            "Theron",
-            CivilizationRace::SolarTerran,
-            PlotType::CommercialAlliance,
-            "Grand Trans-Continental Caravan Pact",
-            "Establish duty-free timber and ore trading route across Crystal River",
-        ));
-        plots.push(CivilPlot::new(
-            2,
-            12,
-            "Corvus",
-            CivilizationRace::ChthonicLunarian,
-            PlotType::HeresySchism,
-            "Cult of the Midnight Leyline",
-            "Consecrate ancient leyline ruins independent of orthodox Moon Altar priesthood",
-        ));
+        let plots = vec![
+            CivilPlot::new(
+                1,
+                7,
+                "Theron",
+                CivilizationRace::SolarTerran,
+                PlotType::CommercialAlliance,
+                "Grand Trans-Continental Caravan Pact",
+                "Establish duty-free timber and ore trading route across Crystal River",
+            ),
+            CivilPlot::new(
+                2,
+                12,
+                "Corvus",
+                CivilizationRace::ChthonicLunarian,
+                PlotType::HeresySchism,
+                "Cult of the Midnight Leyline",
+                "Consecrate ancient leyline ruins independent of orthodox Moon Altar priesthood",
+            ),
+        ];
 
         Self {
             rival_god: RivalGodState::new(),
@@ -229,8 +242,14 @@ impl CivilizationsCoordinator {
         }
     }
 
-    pub fn tick(&mut self, current_tick: u64, terran_count: usize, lunarian_count: usize) -> Option<String> {
-        self.rival_god.evaluate_and_intervene(current_tick, terran_count, lunarian_count)
+    pub fn tick(
+        &mut self,
+        current_tick: u64,
+        terran_count: usize,
+        lunarian_count: usize,
+    ) -> Option<String> {
+        self.rival_god
+            .evaluate_and_intervene(current_tick, terran_count, lunarian_count)
     }
 
     pub fn hatch_plot(

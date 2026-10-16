@@ -9,7 +9,7 @@ use super::super::brain::desire::AmbitionArchetype;
 use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
 use super::covenants::{DivineCovenant, QuestObjectiveType, CovenantRewardType};
-use crate::server::god_powers::DivineInterventionKind;
+pub use super::god_powers::DivineInterventionKind;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use super::protocol::{
@@ -1348,7 +1348,8 @@ impl SimulationEngine {
     }
 
     /// Handles a God intervention from the Admin Console
-    pub fn execute_intervention(&mut self, intervention: DivineInterventionKind) {
+    pub fn execute_intervention(&mut self, intervention: super::god_powers::DivineInterventionKind) {
+        use super::god_powers::DivineInterventionKind;
         match intervention {
             DivineInterventionKind::DivineWhisper { target_agent_id, message } => {
                 if let Some(target_id) = target_agent_id {

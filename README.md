@@ -523,7 +523,8 @@ cogniverse-rpg/
 │   ├── agent/                         # Autonomous NPC Agents & Utility AI
 │   │   ├── mod.rs                     # Agent entity, vitals, inventory, and sensory distances
 │   │   ├── needs.rs                   # Dave Mark's IAUS NpcNeeds (hunger, rest, safety, shelter, social)
-│   │   └── utility_ai.rs              # Quadratic utility curves U(x)=x^2, hysteresis (0.15), unbiased wander
+│   │   ├── utility_ai.rs              # Quadratic utility curves U(x)=x^2, hysteresis (0.15), unbiased wander
+│   │   └── progression.rs             # 7 RPG attributes, Temple blessing, canonical ranks (F-SSS), classes & subclasses
 │   ├── economy/                       # Market Economics & Commodity Trading
 │   │   ├── mod.rs                     # Economy module coordinator
 │   │   └── market.rs                  # Local markets, supply/demand square-root pricing, inertia & ledger
@@ -533,6 +534,8 @@ cogniverse-rpg/
 │   │   ├── construction.rs            # Multi-stage construction pipeline (Clearing -> Hauling -> Framing) & JobBoard
 │   │   ├── shipping.rs                # Vessels (FishingBoat, CargoCog, Galleon), A* water pathfinding & launch
 │   │   ├── trade_routes.rs            # DockPort, TradeRoute, and ShippingNetwork automated trade arbitrage
+│   │   ├── danger.rs                  # Decaying 2D hazard & danger field with spatial diffusion and gradients
+│   │   ├── disaster.rs                # Natural disasters (Wildfire, Flood, Earthquake, Drought, Plague) & Adaptation
 │   │   ├── commands.rs                # Unified EditCommand pipeline with undo/redo & cache invalidation
 │   │   ├── cube_sphere.rs             # Continuous 6xNxN cube-sphere topology & seamless edge-stitching
 │   │   ├── planet.rs                  # 3D spherical OpenSimplex terrain, biomes, and Points of Interest
@@ -576,6 +579,7 @@ cogniverse-rpg/
     ├── phase2_ecology_tests.rs        # Food web, grazing/hunting/fleeing, carrying capacity, extinction & farming
     ├── phase3_utility_construction_tests.rs # Utility AI hysteresis, unbiased exploration, food nutrition & job board
     ├── phase4_economy_shipping_tests.rs # Supply/demand pricing, boat launch, water pathfinding, sea-trade arbitrage
+    ├── phase5_disasters_blessing_ranks_tests.rs # Danger diffusion, disaster damage, rank roll proptest, temple blessing
     ├── repro_known_bugs.rs            # Initial repro tests for known bugs
     └── simulation_tests.rs            # Comprehensive unit & integration test suite (20 cases)
 ```
@@ -987,6 +991,121 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 
 # 3. Full test suite (45 passing tests across 7 test suites)
+cargo test
+
+# 4. Production release build (LTO, codegen-units = 1)
+cargo build --release
+```
+
+---
+
+## ⚡ Phase 5: Danger Field, Disasters, Tech Ages, Temple Blessing & Adventurer Ranks
+
+Phase 5 introduces existential environmental hazards, natural disasters, community adaptation pressure, the coming-of-age Temple Blessing ceremony, 7 core RPG attributes, 14 vocation classes with branching subclasses, and canonical adventurer ranks from $F$ to $SSS$.
+
+### 🌋 Dynamic Decaying Danger Field (`src/world/danger.rs`)
+
+The `DangerField` models per-cell hazard levels ($[0.0, 100.0]$) across the world grid:
+- **Spatial Diffusion**: Danger bleeds symmetrically into the 4 orthogonal neighboring cells ($\kappa = 0.08$):
+  $$D_{t+1}(x, y) = (1 - \kappa) D_t(x, y) + \frac{\kappa}{|\mathcal{N}_4|} \sum_{(nx, ny) \in \mathcal{N}_4} D_t(nx, ny)$$
+- **Temporal Exponential Decay**: Danger dissipates over time with baseline decay rate $\delta = 0.05$ (5% reduction per tick).
+- **Safety Gradient Vectors**: Evaluates orthogonal direction vectors $(g_x, g_y)$ pointing away from high hazard zones, enabling fleeing NPCs to escape along downhill danger gradients.
+
+---
+
+### 🔥 Natural Disasters & Adaptation Pressure (`src/world/disaster.rs`)
+
+Natural catastrophes threaten settlements and challenge developing civilizations:
+- **Disaster Kinds**:
+  - `Wildfire`: Spreads across flammable biomes (`WhisperingForest`, `SunlitPlains`), igniting vegetation and scorching wooden cottages and docks.
+  - `Flood`: Surges along coasts and waterways, damaging coastal docks and boatyards.
+  - `Earthquake`: Tectonic tremors fracturing masonry structures and causing structural damage.
+  - `Drought`: Arid conditions drying fertile soil and raising wildfire susceptibility.
+  - `Plague`: Virulent contagion spreading between clustered NPCs.
+- **Adaptation Countermeasures (`AdaptationTracker`)**:
+  - Settlements record cumulative hazard exposure, unlocking protective cultural countermeasures:
+    - 50+ Wildfire Damage $\to$ **Firebreak Zoning** (stops fire propagation into settlements)
+    - 50+ Flood Damage $\to$ **Coastal Levees** (protects docks and boatyards against inundation)
+    - 50+ Drought Damage $\to$ **Communal Granaries** (protects grain rations from spoilage)
+    - 50+ Plague Damage $\to$ **Herbal Quarantine Protocols** (mitigates contagion rates)
+    - 50+ Earthquake Damage $\to$ **Timber-Braced Masonry** (prevents building collapses)
+
+---
+
+### 🏛️ Temple Blessing Ceremony & Canonical Ranks (`src/agent/progression.rs`)
+
+#### 1. Coming-of-Age Temple Pilgrimage
+When reaching 16 years of age (1,600 ticks), unblessed citizens prioritize a holy pilgrimage to the nearest God's Altar/Temple (`UtilityGoal::SeekBlessing`). If no temple exists, the settlement issues an urgent blueprint construction request.
+
+#### 2. Canonical Rank Distribution ($F$ to $SSS$)
+Blessing rolls a canonical rank according to exact data-driven weights:
+$$\text{Weights} = [300, 250, 180, 120, 80, 40, 20, 9, 1] \quad (\sum = 1000)$$
+
+| Rank | Probability | Stat Growth Multiplier | Maximum Level Cap | Classification |
+| :---: | :---: | :---: | :---: | :--- |
+| **F** | 30.0% | $1.0\times$ | Level 20 | Common Townsman |
+| **E** | 25.0% | $1.2\times$ | Level 30 | Capable Citizen |
+| **D** | 18.0% | $1.5\times$ | Level 40 | Seasoned Veteran |
+| **C** | 12.0% | $1.8\times$ | Level 50 | Elite Specialist |
+| **B** | 8.0% | $2.2\times$ | Level 65 | Champion |
+| **A** | 4.0% | $2.8\times$ | Level 80 | Legendary Master |
+| **S** | 2.0% | $3.5\times$ | Level 95 | Mythic Hero |
+| **S+** | 0.9% | $4.2\times$ | Level 110 | Demi-Divine Paragon |
+| **SSS** | 0.1% | $5.0\times$ | Level 150 | Transcendent Chosen |
+
+---
+
+### ⚔️ 7 Core Attributes, Classes & Subclasses
+
+#### 1. Core Attributes
+- **STR (Strength)**: Physical melee damage, carrying capacity, framing labor speed.
+- **AGI (Agility)**: Movement velocity, dodge chance, projectile accuracy.
+- **VIT (Vitality)**: Max health calculation, natural health regeneration, plague resistance.
+- **INT (Intelligence)**: Cultural tech research speed, arcane spell power.
+- **WIS (Wisdom)**: Mana capacity, disaster hazard perception radius.
+- **CHA (Charisma)**: Market trading margins, social bonding speed.
+- **LUK (Luck)**: Critical strikes, rare gathering drops, divine miracle chance.
+
+#### 2. Vocation Classes & Level 25+ Subclasses
+- **Combat Vocations**:
+  - `Warrior` $\to$ `Paladin` (High-VIT tank) or `Berserker` (Pure STR damage)
+  - `Archer` $\to$ `Sniper` (Crit precision) or `Wilderness Ranger` (Beast taming)
+  - `Mage` $\to$ `Elementalist` (AoE fire/ice) or `Grand Arcanist` (Code weaving)
+  - `Rogue` $\to$ `Shadow Assassin` (Lethality) or `Shadow Dancer` (Evasion)
+  - `Cleric` $\to$ `High Priest` (Healing & plague cure) or `Inquisitor` (Smite)
+- **Crafting Vocations**:
+  - `Farmer` $\to$ `Master Agronomist` (Drought-resilient crop yields)
+  - `Miner` $\to$ `Deep Delver` (Gems, mithril, and mana crystals)
+  - `Woodcutter` $\to$ `Master Forester` (Sustainable timber harvesting)
+  - `Builder` $\to$ `Master Architect` (Quake-resistant blueprint framing)
+  - `Blacksmith` $\to$ `Rune Smith` (Forged steel weapons & enchanted armor)
+  - `Alchemist` $\to$ `Grand Apothecary` (Healing potions & disease elixirs)
+  - `Carpenter` $\to$ `Artisan Woodworker` (Refined furniture & trade carts)
+  - `Shipwright` $\to$ `Naval Architect` (Galleon construction & reinforced hulls)
+  - `Cook` $\to$ `Master Caterer` (High-nutrition feasts & morale boosts)
+
+---
+
+### 🧪 Phase 5 Test Suite (`tests/phase5_disasters_blessing_ranks_tests.rs`)
+
+| Test Case | Description & Verification Target |
+| :--- | :--- |
+| `test_danger_field_diffusion_and_temporal_decay` | Validates initial calm field, danger injection, outward safety gradient vector calculations $(g_x > 0)$, temporal decay over 10 ticks (>25% reduction), and spatial diffusion into surrounding tiles. |
+| `test_disaster_wildfire_spread_and_hazard_generation` | Ignites a wildfire in a forest tile with a wooden cottage; verifies tile ignition (`is_on_fire`), elevated danger level (>25.0), structure health depletion, and adaptation damage tracking. |
+| `test_temple_blessing_rank_roll_distribution_proptest` | Executes 10,000 Monte Carlo rank rolls; verifies all 9 ranks generate within statistical bounds ($F \approx 30.0\%$, $E \approx 25.0\%$, $D \approx 18.0\%$, $SSS \approx 0.1\%$) and confirms monotonic rank ordering ($F > E > D > C > B > A > S$). |
+| `test_npc_coming_of_age_blessing_and_class_progression` | Simulates a citizen reaching age 16, verifies `UtilityGoal::SeekBlessing`, performs temple ceremony, validates rank attribute multipliers, advances levels to 25 to unlock `Subclass::Paladin`, and enforces rank level caps (F-rank capped at 20). |
+
+### 🛠️ Phase 5 Verification & Acceptance Gates
+
+All four acceptance gates pass cleanly:
+```bash
+# 1. Format check
+cargo fmt --check
+
+# 2. Strict lints & zero warnings
+cargo clippy --all-targets -- -D warnings
+
+# 3. Full test suite (49 passing tests across 8 test suites)
 cargo test
 
 # 4. Production release build (LTO, codegen-units = 1)

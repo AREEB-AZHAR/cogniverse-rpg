@@ -15,6 +15,7 @@ pub enum UtilityGoal {
     Construct,
     Socialize,
     Explore,
+    SeekBlessing,
 }
 
 impl UtilityGoal {
@@ -26,6 +27,7 @@ impl UtilityGoal {
             UtilityGoal::Construct => "Building Community Infrastructure",
             UtilityGoal::Socialize => "Social Gathering",
             UtilityGoal::Explore => "Radial Terrain Exploration",
+            UtilityGoal::SeekBlessing => "Pilgrimage to God's Temple",
         }
     }
 }
@@ -63,20 +65,40 @@ impl UtilityAi {
         has_shelter: bool,
         job_board: &JobBoard,
     ) -> UtilityGoal {
+        self.evaluate_best_goal_with_context(
+            needs,
+            has_food_available,
+            has_shelter,
+            job_board,
+            0.0,
+            false,
+        )
+    }
+
+    /// Extended goal evaluation incorporating dynamic danger field hazards and temple blessing pilgrimage
+    pub fn evaluate_best_goal_with_context(
+        &mut self,
+        needs: &NpcNeeds,
+        has_food_available: bool,
+        has_shelter: bool,
+        job_board: &JobBoard,
+        local_danger: f32,
+        needs_blessing: bool,
+    ) -> UtilityGoal {
         self.goal_duration_ticks += 1;
 
         // 1. Calculate raw utility scores using quadratic response curve U(x) = x^2
         let mut score_eat = if has_food_available {
             needs.hunger.powi(2)
         } else {
-            // Urgency remains high to seek food tiles across the map
             needs.hunger.powi(2) * 0.8
         };
 
         let mut score_rest = needs.rest.powi(2);
 
-        // Safety has highest emergency multiplier
-        let mut score_flee = (needs.safety.powi(2) * 1.6).min(1.0);
+        // Safety has highest emergency multiplier, augmented by external danger field
+        let hazard_ratio = (local_danger / 50.0).clamp(0.0, 1.0);
+        let mut score_flee = (needs.safety.powi(2) * 1.6 + hazard_ratio.powi(2) * 1.8).min(1.0);
 
         // Construction utility is driven by shelter need and active job board blueprints
         let mut score_construct = if job_board.has_open_jobs() {
@@ -89,6 +111,9 @@ impl UtilityAi {
 
         let mut score_social = needs.social.powi(2) * 0.75;
 
+        // Pilgrimage blessing utility
+        let mut score_bless = if needs_blessing { 0.75 } else { 0.0 };
+
         // Baseline exploration utility when all needs are well-satisfied
         let score_explore = 0.15;
 
@@ -99,6 +124,7 @@ impl UtilityAi {
             UtilityGoal::FleeDanger => score_flee += UTILITY_STICKINESS,
             UtilityGoal::Construct => score_construct += UTILITY_STICKINESS,
             UtilityGoal::Socialize => score_social += UTILITY_STICKINESS,
+            UtilityGoal::SeekBlessing => score_bless += UTILITY_STICKINESS,
             UtilityGoal::Explore => {}
         }
 
@@ -107,6 +133,7 @@ impl UtilityAi {
             (UtilityGoal::FleeDanger, score_flee),
             (UtilityGoal::EatFood, score_eat),
             (UtilityGoal::Rest, score_rest),
+            (UtilityGoal::SeekBlessing, score_bless),
             (UtilityGoal::Construct, score_construct),
             (UtilityGoal::Socialize, score_social),
             (UtilityGoal::Explore, score_explore),

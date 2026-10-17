@@ -1,7 +1,9 @@
 pub mod needs;
+pub mod progression;
 pub mod utility_ai;
 
 pub use needs::NpcNeeds;
+pub use progression::{Attributes, CharacterClass, HeroicProgression, Rank, Subclass};
 pub use utility_ai::{UtilityAi, UtilityGoal, UTILITY_STICKINESS};
 
 use super::brain::ast::EntityFilter;
@@ -57,6 +59,8 @@ pub struct Agent {
     pub needs: NpcNeeds,
     #[serde(default)]
     pub utility_ai: UtilityAi,
+    #[serde(default)]
+    pub progression: HeroicProgression,
 
     // Inventory & Tools
     pub inventory: Inventory,
@@ -161,6 +165,7 @@ impl Agent {
             social_need: 0.30,
             needs: NpcNeeds::new(),
             utility_ai: UtilityAi::new(),
+            progression: HeroicProgression::new(),
             inventory,
             brain,
             partner_id: None,

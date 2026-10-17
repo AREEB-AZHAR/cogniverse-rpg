@@ -3,6 +3,8 @@ pub mod cellular;
 pub mod commands;
 pub mod construction;
 pub mod cube_sphere;
+pub mod danger;
+pub mod disaster;
 pub mod ecology;
 pub mod fauna;
 pub mod generation;
@@ -17,6 +19,8 @@ pub mod views;
 
 pub use construction::{Blueprint, ConstructionStage, JobBoard};
 pub use cube_sphere::{cell_dir, CellId};
+pub use danger::DangerField;
+pub use disaster::{ActiveDisaster, AdaptationTracker, DisasterEngine, DisasterKind};
 pub use headless::{HeadlessSimResult, HeadlessSimulator, TICKS_PER_YEAR};
 pub use planet::{CubeSphereWorld, PoiKind, PointOfInterest};
 pub use saves::{SaveError, SaveSystem};
@@ -57,6 +61,10 @@ pub struct WorldGrid {
     pub job_board: JobBoard,
     #[serde(default)]
     pub shipping: ShippingNetwork,
+    #[serde(default)]
+    pub danger_field: DangerField,
+    #[serde(default)]
+    pub disasters: DisasterEngine,
 }
 
 impl Default for WorldGrid {
@@ -86,6 +94,8 @@ impl WorldGrid {
             ecology: EcologyManager::default(),
             job_board: JobBoard::new(),
             shipping: ShippingNetwork::new(),
+            danger_field: DangerField::new(width, height),
+            disasters: DisasterEngine::new(),
         }
     }
 
@@ -246,6 +256,15 @@ impl WorldGrid {
             };
             self.wildlife.push(WildlifeEntity::new(id, species, rx, ry));
         }
+
+        // Tick danger field and active natural disasters
+        self.danger_field.tick();
+        self.disasters.tick(
+            &mut self.danger_field,
+            &mut self.tiles,
+            self.width,
+            self.height,
+        );
     }
 
     /// Executes one tick of autonomous construction work for an agent on the world's job board

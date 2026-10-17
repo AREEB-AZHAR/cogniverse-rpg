@@ -368,11 +368,11 @@ impl CellularAutomataEngine {
                 let can_overgrow = if str_target == 0 {
                     true
                 } else if str_source > str_target {
-                    rng.gen_bool(0.65)
+                    rng.gen_bool(0.70)
                 } else if str_source == str_target {
-                    rng.gen_bool(0.25)
+                    rng.gen_bool(0.20)
                 } else {
-                    rng.gen_bool(0.08)
+                    false
                 };
 
                 if can_overgrow {

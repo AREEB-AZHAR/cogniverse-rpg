@@ -1205,12 +1205,51 @@ cargo fmt --check
 # 2. Strict lints & zero warnings
 cargo clippy --all-targets -- -D warnings
 
-# 3. Full test suite (57 passing tests across 11 test suites)
+# 3. Full test suite (62 passing tests across 12 test suites)
 cargo test
 
 # 4. Production release build (LTO, codegen-units = 1)
 cargo build --release
 ```
+
+---
+
+## ⚔️ Phase 7: Guilds, Parties, Dungeon Outbursts & Multi-Nation Alliances
+
+Phase 7 introduces the dynamic macro-threat and civil-defense military response architecture to **Genesis Cogniverse**:
+
+### 🌋 Subterranean Mana Swells & Dungeon Outbursts
+- Dungeons left uncleared over extended simulation ticks steadily accumulate subterranean mana:
+  $$\Delta M = \lambda_{\text{base}} \times R_{\text{multiplier}}$$
+- When `mana_swell >= 100.0`, the dungeon ruptures into **`DungeonState::Outburst`**:
+  - The subterranean seal breaks, unleashing an **`OutburstHorde`** of surface monsters around the entrance.
+  - Surrounding cells in the dynamic **`DangerField`** spike immediately to catastrophic hazard ratings ($\ge 80.0$).
+  - **Relentless Rage Swarm Dynamics**: Surface horde monsters spawn in an unstoppable Rage State. They step relentlessly toward the nearest high-population civilian settlement to consume sustenance, ignoring satiety thresholds, damaging infrastructure, and pillaging grain stores until subdued.
+
+### 📜 Adventurer Guild & Emergency Quests
+- The **`AdventurerGuild`** acts as a cross-realm defense agency and contract board:
+  - When an outburst occurs, the guild immediately generates an urgent **`QuestKind::OutbreakContainment`** contract.
+  - Civilizations dynamically contribute liquid gold bounties from their national treasuries to the contract reward pool.
+  - Subjugating the outbreak distributes gold, high renown, and celestial mana stones to participating heroes.
+
+### 🛡️ Flexible Raid Parties & Trinity Role Synergy
+- Autonomous combatant heroes evaluate `UtilityGoal::JoinParty` and `UtilityGoal::TakeGuildQuest` via the IAUS Utility AI system.
+- **Dynamic Party Scaling**:
+  - **Standard Strike Squads (3–4 Members)**: 1 Vanguard/Tank, 1–2 Strikers/DPS, 1 Healer/Support for Rank $F \sim B$ threats.
+  - **Flexible Grand Raid Brigades (Up to 8 Members)**: 2 Tanks, 4 DPS, 2 Healers for high-threat $A, S, SPlus, SSS$ calamities with multi-nation participation.
+- **Trinity Synergy Multiplier ($S_{\text{synergy}} \ge 1.35 \times$)**:
+  - *Vanguard/Tank* (Paladin, Berserker, Warrior): $+15\%$ damage resistance for the entire squad.
+  - *Striker/DPS* (Elementalist, Arcanist, Sniper, Ranger, Assassin): $+15\%$ damage execution.
+  - *Healer/Support* (High Priest, Inquisitor, Cleric): $+20\%$ combat regeneration and casualty mitigation.
+  - *Full Trinity Bonus*: Cohesive squads containing all 3 roles unlock $+15\%$ composite combat power.
+
+### 🌐 Geopolitical Alliances & Grand Anti-Calamity Coalition
+- High-threat $A, S, SPlus, SSS$ dungeon outbursts trigger geopolitical panic across territorial borders.
+- Solar Terrans and Chthonic Lunarians set aside diplomatic tensions to ratify:
+  - **`DiplomaticStatus::MutualDefensePact`** (for Rank $A$ incursions).
+  - **`DiplomaticStatus::GrandCoalition`** (for Rank $S, SPlus, SSS$ world-ending calamities).
+- Both sovereign nations pool $25\%$ of their national treasuries into the guild bounty pool and field multinational expedition forces.
+- Eradication of the calamity awards both realms $+100$ Knowledge Points, increases bilateral trade volume by $+50$, and solidifies enduring peace.
 
 ---
 

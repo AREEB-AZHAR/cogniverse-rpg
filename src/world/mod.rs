@@ -12,6 +12,7 @@ pub mod fauna;
 pub mod generation;
 pub mod headless;
 pub mod items;
+pub mod outburst;
 pub mod planet;
 pub mod saves;
 pub mod shipping;
@@ -30,6 +31,7 @@ pub use encounter::{
     DungeonExpedition, EncounterSimulator, ExpeditionMember, ExpeditionState, StepResult,
 };
 pub use headless::{HeadlessSimResult, HeadlessSimulator, TICKS_PER_YEAR};
+pub use outburst::{DungeonOutburstSystem, OutbreakMob, OutburstHorde};
 pub use planet::{CubeSphereWorld, PoiKind, PointOfInterest};
 pub use saves::{SaveError, SaveSystem};
 pub use shipping::{
@@ -77,10 +79,20 @@ pub struct WorldGrid {
     pub dungeons: Vec<Dungeon>,
     #[serde(default)]
     pub expeditions: Vec<DungeonExpedition>,
+    #[serde(default)]
+    pub outburst_system: DungeonOutburstSystem,
+    #[serde(default)]
+    pub parties: Vec<crate::agent::party::Party>,
+    #[serde(default = "default_party_seed_id")]
+    pub next_party_id: usize,
     #[serde(default = "default_item_seed_id")]
     pub next_item_id: u64,
     #[serde(default = "default_stone_seed_id")]
     pub next_stone_id: u64,
+}
+
+fn default_party_seed_id() -> usize {
+    1
 }
 
 fn default_item_seed_id() -> u64 {
@@ -123,6 +135,9 @@ impl WorldGrid {
             disasters: DisasterEngine::new(),
             dungeons,
             expeditions: Vec::new(),
+            outburst_system: DungeonOutburstSystem::new(),
+            parties: Vec::new(),
+            next_party_id: 1,
             next_item_id: 1001,
             next_stone_id: 5001,
         }
@@ -158,6 +173,8 @@ impl WorldGrid {
         self.shipping = ShippingNetwork::new();
         self.dungeons = Self::spawn_initial_dungeons(self.width, self.height, seed);
         self.expeditions.clear();
+        self.outburst_system = DungeonOutburstSystem::new();
+        self.parties.clear();
 
         map_title
     }
@@ -410,5 +427,108 @@ impl WorldGrid {
     pub fn tick_shipping(&mut self, markets: &mut [crate::economy::Market]) {
         self.shipping
             .tick_trade_arbitrage(&self.tiles, self.width, self.height, markets);
+    }
+
+    /// Advances dungeon outbursts, surface hordes, guild quest responses, and tactical party maneuvers
+    pub fn tick_outbursts_and_parties(
+        &mut self,
+        civil_coordinator: &mut crate::factions::CivilizationsCoordinator,
+        settlements: &[(usize, usize, usize)],
+        current_tick: u64,
+    ) -> Vec<String> {
+        let mut events = Vec::new();
+        let mut rng = rand::thread_rng();
+
+        // 1. Tick dungeon mana swells & surface outburst hordes
+        let new_breaks = self.outburst_system.tick(
+            &mut self.dungeons,
+            &mut self.danger_field,
+            settlements,
+            self.width,
+            self.height,
+            &mut rng,
+        );
+
+        // 2. Process emergency quests and geopolitical coalition appeals
+        for d_id in new_breaks {
+            if let Some(dungeon) = self.dungeons.iter().find(|d| d.id == d_id) {
+                let q_id = civil_coordinator
+                    .guild
+                    .post_emergency_outburst_quest(dungeon, current_tick);
+                events.push(format!(
+                    "🚨 [DUNGEON OUTBURST] Mana rupture at [{}] (Rank {})! Surface horde is marching in rage toward settlements! Quest #{} issued.",
+                    dungeon.name,
+                    dungeon.rank.display_name(),
+                    q_id
+                ));
+
+                if let Some(coalition_event) =
+                    civil_coordinator.evaluate_outburst_coalition(dungeon.rank)
+                {
+                    events.push(coalition_event);
+                }
+            }
+        }
+
+        // 3. Advance tactical parties toward target and engage in combat
+        for party in &mut self.parties {
+            if !party.is_party_alive() {
+                party.status = crate::agent::party::PartyStatus::Disbanded;
+                continue;
+            }
+
+            // Find target horde if party has an active quest
+            if let Some(q_id) = party.active_quest_id {
+                let target_d_id = civil_coordinator
+                    .guild
+                    .quests
+                    .iter()
+                    .find(|q| q.id == q_id)
+                    .and_then(|q| q.target_dungeon_id);
+
+                if let Some(d_id) = target_d_id {
+                    if let Some(horde) = self
+                        .outburst_system
+                        .active_hordes
+                        .iter_mut()
+                        .find(|h| h.dungeon_id == d_id && !h.is_contained)
+                    {
+                        let dist = (party.x as isize - horde.origin_x as isize).abs()
+                            + (party.y as isize - horde.origin_y as isize).abs();
+
+                        if dist <= 2 {
+                            party.status = crate::agent::party::PartyStatus::InBattle;
+                            let engaged = party.engage_outbreak_round(horde, &mut rng);
+                            if engaged && horde.is_fully_defeated() {
+                                horde.is_contained = true;
+                                if let Some(dungeon) =
+                                    self.dungeons.iter_mut().find(|d| d.id == d_id)
+                                {
+                                    dungeon.resolve_outburst();
+                                }
+                                party.status = crate::agent::party::PartyStatus::Resting;
+                                civil_coordinator.guild.complete_quest(q_id);
+                                if let Some(triumph) =
+                                    civil_coordinator.resolve_coalition_victory(horde.rank)
+                                {
+                                    events.push(triumph);
+                                }
+                                events.push(format!(
+                                    "⚔️ [OUTBURST CONTAINED] Party '{}' successfully eradicated the horde at ({}, {})!",
+                                    party.name, horde.origin_x, horde.origin_y
+                                ));
+                            }
+                        } else {
+                            party.status = crate::agent::party::PartyStatus::EnRoute;
+                            party.target_x = horde.origin_x;
+                            party.target_y = horde.origin_y;
+                            party.step_toward_target(self.width, self.height);
+                        }
+                    }
+                }
+            }
+        }
+
+        events
     }
 }

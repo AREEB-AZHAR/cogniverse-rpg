@@ -1,8 +1,10 @@
 pub mod needs;
+pub mod party;
 pub mod progression;
 pub mod utility_ai;
 
 pub use needs::NpcNeeds;
+pub use party::{CombatRole, Party, PartyFormationEngine, PartyMember, PartyStatus};
 pub use progression::{Attributes, CharacterClass, HeroicProgression, Rank, Subclass};
 pub use utility_ai::{UtilityAi, UtilityGoal, UTILITY_STICKINESS};
 

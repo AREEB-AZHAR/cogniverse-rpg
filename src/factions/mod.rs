@@ -1,7 +1,10 @@
+pub mod guild;
 pub mod plots;
 pub mod rival_god;
 
+use crate::agent::progression::Rank;
 use crate::agent::CivilizationRace;
+use guild::AdventurerGuild;
 use plots::{CivilPlot, PlotType};
 use rival_god::RivalGodState;
 use serde::{Deserialize, Serialize};
@@ -12,6 +15,8 @@ pub enum DiplomaticStatus {
     BorderTension,
     OpenWarfare,
     CommercialAlliance,
+    MutualDefensePact,
+    GrandCoalition,
 }
 
 impl DiplomaticStatus {
@@ -21,6 +26,8 @@ impl DiplomaticStatus {
             DiplomaticStatus::BorderTension => "Border Tension",
             DiplomaticStatus::OpenWarfare => "Open Warfare",
             DiplomaticStatus::CommercialAlliance => "Commercial Alliance",
+            DiplomaticStatus::MutualDefensePact => "🛡️ Mutual Defense Pact",
+            DiplomaticStatus::GrandCoalition => "⚔️ Grand Anti-Calamity Coalition",
         }
     }
 }
@@ -194,6 +201,7 @@ pub struct CivilizationsCoordinator {
     pub lunar_treasury: u32,
     pub active_plots: Vec<CivilPlot>,
     pub next_plot_id: usize,
+    pub guild: AdventurerGuild,
 }
 
 impl Default for CivilizationsCoordinator {
@@ -239,6 +247,12 @@ impl CivilizationsCoordinator {
             lunar_treasury: 250,
             active_plots: plots,
             next_plot_id: 3,
+            guild: AdventurerGuild::new(
+                "Grand Pan-Continental Adventurer Guild",
+                "Neutral Concord",
+                65,
+                60,
+            ),
         }
     }
 
@@ -329,5 +343,66 @@ impl CivilizationsCoordinator {
             }
         }
         events
+    }
+
+    /// Evaluates geopolitical panic when an Outburst occurs.
+    /// High-threat outbursts (A, S, SS, SSS) compel nations to forge Mutual Defense Pacts or Grand Coalitions.
+    pub fn evaluate_outburst_coalition(&mut self, dungeon_rank: Rank) -> Option<String> {
+        if self.diplomacy == DiplomaticStatus::OpenWarfare {
+            return None; // Bitter wartime rivals refuse joint treaties until open truce
+        }
+
+        if dungeon_rank >= Rank::S {
+            if self.diplomacy != DiplomaticStatus::GrandCoalition {
+                self.diplomacy = DiplomaticStatus::GrandCoalition;
+                let terran_contrib = self.terran_treasury / 4;
+                let lunar_contrib = self.lunar_treasury / 4;
+                self.terran_treasury = self.terran_treasury.saturating_sub(terran_contrib);
+                self.lunar_treasury = self.lunar_treasury.saturating_sub(lunar_contrib);
+                self.guild.treasury_gold += terran_contrib + lunar_contrib;
+
+                return Some(format!(
+                    "🌐 [GEOPOLITICAL TREATY] Catastrophic {}-Rank Outburst ignited realm-wide panic! Solar Terrans and Chthonic Lunarians ratified the GRAND ANTI-CALAMITY COALITION! Pooled {} gold into Guild bounty treasury.",
+                    dungeon_rank.display_name(),
+                    terran_contrib + lunar_contrib
+                ));
+            }
+        } else if dungeon_rank >= Rank::A
+            && self.diplomacy != DiplomaticStatus::MutualDefensePact
+            && self.diplomacy != DiplomaticStatus::GrandCoalition
+        {
+            self.diplomacy = DiplomaticStatus::MutualDefensePact;
+            return Some(format!(
+                "🛡️ [DIPLOMATIC TREATY] Severe {}-Rank Outburst led nations to sign a MUTUAL DEFENSE PACT to coordinate garrison defenses.",
+                dungeon_rank.display_name()
+            ));
+        }
+
+        None
+    }
+
+    /// Rewards cooperating nations upon successful eradication of an outburst threat under coalition
+    pub fn resolve_coalition_victory(&mut self, dungeon_rank: Rank) -> Option<String> {
+        if self.diplomacy == DiplomaticStatus::GrandCoalition
+            || self.diplomacy == DiplomaticStatus::MutualDefensePact
+        {
+            let knowledge_gain = match dungeon_rank {
+                Rank::SSS | Rank::SPlus | Rank::S => 100,
+                Rank::A => 60,
+                _ => 30,
+            };
+
+            self.terran_culture.add_knowledge(knowledge_gain);
+            self.lunar_culture.add_knowledge(knowledge_gain);
+            self.trade_volume += 50;
+
+            Some(format!(
+                "🕊️ [COALITION TRIUMPH] Joint allied forces eradicated the {}-Rank Outburst! Both civilizations celebrate unified victory (+{} Knowledge, +50 Trade Volume).",
+                dungeon_rank.display_name(),
+                knowledge_gain
+            ))
+        } else {
+            None
+        }
     }
 }

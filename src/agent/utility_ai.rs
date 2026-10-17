@@ -16,6 +16,8 @@ pub enum UtilityGoal {
     Socialize,
     Explore,
     SeekBlessing,
+    JoinParty,
+    TakeGuildQuest,
 }
 
 impl UtilityGoal {
@@ -28,6 +30,8 @@ impl UtilityGoal {
             UtilityGoal::Socialize => "Social Gathering",
             UtilityGoal::Explore => "Radial Terrain Exploration",
             UtilityGoal::SeekBlessing => "Pilgrimage to God's Temple",
+            UtilityGoal::JoinParty => "Assembling Adventurer Strike Team",
+            UtilityGoal::TakeGuildQuest => "Accepting Guild Subjugation Contract",
         }
     }
 }
@@ -125,7 +129,7 @@ impl UtilityAi {
             UtilityGoal::Construct => score_construct += UTILITY_STICKINESS,
             UtilityGoal::Socialize => score_social += UTILITY_STICKINESS,
             UtilityGoal::SeekBlessing => score_bless += UTILITY_STICKINESS,
-            UtilityGoal::Explore => {}
+            UtilityGoal::JoinParty | UtilityGoal::TakeGuildQuest | UtilityGoal::Explore => {}
         }
 
         // 3. Select action with the highest evaluated utility
@@ -156,6 +160,42 @@ impl UtilityAi {
 
         self.last_action_score = best_score;
         best_goal
+    }
+
+    /// Evaluates decision utility for ranked heroic adventurers (joining parties, accepting quests)
+    pub fn evaluate_combatant_goal(
+        &mut self,
+        needs: &NpcNeeds,
+        is_combat_ready: bool,
+        has_open_quest: bool,
+        in_party: bool,
+        local_danger: f32,
+    ) -> UtilityGoal {
+        self.goal_duration_ticks += 1;
+
+        if needs.hunger > 0.85 {
+            return UtilityGoal::EatFood;
+        }
+        if needs.rest > 0.85 {
+            return UtilityGoal::Rest;
+        }
+
+        if !is_combat_ready && local_danger > 40.0 {
+            return UtilityGoal::FleeDanger;
+        }
+
+        if is_combat_ready {
+            if !in_party && has_open_quest {
+                self.current_goal = UtilityGoal::JoinParty;
+                return UtilityGoal::JoinParty;
+            } else if in_party && has_open_quest {
+                self.current_goal = UtilityGoal::TakeGuildQuest;
+                return UtilityGoal::TakeGuildQuest;
+            }
+        }
+
+        self.current_goal = UtilityGoal::Explore;
+        UtilityGoal::Explore
     }
 
     /// Executes consumption of the best available food in inventory (bread, meat, berries, grain)

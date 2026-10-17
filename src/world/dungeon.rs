@@ -11,6 +11,7 @@ pub enum DungeonState {
     Active,
     Cleared,
     Collapsed,
+    Outburst,
 }
 
 /// Specialized chamber archetype within a dungeon floor
@@ -102,6 +103,9 @@ pub struct Dungeon {
     pub mana_density: f32,
     pub respawn_timer: u32,
     pub discovery_tick: u64,
+    pub mana_swell: f32,
+    pub outburst_threshold: f32,
+    pub outburst_count: u32,
 }
 
 impl Dungeon {
@@ -115,6 +119,28 @@ impl Dungeon {
         let fresh = generate_dungeon(self.id, &self.name, self.x, self.y, self.rank, seed);
         self.floors = fresh.floors;
         self.state = DungeonState::Active;
+        self.respawn_timer = 0;
+        self.mana_swell = 0.0;
+    }
+
+    /// Ticks the subterranean mana swell accumulator.
+    /// Triggers `DungeonState::Outburst` when critical threshold is breached.
+    pub fn tick_mana_swell(&mut self, rate: f32) -> bool {
+        if self.state == DungeonState::Active {
+            self.mana_swell += rate * self.rank.stat_multiplier();
+            if self.mana_swell >= self.outburst_threshold {
+                self.state = DungeonState::Outburst;
+                self.outburst_count += 1;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Concludes an outburst event, returning the dungeon to Cleared status and resetting mana swell
+    pub fn resolve_outburst(&mut self) {
+        self.state = DungeonState::Cleared;
+        self.mana_swell = 0.0;
         self.respawn_timer = 0;
     }
 }
@@ -239,6 +265,9 @@ pub fn generate_dungeon(
         mana_density,
         respawn_timer: 0,
         discovery_tick: 0,
+        mana_swell: 0.0,
+        outburst_threshold: 100.0,
+        outburst_count: 0,
     }
 }
 

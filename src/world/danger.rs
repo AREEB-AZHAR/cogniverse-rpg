@@ -46,6 +46,19 @@ impl DangerField {
         self.cells[self.index(x, y)]
     }
 
+    /// Alias for sample_danger
+    pub fn get_hazard(&self, x: usize, y: usize) -> f32 {
+        self.sample_danger(x, y)
+    }
+
+    /// Injects localized hazard directly into a single cell coordinate
+    pub fn inject_hazard(&mut self, x: usize, y: usize, amount: f32) {
+        if x < self.width && y < self.height {
+            let idx = self.index(x, y);
+            self.cells[idx] = (self.cells[idx] + amount).min(100.0);
+        }
+    }
+
     /// Injects hazard/danger intensity into an epicenter with quadratic distance falloff
     pub fn inject_danger(&mut self, center_x: usize, center_y: usize, radius: usize, amount: f32) {
         let min_x = center_x.saturating_sub(radius);

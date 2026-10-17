@@ -13,6 +13,12 @@
 
 ## 📸 WorldBox-Inspired God Admin Console
 
+![Dual-Mode Isometric Tactical Village View & Bottom NPC Inspector Panel](screenshots/village_tactical_view_final.png)
+*Live **Tactical Village Simulation View** featuring the **Retro Wooden Status Bar** (Calendar, Time, Weather, Danger Level: `MODERATE`, Settlement Stockpiles `🪵 49285, 🪨 3290, 🌾 709, 🔷 Mana Stones: 67`, and Speed Controls), top-left **Debug Inspector**, bottom-docked **NPC Inspector Panel** with animated portrait, Level, Age, Awakening Status, 4-stat chips (`STR 19`, `VIT 15`, `DEX 14`, `INT 17`), and autonomous AI goal, bottom-center **Live Event Feed**, and bottom-right **Mini-map & Build/Edit Toolbar**.*
+
+![Cosmic 3D Planetary World Map - Aether Planet](screenshots/cosmic_world_map_final.png)
+*Live **Cosmic 3D Planetary World Map** (`World Map - Aether Planet`) featuring deep starry cosmic space, cratered crescent moon, **rotating 3D spherical Aether Planet** with polar ice caps, biomes, **glowing violet leylines**, **swirling equatorial cloud ring**, dashed maritime trade routes, stone-carved **Sovereign Realms Card** (`🇵🇸 森林聯邦 🕊️`, `🌲 eylias ⚔️`, `🇫🇷 laha ⚔️`, `🇬🇷 mont 🕊️`, `🇪🇸 烈灼帝国 🔥`), **Mether Planet Threat Rankings Card** (`F`, `C`, `B`, `A`, `S` with star ratings), and bottom **Civilizational Era Progression Bar** (`Iron Age → Mana Age`). Seamlessly zooms between village and planetary views using mouse wheel or `M`.*
+
 ![Architecture Buildings & Mountain Ore Veins](screenshots/worldbox_buildings_and_ores.png)
 *Live 2D Procedural Matrix (**128x128 Grand Continental Archipelago - 16,384 tiles**) showcasing defined, distinguishable pixel biomes, permanent village structures (**Stone Cabins with pitched roofs and chimneys, Thatched Cottages, Campfires, Granaries, Watchtowers, and Mountain Mine Shafts**), and discoverable mountain ore veins (**Glittering Auric Gold, Radiant Cyan Mithril, and Metallic Copper Iron**).*
 
@@ -1374,6 +1380,66 @@ Phase 9 completes the sensory and navigational apex of the Genesis Cogniverse si
 - **Granular Volume Sliders**: Independent sliders for Master, SFX, and Ambient Environment volumes with real-time percentage readouts.
 - **Global Audio Mute**: Instant toggle preserving configured volumes when unmuted.
 - **Visual Display Overlays**: Checkboxes to toggle Minimap Radar, Titan Pulsing Auras, Demigod Celestial Halos, and Dynamic Day/Night Lighting Masks.
+
+---
+
+## 🌌 Dual-Mode UI Recreation Engine: Tactical Village & Cosmic 3D World Map
+
+The Genesis Cogniverse interface now features a **seamless dual-mode zoom engine** achieving 100% visual fidelity with reference pixel-art designs:
+
+### 1. Zoomed-In Tactical Village Mode (Micro Perspective)
+- **Living Village Simulation**:
+  - Detailed pixel-art village featuring the curving **Crystal Blue River** with animated water foam ripples and **Timber Footbridge**.
+  - **🏛️ GODs Temple**: Multi-tier grey stone sanctuary with marble pillars, pitched golden roof, 4 animated violet flame braziers emitting magical purple particles, and praying villagers.
+  - **🛡️ Guild Hall**: Gabled timber and stone hall adorned with red heraldic banners.
+  - **🎪 Market Quarter**: Timber stalls with striped orange/white and blue/white canopies, handcarts with wooden wheels, and merchant stands.
+  - **🐑 Livestock Pen**: Wooden split-rail fence enclosing grazing dairy cows and fluffy white sheep.
+  - **🌾 Farmland**: Tilled brown furrows with lush golden wheat crops and working farmers.
+  - **⛰️ Mountain Cavern Dungeon (A-Rank)**: Rocky cave entrance crowned with a glowing red circular arcane badge, `A-Rank` label, and an adventurer party (Warrior with shield, Swordswoman, Blue-robed Mage with glowing staff) standing guard.
+  - **🐗 Feral Orc Camp & Quarry**: Green-skinned orcs with axes, wooden log piles, campfire, and quarry mine shaft with danger alert badges `(!)`.
+- **Top Retro Wooden Status Bar**:
+  - Date & Time: `Year 108, Season: Summer, Day 22` | `Time: 09:20 AM`.
+  - Weather: Dynamic atmospheric conditions (e.g. `crisp/windy`, `clearsun`, `heatwave`) with help tooltip.
+  - Danger Level: Beveled badge (`LOW`, `MODERATE`, `HIGH`, `EXTREME`).
+  - Settlement Stockpiles: Real-time counters for Timber Wood (`🪵`), Hewn Stone (`🪨`), Harvested Wheat (`🌾`), and Refined Mana Stones (`🔷`).
+  - Speed Controls: Instant toggles for `||` (Pause), `1x`, `2x`, `4x`, `8x`, and `🌍 Map (M)`.
+- **Top-Left Debug Inspector Card**:
+  - Monospace telemetry tracking live `FPS`, `Active NPCs`, `Chunk: 0`, `Chunk Updates`, and `Pathfinding Fails`.
+- **Bottom-Left NPC Inspector Panel**:
+  - Docks smoothly into the bottom-left corner whenever any NPC on the map is clicked.
+  - Displays:
+    - Custom anime/pixel-art avatar portrait.
+    - Level and Class/Role (e.g., `Level 11 AsceticHermit`, `Level 14 Novice`).
+    - Character Name and Age (e.g., `Kael (19yo)`, `Aelric (16yo)`).
+    - Class Awakening & Spiritual Status (e.g., `Class Awakening Scheduled`, `Fatigued / Meditating`).
+    - 4-Stat Box Matrix: `STR` (red), `VIT` (orange), `DEX` (green), and `INT` (cyan) stat chips.
+    - Autonomous AI Goal: Real-time neural intention and inner monologue statement.
+    - Red `[x]` close button.
+- **Bottom-Center Live Event Feed**:
+  - Scrollable parchment feed displaying timestamped notifications for emergency quests, caravans, and party formations.
+- **Bottom-Right Mini-Map & Build Toolbar**:
+  - Mini 3D rotating globe radar tracking settlements and active dungeon pings.
+  - 4 quick-action toolbar buttons (`🏞️ Terrain`, `⛏️ Mine`, `🏗️ Build`, `🛡️ Defend`).
+
+### 2. Zoomed-Out Cosmic Planetary World Map Mode (Macro Perspective)
+- **Deep Cosmic Space Void**:
+  - Starfield with 180+ twinkling pixel stars and distant cosmic nebulae.
+  - Detailed crescent moon with crater surface markings in the upper-right sky.
+- **Rotating 3D Spherical Aether Planet**:
+  - 3D sphere rendered with procedural continental landmasses, polar ice caps, and realistic spherical shading.
+  - **Glowing Violet Leylines**: Pulsing magenta/purple energy fractures wrapping around the globe.
+  - **Swirling Equatorial Cloud Ring**: Soft white cloud band encircling the planet and extending beyond the sphere's edges.
+  - **Golden Maritime Trade Routes**: Dashed golden nautical lanes connecting oceanic ports.
+  - **Surface Landmark Glyphs**: Interactive miniature icons for temples, castles, and dungeons with territorial realm tints.
+- **Side Stone Tablet Cards**:
+  - **Sovereign Realms Card (Left)**: Lists active world nations (`🇵🇸 森林聯邦 🕊️`, `🌲 eylias ⚔️`, `🇫🇷 laha ⚔️`, `🇬🇷 mont 🕊️`, `🇪🇸 烈灼帝国 🔥`) with peace doves and crossed sword war indicators.
+  - **Mether Planet Threat Rankings Card (Right)**: Categorizes planetary threat levels (`F`, `C`, `B`, `A` Monster Outburst, `S` Primordial Titan) with star badges.
+- **Bottom Civilizational Era Progression Bar**:
+  - Stone-carved banner tracking the world's technological advancement from `Iron Age → Mana Age` with a glowing purple mana gradient progress fill.
+
+### 3. Seamless Zoom Navigation
+- **Scroll Mouse Wheel**: Zooming out past `zoom <= 0.35` seamlessly transitions into the Cosmic World Map; zooming in past `zoom > 0.35` seamlessly transitions into the detailed Tactical Village View.
+- **Hotkey `M` / Buttons**: Click `🌍 Map (M)` or `[Back to Village (M)]` at any time for instant mode switching.
 
 ---
 

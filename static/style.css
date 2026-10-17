@@ -314,7 +314,7 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
-  display: flex;
+  display: none !important;
   flex-direction: column;
   align-items: center;
   max-width: 96vw;
@@ -3081,5 +3081,795 @@ html, body {
   background: rgba(245, 158, 11, 0.2);
   border-color: #f59e0b;
   color: #fef08a;
+}
+
+/* =========================================================
+   DUAL-MODE UI RECREATION ENGINE (100% VISUAL FIDELITY)
+========================================================= */
+
+/* Top Debug Title Bar */
+#project-title-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  border-bottom: 2px solid #1e3a8a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  z-index: 2000;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.window-title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.window-ctrl-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.win-btn {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  cursor: pointer;
+}
+
+.win-btn.close {
+  background: #ef4444;
+}
+
+/* ---------------------------------------------------------
+   IMAGE 1: TOP RETRO WOODEN STATUS BAR
+--------------------------------------------------------- */
+#retro-top-bar {
+  position: fixed;
+  top: 30px;
+  left: 10px;
+  right: 10px;
+  height: 48px;
+  background: #503726;
+  border: 3px solid #2e1d13;
+  outline: 2px solid #7c5438;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  z-index: 1500;
+  box-shadow: inset 2px 2px 0px rgba(255, 220, 160, 0.25), inset -2px -2px 0px rgba(0, 0, 0, 0.7), 0 6px 16px rgba(0, 0, 0, 0.6);
+  font-family: 'Outfit', 'MedievalSharp', sans-serif;
+}
+
+.retro-hud-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #3c271b;
+  border: 2px solid #23160e;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.1), inset -1px -1px 0px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  padding: 4px 10px;
+  height: 36px;
+  color: #fce7cf;
+  font-size: 0.74rem;
+}
+
+.retro-hud-block.datetime {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 2px 10px;
+  min-width: 220px;
+}
+
+.dt-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.dt-icon {
+  font-size: 0.78rem;
+}
+
+.retro-hud-block.weather {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.weather-btn-help {
+  width: 16px;
+  height: 16px;
+  background: #6a4630;
+  border: 1px solid #946648;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #fff;
+  cursor: pointer;
+}
+
+.danger-level-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.danger-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #fbd38d;
+}
+
+.danger-pill {
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 2px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.3), inset -1px -1px 0px rgba(0, 0, 0, 0.4);
+}
+
+.danger-pill.moderate {
+  background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+  border: 1px solid #7c2d12;
+  color: #ffedd5;
+}
+
+.stockpiles-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stockpile-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #fed7aa;
+  margin-right: 2px;
+}
+
+.stock-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.stock-item.wood { color: #fbcfe8; }
+.stock-item.stone { color: #cbd5e1; }
+.stock-item.wheat { color: #fef08a; }
+.stock-item.mana { color: #93c5fd; }
+
+.retro-time-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-retro-speed {
+  background: linear-gradient(180deg, #7c5137 0%, #4a2f1e 100%);
+  border: 2px solid #28170e;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.25), inset -1px -1px 0px rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  color: #ffedd5;
+  font-size: 0.74rem;
+  font-weight: 900;
+  padding: 4px 8px;
+  cursor: pointer;
+  min-width: 28px;
+  text-align: center;
+  transition: all 0.1s ease;
+}
+
+.btn-retro-speed:hover {
+  background: linear-gradient(180deg, #996544 0%, #5d3b26 100%);
+  color: #ffffff;
+}
+
+.btn-retro-speed.active {
+  background: linear-gradient(180deg, #ea580c 0%, #9a3412 100%);
+  border-color: #431407;
+  color: #ffffff;
+}
+
+/* ---------------------------------------------------------
+   IMAGE 1: TOP-LEFT FLOATING DEBUG INSPECTOR
+--------------------------------------------------------- */
+#debug-inspector-card {
+  position: fixed;
+  top: 86px;
+  left: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px 12px;
+  z-index: 1400;
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.debug-heading {
+  font-weight: 800;
+  color: #fbbf24;
+  margin-bottom: 2px;
+  font-size: 0.72rem;
+}
+
+/* ---------------------------------------------------------
+   IMAGE 1: BOTTOM-LEFT NPC INSPECTOR PANEL
+--------------------------------------------------------- */
+#bottom-npc-inspector {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  width: 320px;
+  background: #4a3325;
+  border: 3px solid #2c1c13;
+  outline: 2px solid #7c5438;
+  border-radius: 6px;
+  padding: 8px 10px;
+  z-index: 1600;
+  box-shadow: inset 2px 2px 0px rgba(255, 220, 160, 0.2), inset -2px -2px 0px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: 'Outfit', sans-serif;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+#bottom-npc-inspector.hidden {
+  display: none !important;
+}
+
+.npc-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #63432f;
+  padding-bottom: 4px;
+}
+
+.npc-panel-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fde68a;
+}
+
+.btn-close-retro {
+  width: 16px;
+  height: 16px;
+  background: #b91c1c;
+  border: 1px solid #7f1d1d;
+  border-radius: 2px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.3);
+}
+
+.npc-panel-body {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.npc-avatar-frame {
+  width: 76px;
+  height: 76px;
+  background: #23160e;
+  border: 2px solid #6e462e;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.npc-avatar-frame svg,
+.npc-avatar-frame canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.npc-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-grow: 1;
+}
+
+.npc-level-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.npc-name-age {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.npc-class-status {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.npc-stats-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.npc-stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 44px;
+  border: 1px solid #1a0f09;
+}
+
+.npc-stat-chip .stat-tag {
+  width: 100%;
+  text-align: center;
+  font-size: 0.58rem;
+  font-weight: 900;
+  padding: 1px 0;
+  letter-spacing: 0.3px;
+}
+
+.npc-stat-chip .stat-num {
+  width: 100%;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 2px 0;
+  background: #1e130c;
+  color: #ffffff;
+}
+
+.npc-stat-chip.str .stat-tag { background: #b91c1c; color: #fee2e2; }
+.npc-stat-chip.vit .stat-tag { background: #c2410c; color: #ffedd5; }
+.npc-stat-chip.dex .stat-tag { background: #15803d; color: #dcfce7; }
+.npc-stat-chip.int .stat-tag { background: #0369a1; color: #e0f2fe; }
+
+.npc-goal-box {
+  background: #2b1b12;
+  border: 1px solid #4a2f1f;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.66rem;
+  color: #e2e8f0;
+  line-height: 1.25;
+}
+
+.npc-goal-label {
+  font-weight: 800;
+  color: #fed7aa;
+}
+
+/* ---------------------------------------------------------
+   IMAGE 1: BOTTOM-CENTER EVENT FEED
+--------------------------------------------------------- */
+#bottom-event-feed {
+  position: fixed;
+  bottom: 12px;
+  left: 344px;
+  right: 270px;
+  height: 92px;
+  background: #4a3325;
+  border: 3px solid #2c1c13;
+  outline: 2px solid #7c5438;
+  border-radius: 6px;
+  padding: 6px 10px;
+  z-index: 1500;
+  box-shadow: inset 2px 2px 0px rgba(255, 220, 160, 0.2), inset -2px -2px 0px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.feed-header {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fde68a;
+  border-bottom: 1px solid #63432f;
+  padding-bottom: 2px;
+}
+
+.feed-entries {
+  overflow-y: auto;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 4px;
+}
+
+.feed-entry {
+  font-size: 0.67rem;
+  color: #f1f5f9;
+  line-height: 1.25;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.feed-time {
+  color: #fed7aa;
+  font-weight: 800;
+}
+
+.feed-quest {
+  color: #f87171;
+  font-weight: 700;
+}
+
+.feed-caravan {
+  color: #38bdf8;
+}
+
+.feed-party {
+  color: #4ade80;
+}
+
+/* ---------------------------------------------------------
+   IMAGE 1: BOTTOM-RIGHT MINI-MAP & BUILD TOOLBAR
+--------------------------------------------------------- */
+#bottom-minimap-card {
+  position: fixed;
+  bottom: 96px;
+  right: 12px;
+  width: 210px;
+  height: 200px;
+  background: #4a3325;
+  border: 3px solid #2c1c13;
+  outline: 2px solid #7c5438;
+  border-radius: 6px;
+  padding: 6px 8px;
+  z-index: 1550;
+  box-shadow: inset 2px 2px 0px rgba(255, 220, 160, 0.2), inset -2px -2px 0px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.minimap-header-retro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.minimap-title-retro {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fde68a;
+}
+
+.minimap-body-retro {
+  flex-grow: 1;
+  background: #1b120c;
+  border: 2px solid #23160e;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#retro-minimap-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#bottom-build-toolbar {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  width: 210px;
+  height: 74px;
+  background: #4a3325;
+  border: 3px solid #2c1c13;
+  outline: 2px solid #7c5438;
+  border-radius: 6px;
+  padding: 6px 8px;
+  z-index: 1550;
+  box-shadow: inset 2px 2px 0px rgba(255, 220, 160, 0.2), inset -2px -2px 0px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.build-toolbar-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #fde68a;
+  text-align: center;
+}
+
+.build-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.btn-build-tool {
+  background: linear-gradient(180deg, #7c5137 0%, #4a2f1e 100%);
+  border: 2px solid #28170e;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.25), inset -1px -1px 0px rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.btn-build-tool:hover {
+  background: linear-gradient(180deg, #996544 0%, #5d3b26 100%);
+  transform: translateY(-1px);
+}
+
+.btn-build-tool.active {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-color: #0c4a6e;
+}
+
+/* ---------------------------------------------------------
+   IMAGE 2: COSMIC WORLD MAP OVERLAYS
+--------------------------------------------------------- */
+#world-map-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 38px 24px 20px 24px;
+  transition: opacity 0.3s ease;
+}
+
+#world-map-overlay.hidden {
+  display: none !important;
+}
+
+/* Top Stone Tablet Banner */
+.world-map-banner-container {
+  display: flex;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.stone-tablet-banner {
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+  border: 4px solid #1e293b;
+  outline: 2px solid #64748b;
+  border-radius: 8px;
+  padding: 6px 36px;
+  color: #f8fafc;
+  font-family: 'MedievalSharp', 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  box-shadow: inset 2px 2px 0px rgba(255, 255, 255, 0.3), inset -2px -2px 0px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.8);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Side Panels Layout */
+.world-map-side-columns {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  pointer-events: auto;
+}
+
+/* Stone Frame Card */
+.stone-frame-card {
+  width: 180px;
+  background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+  border: 4px solid #111827;
+  outline: 2px solid #4b5563;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: inset 2px 2px 0px rgba(255, 255, 255, 0.2), inset -2px -2px 0px rgba(0, 0, 0, 0.7), 0 10px 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+}
+
+.stone-card-header {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #e2e8f0;
+  border-bottom: 2px solid #374151;
+  padding-bottom: 4px;
+}
+
+.kingdom-list-stone {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kingdom-stone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.k-flag {
+  width: 22px;
+  height: 15px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  font-size: 0.8rem;
+}
+
+.k-name {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f1f5f9;
+}
+
+.k-status-ico {
+  font-size: 0.85rem;
+}
+
+/* Threat Ranking Card */
+.threat-list-stone {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.threat-stone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.threat-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 900;
+  color: #ffffff;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.threat-badge.f { background: #64748b; }
+.threat-badge.c { background: #16a34a; }
+.threat-badge.b { background: #2563eb; }
+.threat-badge.a { background: #9333ea; }
+.threat-badge.s { background: #d97706; }
+
+.threat-name {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f1f5f9;
+}
+
+.threat-star {
+  color: #fbbf24;
+  font-size: 0.75rem;
+}
+
+/* Bottom Era Progress Bar */
+.world-map-bottom-container {
+  display: flex;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.stone-era-banner {
+  width: 600px;
+  max-width: 90vw;
+  background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+  border: 4px solid #111827;
+  outline: 2px solid #4b5563;
+  border-radius: 8px;
+  padding: 8px 16px;
+  box-shadow: inset 2px 2px 0px rgba(255, 255, 255, 0.2), inset -2px -2px 0px rgba(0, 0, 0, 0.7), 0 10px 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+}
+
+.era-title-text {
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+  color: #f8fafc;
+}
+
+.era-progress-track {
+  flex-grow: 1;
+  height: 14px;
+  background: #111827;
+  border: 2px solid #1f2937;
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.era-progress-fill {
+  height: 100%;
+  width: 68%;
+  background: linear-gradient(90deg, #78350f 0%, #c026d3 60%, #e879f9 100%);
+  box-shadow: 0 0 10px #c026d3;
+  border-radius: 5px;
+  transition: width 0.3s ease;
 }
 

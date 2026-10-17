@@ -20,9 +20,308 @@
   </div>
 
   <!-- =========================================================
-       TOP FLOATING HUD: CHRONOS TIME & DEMOGRAPHICS
+       PROJECT WINDOW TITLE BAR (IMAGE 1)
   ========================================================= -->
-  <header id="top-hud" class="wb-panel-floating">
+  <div id="project-title-bar">
+    <div class="window-title-left">
+      <span>🎮 Project: Aether Planet - Antigravity Systems [Debug Build]</span>
+    </div>
+    <div class="window-ctrl-btns">
+      <button class="win-btn" title="Minimize">_</button>
+      <button class="win-btn" title="Maximize">□</button>
+      <button class="win-btn close" title="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       TOP RETRO WOODEN STATUS BAR (IMAGE 1)
+  ========================================================= -->
+  <header id="retro-top-bar">
+    <!-- Date & Time Box -->
+    <div class="retro-hud-block datetime">
+      <div class="dt-row">
+        <span class="dt-icon">📅</span>
+        <span id="retro-date">Year 104, Season: Autumn, Day 12</span>
+      </div>
+      <div class="dt-row">
+        <span class="dt-icon">⏰</span>
+        <span id="retro-time">Time: 10:24 AM</span>
+      </div>
+    </div>
+
+    <!-- Weather Widget -->
+    <div class="retro-hud-block weather">
+      <span>🌧️</span>
+      <span>Wire: <span id="retro-weather">crisp/windy</span></span>
+      <span class="weather-btn-help" title="Atmospheric conditions affect crop yields and movement speed">?</span>
+    </div>
+
+    <!-- Danger Level Badge -->
+    <div class="retro-hud-block danger">
+      <div class="danger-level-box">
+        <span class="danger-label">Danger Level:</span>
+        <span id="retro-danger-pill" class="danger-pill moderate">MODERATE</span>
+      </div>
+    </div>
+
+    <!-- Settlement Stockpiles -->
+    <div class="retro-hud-block stockpiles">
+      <div class="stockpiles-box">
+        <span class="stockpile-title">Settlement Stockpiles</span>
+        <div class="stock-item wood" title="Timber Wood Stockpile">
+          <span>🪵</span>
+          <span id="stock-wood-val">1420</span>
+        </div>
+        <div class="stock-item stone" title="Hewn Stone Stockpile">
+          <span>🪨</span>
+          <span id="stock-stone-val">890</span>
+        </div>
+        <div class="stock-item wheat" title="Harvested Wheat Granary">
+          <span>🌾</span>
+          <span id="stock-wheat-val">410</span>
+        </div>
+        <div class="stock-item mana" title="Refined Mana Stones">
+          <span>🔷</span>
+          <span id="stock-mana-val">Mana Stones: 23</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Speed & View Controls -->
+    <div class="retro-hud-block controls">
+      <div class="retro-time-controls">
+        <button id="retro-btn-pause" class="btn-retro-speed" onclick="setSpeed(0)" title="Pause Simulation">⏸</button>
+        <button id="retro-btn-1x" class="btn-retro-speed active" onclick="setSpeed(1)" title="1x Normal Speed">1x</button>
+        <button id="retro-btn-2x" class="btn-retro-speed" onclick="setSpeed(2)" title="2x Speed">2x</button>
+        <button id="retro-btn-4x" class="btn-retro-speed" onclick="setSpeed(4)" title="4x Speed">4x</button>
+        <button id="retro-btn-8x" class="btn-retro-speed" onclick="setSpeed(8)" title="8x Speed">8x</button>
+        <button id="retro-btn-view-toggle" class="btn-retro-speed" onclick="toggleViewMode()" title="Toggle Planetary World Map / Village View" style="margin-left: 6px; background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);">🌍 Map (M)</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       TOP-LEFT FLOATING DEBUG INSPECTOR (IMAGE 1)
+  ========================================================= -->
+  <div id="debug-inspector-card">
+    <div class="debug-heading">Debug Inspector</div>
+    <div>FPS: <span id="debug-fps-val">60</span> | Active NPCs: <span id="debug-npcs-val">128</span></div>
+    <div>Chunk: <span id="debug-chunk-val">0</span></div>
+    <div>Chunk Updates: <span id="debug-updates-val">2</span></div>
+    <div>Pathfinding Fails: <span id="debug-fails-val">0</span></div>
+  </div>
+
+  <!-- =========================================================
+       BOTTOM-LEFT NPC INSPECTOR PANEL (IMAGE 1)
+  ========================================================= -->
+  <div id="bottom-npc-inspector">
+    <div class="npc-panel-header">
+      <span class="npc-panel-title">NPC Inspector Panel</span>
+      <button class="btn-close-retro" onclick="closeNpcInspector()" title="Close Inspector">✕</button>
+    </div>
+    <div class="npc-panel-body">
+      <!-- Portrait Frame -->
+      <div class="npc-avatar-frame" id="npc-avatar-box">
+        <svg viewBox="0 0 64 64" width="100%" height="100%">
+          <!-- Anime Hero Portrait (Aelric) -->
+          <defs>
+            <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffdfba"/>
+              <stop offset="100%" stop-color="#f5c296"/>
+            </linearGradient>
+            <linearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fef08a"/>
+              <stop offset="100%" stop-color="#eab308"/>
+            </linearGradient>
+            <linearGradient id="armorGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#60a5fa"/>
+              <stop offset="100%" stop-color="#2563eb"/>
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" fill="#1e1b2e"/>
+          <!-- Shoulders & Blue Armor -->
+          <path d="M 8 64 Q 14 46 32 46 Q 50 46 56 64 Z" fill="url(#armorGrad)"/>
+          <path d="M 18 52 L 32 47 L 46 52 L 40 64 L 24 64 Z" fill="#94a3b8"/>
+          <!-- Neck -->
+          <rect x="27" y="38" width="10" height="10" fill="#f5c296"/>
+          <!-- Head/Face -->
+          <ellipse cx="32" cy="30" rx="14" ry="15" fill="url(#skinGrad)"/>
+          <!-- Anime Eyes -->
+          <ellipse cx="26" cy="29" rx="3" ry="4" fill="#0284c7"/>
+          <circle cx="27" cy="28" r="1.2" fill="#ffffff"/>
+          <ellipse cx="38" cy="29" rx="3" ry="4" fill="#0284c7"/>
+          <circle cx="39" cy="28" r="1.2" fill="#ffffff"/>
+          <!-- Nose & Smile -->
+          <path d="M 32 32 L 31 34 L 33 34" stroke="#d97706" stroke-width="1" fill="none"/>
+          <path d="M 29 37 Q 32 39 35 37" stroke="#b45309" stroke-width="1.2" fill="none"/>
+          <!-- Spiky Blonde Hair -->
+          <path d="M 16 28 Q 12 14 24 10 Q 32 6 42 10 Q 52 14 48 28 Q 50 20 46 16 Q 38 12 32 14 Q 24 12 18 20 Z" fill="url(#hairGrad)"/>
+          <path d="M 18 22 L 23 26 L 27 18 L 32 25 L 37 17 L 41 26 L 46 22 L 44 32 L 40 28 L 36 32 L 32 27 L 28 32 L 24 28 L 20 32 Z" fill="url(#hairGrad)"/>
+        </svg>
+      </div>
+
+      <!-- Character Attributes -->
+      <div class="npc-info-col">
+        <div class="npc-level-tag" id="npc-insp-level">Level 14 Novice</div>
+        <div class="npc-name-age" id="npc-insp-name-age">Aelric (16yo)</div>
+        <div class="npc-class-status" id="npc-insp-status">Class Awakening Scheduled</div>
+
+        <!-- 4-Stat Box Chips -->
+        <div class="npc-stats-row">
+          <div class="npc-stat-chip str">
+            <span class="stat-tag">STR</span>
+            <span class="stat-num" id="npc-insp-str">12</span>
+          </div>
+          <div class="npc-stat-chip vit">
+            <span class="stat-tag">VIT</span>
+            <span class="stat-num" id="npc-insp-vit">10</span>
+          </div>
+          <div class="npc-stat-chip dex">
+            <span class="stat-tag">DEX</span>
+            <span class="stat-num" id="npc-insp-dex">11</span>
+          </div>
+          <div class="npc-stat-chip int">
+            <span class="stat-tag">INT</span>
+            <span class="stat-num" id="npc-insp-int">8</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Goal Footer -->
+    <div class="npc-goal-box">
+      <span class="npc-goal-label">Current Goal: </span>
+      <span id="npc-insp-goal">Travel to GODs Temple for Awakening.</span>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       BOTTOM-CENTER LIVE EVENT FEED (IMAGE 1)
+  ========================================================= -->
+  <div id="bottom-event-feed">
+    <div class="feed-header">Event Feed</div>
+    <div class="feed-entries" id="feed-entries-container">
+      <div class="feed-entry"><span class="feed-time">[08:15]</span> <span class="feed-quest">Emergency Quest: Seal Corrupted Leyline near Dungeon!</span></div>
+      <div class="feed-entry"><span class="feed-time">[09:30]</span> <span class="feed-caravan">Caravan arrived from Nation of Eldoria</span></div>
+      <div class="feed-entry"><span class="feed-time">[10:12]</span> <span class="feed-party">Party 'Iron Shield' formed to clear Dungeon</span></div>
+      <div class="feed-entry"><span class="feed-time">[10:24]</span> Aelric set out toward GODs Temple for Awakening.</div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       BOTTOM-RIGHT MINI-MAP & BUILD TOOLBAR (IMAGE 1)
+  ========================================================= -->
+  <div id="bottom-minimap-card">
+    <div class="minimap-header-retro">
+      <span class="minimap-title-retro">Mini-map</span>
+      <button class="btn-close-retro" onclick="toggleMiniMapCard()" title="Close Mini-map">✕</button>
+    </div>
+    <div class="minimap-body-retro">
+      <canvas id="retro-minimap-canvas" width="180" height="150"></canvas>
+    </div>
+  </div>
+
+  <div id="bottom-build-toolbar">
+    <div class="build-toolbar-title">Build & Edit</div>
+    <div class="build-tools-grid">
+      <button class="btn-build-tool active" onclick="switchCategory('nature'); showToast('🌱 Nature & Terrain Tools');" title="Terrain & Nature">🏞️</button>
+      <button class="btn-build-tool" onclick="selectGodTool('brush-iron', 'Enrich Iron Vein', 'Seed raw iron ore'); showToast('⛏️ Mining & Mineral Veins');" title="Mining & Ores">⛏️</button>
+      <button class="btn-build-tool" onclick="switchCategory('architecture'); showToast('🏗️ Architecture & Town Construction');" title="Architecture Buildings">🏗️</button>
+      <button class="btn-build-tool" onclick="selectGodTool('blessing-spark', 'Divine Spark', 'Heal and protect characters'); showToast('🛡️ Defend & Divine Spark');" title="Defense & Divine Blessings">🛡️</button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       COSMIC WORLD MAP OVERLAY (IMAGE 2)
+  ========================================================= -->
+  <div id="world-map-overlay" class="hidden">
+    <!-- Top Stone Tablet Banner -->
+    <div class="world-map-banner-container">
+      <div class="stone-tablet-banner" onclick="toggleViewMode()" style="cursor: pointer;" title="Click to return to Village View">
+        World Map - Aether Planet
+      </div>
+    </div>
+
+    <!-- Side Stone Columns -->
+    <div class="world-map-side-columns">
+      <!-- Left Stone Card: Kingdom Diplomatic Index -->
+      <div class="stone-frame-card">
+        <div class="stone-card-header">Sovereign Realms</div>
+        <div class="kingdom-list-stone" id="world-kingdoms-list">
+          <div class="kingdom-stone-row">
+            <span class="k-flag">🇵🇸</span>
+            <span class="k-name">森林聯邦</span>
+            <span class="k-status-ico" title="Peace">🕊️</span>
+          </div>
+          <div class="kingdom-stone-row">
+            <span class="k-flag">🌲</span>
+            <span class="k-name">eylias</span>
+            <span class="k-status-ico" title="War">⚔️</span>
+          </div>
+          <div class="kingdom-stone-row">
+            <span class="k-flag">🇫🇷</span>
+            <span class="k-name">laha</span>
+            <span class="k-status-ico" title="War">⚔️</span>
+          </div>
+          <div class="kingdom-stone-row">
+            <span class="k-flag">🇬🇷</span>
+            <span class="k-name">mont</span>
+            <span class="k-status-ico" title="Peace">🕊️</span>
+          </div>
+          <div class="kingdom-stone-row">
+            <span class="k-flag">🇪🇸</span>
+            <span class="k-name">烈灼帝国</span>
+            <span class="k-status-ico" title="Hostile War">🔥</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Stone Card: Mether Planet Threat Rankings -->
+      <div class="stone-frame-card">
+        <div class="stone-card-header">Mether Planet</div>
+        <div class="threat-list-stone" id="world-threats-list">
+          <div class="threat-stone-row">
+            <span class="threat-badge f">F</span>
+            <span class="threat-name">应同极帝盟</span>
+            <span class="threat-star">⭐</span>
+          </div>
+          <div class="threat-stone-row">
+            <span class="threat-badge c">C</span>
+            <span class="threat-name">海同物畏变</span>
+            <span class="threat-star">⭐</span>
+          </div>
+          <div class="threat-stone-row">
+            <span class="threat-badge b">B</span>
+            <span class="threat-name">海央繁</span>
+            <span class="threat-star">🌟</span>
+          </div>
+          <div class="threat-stone-row">
+            <span class="threat-badge a">A</span>
+            <span class="threat-name">魔物暴动</span>
+            <span class="threat-star" style="color: #c084fc;">🌟</span>
+          </div>
+          <div class="threat-stone-row">
+            <span class="threat-badge s">S</span>
+            <span class="threat-name">渊帝暴</span>
+            <span class="threat-star">⭐</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Stone Banner: Era Progression Bar -->
+    <div class="world-map-bottom-container">
+      <div class="stone-era-banner">
+        <span class="era-title-text" id="world-era-label">Iron Age → Mana Age</span>
+        <div class="era-progress-track">
+          <div class="era-progress-fill" id="world-era-fill" style="width: 68%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legacy top hud hidden by default in new mode -->
+  <header id="top-hud" class="wb-panel-floating hidden" style="display:none;">
     <!-- World Title & Chronos Engine -->
     <div class="hud-left">
       <div class="world-title-badge" onclick="toggleWorldModal()" style="cursor: pointer;" title="Click to Change Map or Reset World">
@@ -127,7 +426,7 @@
   <!-- =========================================================
        SIGNATURE WORLDBOX BOTTOM POWER BAR (DOCK)
   ========================================================= -->
-  <footer id="worldbox-bottom-bar" class="wb-dock-container">
+  <footer id="worldbox-bottom-bar" class="wb-dock-container" style="display:none;">
     <div class="wb-dock-inner">
       <!-- Tier 1: Category Selector Tabs -->
       <div class="wb-category-tabs">

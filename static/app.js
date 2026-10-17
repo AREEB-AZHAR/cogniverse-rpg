@@ -430,11 +430,25 @@ function setSpeed(spd) {
   playSound('click');
   sendMsg({ type: 'SetSpeedMultiplier', speed: spd });
   document.querySelectorAll('.btn-wb-time').forEach(b => b.classList.remove('active'));
-  if (spd === 0) document.getElementById('btn-pause').classList.add('active');
-  else if (spd === 1) document.getElementById('btn-1x').classList.add('active');
-  else if (spd === 2) document.getElementById('btn-2x').classList.add('active');
-  else if (spd === 5) document.getElementById('btn-5x').classList.add('active');
-  else if (spd >= 1000) document.getElementById('btn-turbo').classList.add('active');
+  document.querySelectorAll('.btn-retro-speed').forEach(b => {
+    if (b.id !== 'retro-btn-view-toggle') b.classList.remove('active');
+  });
+  if (spd === 0) {
+    const p1 = document.getElementById('btn-pause'); if (p1) p1.classList.add('active');
+    const p2 = document.getElementById('retro-btn-pause'); if (p2) p2.classList.add('active');
+  } else if (spd === 1) {
+    const b1 = document.getElementById('btn-1x'); if (b1) b1.classList.add('active');
+    const b2 = document.getElementById('retro-btn-1x'); if (b2) b2.classList.add('active');
+  } else if (spd === 2) {
+    const b1 = document.getElementById('btn-2x'); if (b1) b1.classList.add('active');
+    const b2 = document.getElementById('retro-btn-2x'); if (b2) b2.classList.add('active');
+  } else if (spd === 4 || spd === 5) {
+    const b1 = document.getElementById('btn-5x'); if (b1) b1.classList.add('active');
+    const b2 = document.getElementById('retro-btn-4x'); if (b2) b2.classList.add('active');
+  } else if (spd >= 8) {
+    const b1 = document.getElementById('btn-turbo'); if (b1) b1.classList.add('active');
+    const b2 = document.getElementById('retro-btn-8x'); if (b2) b2.classList.add('active');
+  }
 }
 
 function stepTick() {
@@ -535,6 +549,7 @@ function applyZoom(factor, focusX, focusY) {
   camera.x = focusX - (focusX - camera.x) * (newZoom / oldZoom);
   camera.y = focusY - (focusY - camera.y) * (newZoom / oldZoom);
   camera.zoom = newZoom;
+  checkViewModeTransition();
 }
 
 let isCtrlOrMetaPressed = false;
@@ -549,6 +564,9 @@ window.addEventListener('keydown', (e) => {
     isSpacePressed = true;
     if (!camera.isDragging) container.style.cursor = 'grab';
     e.preventDefault();
+  }
+  if ((e.key === 'm' || e.key === 'M') && !e.target.matches('input, textarea')) {
+    toggleViewMode();
   }
 });
 
@@ -837,7 +855,8 @@ function handleMapAction(tx, ty) {
       playSound('click');
       selectedAgentId = closest.id;
       sendMsg({ type: 'SelectAgent', agent_id: closest.id });
-      openCharacterSheet();
+      openNpcInspector(closest);
+      return;
     }
   }
 }
@@ -1030,6 +1049,17 @@ function renderTelemetry(data) {
     if (warRoomModal && !warRoomModal.classList.contains('hidden')) {
       renderWarRoom(data);
     }
+
+    // 9. Retro Wooden HUD, Stockpiles & Minimap
+    updateRetroStatusHud(data);
+    renderRetroMinimap(data);
+
+    if (data.selected_agent) {
+      const npcInsp = document.getElementById('bottom-npc-inspector');
+      if (npcInsp && !npcInsp.classList.contains('hidden')) {
+        openNpcInspector(data.selected_agent);
+      }
+    }
   } catch (err) {
     console.error('Telemetry render error:', err);
   }
@@ -1039,6 +1069,11 @@ function renderTelemetry(data) {
 // LIVING 2D WORLD MAP RENDERER (WORLDBOX VISUALS)
 // ----------------------------------------------------------------------------
 function drawWorldMap(data) {
+  if (isWorldMapActive) {
+    drawCosmicWorldMap(data, Date.now());
+    return;
+  }
+
   if (!isTerrainBufferBuilt) {
     buildTerrainBuffer();
   }
@@ -1387,6 +1422,9 @@ function drawWorldMap(data) {
       }
     }
   }
+
+  // 4b. Draw Image 1 Iconic Village Landmarks (GODs Temple, Guild Hall, Market, Pen, Fields, A-Rank Dungeon)
+  drawVillageIconicLandmarks(data, time);
 
   // Draw rising smoke particles
   ctx.save();
@@ -2584,7 +2622,20 @@ function forgeArchetypeDirect(arch, event) {
 // CONTINUOUS GAME & RENDER LOOP WITH GPU TIER SCALING
 // ----------------------------------------------------------------------------
 let lastFrameTime = 0;
+let frameCount = 0;
+let lastFpsTime = 0;
+let currentFps = 60;
+
 function gameLoop(timestamp) {
+  frameCount++;
+  if (timestamp - lastFpsTime >= 500) {
+    currentFps = Math.round((frameCount * 1000) / (timestamp - lastFpsTime));
+    frameCount = 0;
+    lastFpsTime = timestamp;
+    const fpsEl = document.getElementById('debug-fps-val');
+    if (fpsEl) fpsEl.textContent = currentFps;
+  }
+
   if (gpuTier === 'low') {
     // Low / Battery Saver: cap at 30 FPS
     if (timestamp - lastFrameTime < 33.3) {
@@ -3946,5 +3997,681 @@ window.addEventListener('load', () => {
   initRealmSettings();
   requestAnimationFrame(gameLoop);
 });
+
+// ============================================================================
+// DUAL-MODE UI RECREATION ENGINE (IMAGE 1 & IMAGE 2 FIDELITY)
+// ============================================================================
+let isWorldMapActive = false;
+
+function setViewMode(worldMap) {
+  isWorldMapActive = worldMap;
+  const overlay = document.getElementById('world-map-overlay');
+  const retroTopBar = document.getElementById('retro-top-bar');
+  const debugCard = document.getElementById('debug-inspector-card');
+  const npcPanel = document.getElementById('bottom-npc-inspector');
+  const feedPanel = document.getElementById('bottom-event-feed');
+  const minimapCard = document.getElementById('bottom-minimap-card');
+  const buildToolbar = document.getElementById('bottom-build-toolbar');
+  const legacyDock = document.getElementById('worldbox-bottom-bar');
+  const toggleBtn = document.getElementById('retro-btn-view-toggle');
+
+  if (legacyDock) legacyDock.style.display = 'none';
+
+  if (isWorldMapActive) {
+    if (overlay) overlay.classList.remove('hidden');
+    if (retroTopBar) retroTopBar.style.display = 'none';
+    if (debugCard) debugCard.style.display = 'none';
+    if (npcPanel) npcPanel.classList.add('hidden');
+    if (feedPanel) feedPanel.style.display = 'none';
+    if (minimapCard) minimapCard.style.display = 'none';
+    if (buildToolbar) buildToolbar.style.display = 'none';
+    if (toggleBtn) toggleBtn.textContent = '🏘️ Village (M)';
+    if (camera.zoom > 0.35) {
+      camera.zoom = 0.28;
+      centerCamera();
+    }
+  } else {
+    if (overlay) overlay.classList.add('hidden');
+    if (retroTopBar) retroTopBar.style.display = 'flex';
+    if (debugCard) debugCard.style.display = 'block';
+    if (feedPanel) feedPanel.style.display = 'flex';
+    if (minimapCard) minimapCard.style.display = 'flex';
+    if (buildToolbar) buildToolbar.style.display = 'flex';
+    if (toggleBtn) toggleBtn.textContent = '🌍 Map (M)';
+    if (camera.zoom <= 0.35) {
+      camera.zoom = 1.35;
+      camera.x = canvas.width / 2 - (65 * TILE_PX) * camera.zoom;
+      camera.y = canvas.height / 2 - (48 * TILE_PX) * camera.zoom;
+    }
+  }
+}
+
+function toggleViewMode() {
+  setViewMode(!isWorldMapActive);
+  playSound('click');
+}
+
+function checkViewModeTransition() {
+  if (camera.zoom <= 0.35 && !isWorldMapActive) {
+    setViewMode(true);
+  } else if (camera.zoom > 0.35 && isWorldMapActive) {
+    setViewMode(false);
+  }
+}
+
+function closeNpcInspector() {
+  const p = document.getElementById('bottom-npc-inspector');
+  if (p) p.classList.add('hidden');
+  playSound('click');
+}
+
+function openNpcInspector(agent) {
+  const p = document.getElementById('bottom-npc-inspector');
+  if (!p) return;
+  p.classList.remove('hidden');
+
+  const levelEl = document.getElementById('npc-insp-level');
+  const nameAgeEl = document.getElementById('npc-insp-name-age');
+  const statusEl = document.getElementById('npc-insp-status');
+  const strEl = document.getElementById('npc-insp-str');
+  const vitEl = document.getElementById('npc-insp-vit');
+  const dexEl = document.getElementById('npc-insp-dex');
+  const intEl = document.getElementById('npc-insp-int');
+  const goalEl = document.getElementById('npc-insp-goal');
+
+  const age = agent.age || (16 + (agent.id * 3) % 18);
+  const lvl = agent.level || (10 + (agent.id % 25));
+  const role = (agent.archetype && !agent.archetype.includes('None')) ? agent.archetype : 'Novice';
+
+  if (levelEl) levelEl.textContent = `Level ${lvl} ${role}`;
+  if (nameAgeEl) nameAgeEl.textContent = `${agent.name} (${age}yo)`;
+
+  let statusText = 'Class Awakening Scheduled';
+  if (lvl >= 25) statusText = 'Demigod Trial Eligible';
+  else if (agent.health < 40) statusText = 'Wounded / Seeking Sanctuary';
+  else if (agent.energy < 25) statusText = 'Fatigued / Meditating';
+  if (statusEl) statusEl.textContent = statusText;
+
+  const str = Math.round(agent.atk || (12 + (agent.id * 7) % 12));
+  const vit = Math.round(agent.def || (10 + (agent.id * 5) % 10));
+  const dex = Math.round(agent.spd || (11 + (agent.id * 3) % 11));
+  const intel = Math.round(agent.intellect || (8 + (agent.id * 9) % 16));
+
+  if (strEl) strEl.textContent = str;
+  if (vitEl) vitEl.textContent = vit;
+  if (dexEl) dexEl.textContent = dex;
+  if (intEl) intEl.textContent = intel;
+
+  if (goalEl) {
+    goalEl.textContent = agent.current_thought || agent.last_action || 'Travel to GODs Temple for Awakening.';
+  }
+}
+
+function toggleMiniMapCard() {
+  const mc = document.getElementById('bottom-minimap-card');
+  if (mc) {
+    mc.classList.toggle('hidden');
+    playSound('click');
+  }
+}
+
+function updateRetroStatusHud(data) {
+  const tick = data.world_tick || 0;
+  const year = 104 + Math.floor(tick / 1200);
+  const months = ['Autumn', 'Winter', 'Spring', 'Summer'];
+  const season = months[Math.floor((tick % 1200) / 300)] || 'Autumn';
+  const day = 1 + (Math.floor(tick / 10) % 28);
+  const hours = 8 + (Math.floor(tick / 4) % 12);
+  const mins = (tick * 5) % 60;
+  const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')} AM`;
+
+  const dateEl = document.getElementById('retro-date');
+  if (dateEl) dateEl.textContent = `Year ${year}, Season: ${season}, Day ${day}`;
+
+  const timeEl = document.getElementById('retro-time');
+  if (timeEl) timeEl.textContent = `Time: ${timeStr}`;
+
+  const weatherEl = document.getElementById('retro-weather');
+  if (weatherEl) weatherEl.textContent = data.weather ? `${data.weather.toLowerCase()}` : 'crisp/windy';
+
+  const woodEl = document.getElementById('stock-wood-val');
+  const stoneEl = document.getElementById('stock-stone-val');
+  const wheatEl = document.getElementById('stock-wheat-val');
+  const manaEl = document.getElementById('stock-mana-val');
+
+  const demo = data.demographics;
+  if (woodEl) woodEl.textContent = 1420 + Math.floor((demo?.total_circulating_wealth || 0) * 2.5);
+  if (stoneEl) stoneEl.textContent = 890 + Math.floor((demo?.total_population || 16) * 15);
+  if (wheatEl) wheatEl.textContent = 410 + Math.floor((demo?.avg_health || 100) * 3);
+  if (manaEl) manaEl.textContent = `Mana Stones: ${23 + Math.floor((demo?.max_generation || 1) * 4)}`;
+
+  const npcsEl = document.getElementById('debug-npcs-val');
+  if (npcsEl) npcsEl.textContent = data.agents ? data.agents.length : 128;
+}
+
+function renderRetroMinimap(data) {
+  const rCanvas = document.getElementById('retro-minimap-canvas');
+  if (!rCanvas) return;
+  const rCtx = rCanvas.getContext('2d');
+  const w = rCanvas.width;
+  const h = rCanvas.height;
+
+  rCtx.clearRect(0, 0, w, h);
+
+  const cx = w / 2;
+  const cy = h / 2;
+  const r = Math.min(w, h) * 0.44;
+
+  rCtx.save();
+  rCtx.fillStyle = '#0f172a';
+  rCtx.fillRect(0, 0, w, h);
+
+  rCtx.beginPath();
+  rCtx.arc(cx, cy, r, 0, Math.PI * 2);
+  rCtx.clip();
+
+  rCtx.fillStyle = '#0284c7';
+  rCtx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  rCtx.fillStyle = '#22c55e';
+  rCtx.beginPath();
+  rCtx.arc(cx - r * 0.2, cy - r * 0.1, r * 0.45, 0, Math.PI * 2);
+  rCtx.arc(cx + r * 0.3, cy + r * 0.2, r * 0.35, 0, Math.PI * 2);
+  rCtx.fill();
+
+  rCtx.fillStyle = '#f8fafc';
+  rCtx.beginPath();
+  rCtx.ellipse(cx, cy - r * 0.85, r * 0.4, r * 0.15, 0, 0, Math.PI * 2);
+  rCtx.fill();
+
+  rCtx.fillStyle = '#ef4444';
+  rCtx.fillRect(cx - 6, cy - 4, 5, 5);
+  rCtx.fillRect(cx + 4, cy + 2, 5, 5);
+
+  rCtx.fillStyle = '#a855f7';
+  rCtx.beginPath();
+  rCtx.arc(cx + r * 0.4, cy - r * 0.2, 5, 0, Math.PI * 2);
+  rCtx.fill();
+  rCtx.font = 'bold 7px sans-serif';
+  rCtx.fillStyle = '#ffffff';
+  rCtx.textAlign = 'center';
+  rCtx.fillText('A', cx + r * 0.4, cy - r * 0.2 + 2.5);
+
+  const sphereShade = rCtx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.2, cx, cy, r);
+  sphereShade.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+  sphereShade.addColorStop(0.7, 'rgba(0, 0, 0, 0)');
+  sphereShade.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+  rCtx.fillStyle = sphereShade;
+  rCtx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  rCtx.restore();
+}
+
+function drawCosmicWorldMap(data, time) {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // 1. Deep Space Void with Starfield
+  ctx.fillStyle = '#060814';
+  ctx.fillRect(0, 0, w, h);
+
+  for (let i = 0; i < 180; i++) {
+    const sx = ((i * 137.5) % w);
+    const sy = ((i * 223.7) % h);
+    const twinkle = Math.sin(time * 0.003 + i) * 0.35 + 0.65;
+    ctx.fillStyle = `rgba(255, 255, 255, ${twinkle * 0.8})`;
+    const sz = (i % 5 === 0) ? 2 : 1;
+    ctx.fillRect(sx, sy, sz, sz);
+  }
+
+  // 2. Crescent Moon with Craters (Top Right)
+  const moonX = w * 0.72;
+  const moonY = h * 0.16;
+  const moonR = 24;
+
+  ctx.save();
+  ctx.fillStyle = '#1e2433';
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonR, -Math.PI * 0.4, Math.PI * 0.6);
+  ctx.bezierCurveTo(moonX - moonR * 0.2, moonY + moonR * 0.8, moonX - moonR * 0.2, moonY - moonR * 0.8, moonX, moonY - moonR);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(100, 116, 139, 0.45)';
+  ctx.beginPath();
+  ctx.arc(moonX + 4, moonY - 6, 4, 0, Math.PI * 2);
+  ctx.arc(moonX + 8, moonY + 8, 3, 0, Math.PI * 2);
+  ctx.arc(moonX + 2, moonY + 4, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 3. Central 3D Spherical Aether Planet Globe
+  const cx = w / 2;
+  const cy = h / 2 + 10;
+  const R = Math.min(w * 0.26, h * 0.34, 240);
+
+  ctx.save();
+
+  const atmosGrad = ctx.createRadialGradient(cx, cy, R * 0.95, cx, cy, R * 1.14);
+  atmosGrad.addColorStop(0, 'rgba(56, 189, 248, 0.4)');
+  atmosGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.15)');
+  atmosGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+  ctx.fillStyle = atmosGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 1.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.clip();
+
+  const oceanGrad = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.35, R * 0.1, cx, cy, R);
+  oceanGrad.addColorStop(0, '#0284c7');
+  oceanGrad.addColorStop(0.7, '#0369a1');
+  oceanGrad.addColorStop(1, '#082f49');
+  ctx.fillStyle = oceanGrad;
+  ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+
+  const rot = (time * 0.00012) % (Math.PI * 2);
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - R * 0.82, R * 0.45, R * 0.22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + R * 0.85, R * 0.4, R * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  for (let c = -1; c <= 1; c++) {
+    const shiftX = (rot + c * Math.PI) % (Math.PI * 2) - Math.PI;
+    if (Math.abs(shiftX) > Math.PI / 1.7) continue;
+
+    const contX = cx + Math.sin(shiftX) * R * 0.85;
+
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(contX, cy - R * 0.2, R * 0.32, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#64748b';
+    ctx.beginPath();
+    ctx.arc(contX + 15, cy - R * 0.28, R * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#eab308';
+    ctx.beginPath();
+    ctx.arc(contX - 10, cy + R * 0.1, R * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#15803d';
+    ctx.beginPath();
+    ctx.arc(contX + 8, cy + R * 0.48, R * 0.24, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+    ctx.beginPath();
+    ctx.arc(contX + R * 0.32, cy - R * 0.1, R * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = '14px sans-serif';
+    ctx.fillText('🏛️', contX - 12, cy - R * 0.22);
+    ctx.fillText('🏰', contX + 18, cy + R * 0.12);
+    ctx.fillText('⛩️', contX - 25, cy + R * 0.28);
+    ctx.fillText('🚪', contX + 28, cy - R * 0.28);
+  }
+
+  // Glowing Violet Leylines
+  ctx.strokeStyle = '#d946ef';
+  ctx.shadowColor = '#c026d3';
+  ctx.shadowBlur = 12;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - R * 0.6, cy - R * 0.3);
+  ctx.bezierCurveTo(cx - R * 0.2, cy - R * 0.1, cx + R * 0.2, cy - R * 0.5, cx + R * 0.5, cy - R * 0.2);
+  ctx.bezierCurveTo(cx + R * 0.7, cy + R * 0.2, cx + R * 0.3, cy + R * 0.6, cx, cy + R * 0.7);
+  ctx.bezierCurveTo(cx - R * 0.3, cy + R * 0.5, cx - R * 0.7, cy + R * 0.2, cx - R * 0.6, cy - R * 0.3);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(cx - R * 0.2, cy - R * 0.7);
+  ctx.lineTo(cx, cy);
+  ctx.lineTo(cx - R * 0.4, cy + R * 0.5);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.65, 0.2, 2.8);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const shadeGrad = ctx.createRadialGradient(cx - R * 0.4, cy - R * 0.4, R * 0.2, cx, cy, R);
+  shadeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+  shadeGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
+  shadeGrad.addColorStop(0.85, 'rgba(0, 0, 0, 0.5)');
+  shadeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.85)');
+  ctx.fillStyle = shadeGrad;
+  ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+
+  ctx.restore();
+
+  // Swirling Equatorial Cloud Ring
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+  ctx.shadowBlur = 8;
+
+  const cloudW = R * 1.25;
+  const cloudH = R * 0.42;
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, cloudW, cloudH, -0.15, 0, Math.PI * 2);
+  ctx.stroke();
+
+  for (let cp = 0; cp < 8; cp++) {
+    const ang = cp * (Math.PI / 4) + time * 0.0002;
+    const cpx = cx + Math.cos(ang) * cloudW * 0.95;
+    const cpy = cy + Math.sin(ang) * cloudH * 0.95;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.beginPath();
+    ctx.arc(cpx, cpy, 12, 0, Math.PI * 2);
+    ctx.arc(cpx + 8, cpy - 4, 9, 0, Math.PI * 2);
+    ctx.arc(cpx - 6, cpy + 3, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawVillageIconicLandmarks(data, time) {
+  const tilePx = TILE_PX;
+
+  // 1. Crystal Blue Curving River & Wooden Footbridge (x: 55, y: 48)
+  const bridgeX = 55 * tilePx;
+  const bridgeY = 48 * tilePx;
+
+  ctx.save();
+  ctx.fillStyle = '#8b5a3c';
+  ctx.fillRect(bridgeX - 4, bridgeY - 3, tilePx * 3.8, tilePx * 1.5);
+  ctx.fillStyle = '#5c3a21';
+  for (let p = 0; p < 6; p++) {
+    ctx.fillRect(bridgeX - 4 + p * 8, bridgeY - 3, 2, tilePx * 1.5);
+  }
+  ctx.fillStyle = '#3a2012';
+  ctx.fillRect(bridgeX - 4, bridgeY - 4, tilePx * 3.8, 2);
+  ctx.fillRect(bridgeX - 4, bridgeY + tilePx * 1.5 - 2, tilePx * 3.8, 2);
+  ctx.restore();
+
+  // 2. GODs Temple (x: 68, y: 40)
+  const templeX = 68 * tilePx;
+  const templeY = 40 * tilePx;
+  ctx.save();
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillRect(templeX - 24, templeY - 6, 72, 36);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillRect(templeX - 20, templeY - 14, 64, 12);
+
+  ctx.fillStyle = '#e2e8f0';
+  for (let col = 0; col < 4; col++) {
+    ctx.fillRect(templeX - 16 + col * 18, templeY - 38, 8, 26);
+  }
+
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(templeX - 24, templeY - 38);
+  ctx.lineTo(templeX + 12, templeY - 56);
+  ctx.lineTo(templeX + 48, templeY - 38);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  for (let b = 0; b < 4; b++) {
+    const bx = templeX - 22 + b * 22;
+    const by = templeY + 22;
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(bx - 3, by - 6, 6, 8);
+    const fPulse = Math.sin(time * 0.012 + b) * 3;
+    ctx.fillStyle = '#c084fc';
+    ctx.shadowColor = '#a855f7';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(bx, by - 10 + fPulse * 0.5, 4.5 + fPulse * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.font = 'bold 11px Outfit, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#000000';
+  ctx.shadowBlur = 4;
+  ctx.fillText('GODs Temple', templeX + 12, templeY - 62);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // 3. Guild Hall (x: 82, y: 44)
+  const guildX = 82 * tilePx;
+  const guildY = 44 * tilePx;
+  ctx.save();
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(guildX - 18, guildY - 10, 54, 38);
+  ctx.fillStyle = '#b91c1c';
+  ctx.beginPath();
+  ctx.moveTo(guildX - 22, guildY - 10);
+  ctx.lineTo(guildX + 9, guildY - 32);
+  ctx.lineTo(guildX + 40, guildY - 10);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(guildX + 4, guildY - 4, 10, 14);
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(guildX + 6, guildY - 2, 6, 10);
+
+  ctx.font = 'bold 11px Outfit, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#000000';
+  ctx.shadowBlur = 4;
+  ctx.fillText('Guild Hall', guildX + 9, guildY - 36);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // 4. Market Quarter (x: 78, y: 56)
+  const marketX = 78 * tilePx;
+  const marketY = 56 * tilePx;
+  ctx.save();
+  ctx.fillStyle = '#8b5a3c';
+  ctx.fillRect(marketX - 16, marketY - 4, 28, 16);
+  for (let s = 0; s < 4; s++) {
+    ctx.fillStyle = (s % 2 === 0) ? '#ea580c' : '#ffffff';
+    ctx.fillRect(marketX - 16 + s * 7, marketY - 14, 7, 10);
+  }
+  ctx.fillStyle = '#8b5a3c';
+  ctx.fillRect(marketX + 18, marketY, 26, 16);
+  for (let s = 0; s < 4; s++) {
+    ctx.fillStyle = (s % 2 === 0) ? '#0284c7' : '#ffffff';
+    ctx.fillRect(marketX + 18 + s * 6.5, marketY - 10, 6.5, 10);
+  }
+  ctx.strokeStyle = '#451a03';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(marketX + 22, marketY + 16, 5, 0, Math.PI * 2);
+  ctx.arc(marketX + 40, marketY + 16, 5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.font = 'bold 11px Outfit, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#000000';
+  ctx.shadowBlur = 4;
+  ctx.fillText('Market', marketX + 14, marketY - 20);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // 5. Livestock Pen with Cows & Sheep (x: 64, y: 54)
+  const penX = 64 * tilePx;
+  const penY = 54 * tilePx;
+  ctx.save();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(penX - 24, penY - 18, 56, 44);
+  ctx.fillStyle = '#451a03';
+  ctx.fillRect(penX - 25, penY - 19, 4, 4);
+  ctx.fillRect(penX + 31, penY - 19, 4, 4);
+  ctx.fillRect(penX - 25, penY + 25, 4, 4);
+  ctx.fillRect(penX + 31, penY + 25, 4, 4);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(penX - 10, penY - 6, 14, 9);
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(penX - 6, penY - 4, 5, 5);
+  ctx.fillRect(penX + 1, penY - 2, 3, 3);
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath();
+  ctx.arc(penX + 14, penY + 8, 6, 0, Math.PI * 2);
+  ctx.arc(penX + 8, penY + 12, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(penX + 18, penY + 6, 3, 3);
+  ctx.restore();
+
+  // 6. Farmland Wheat Plots (x: 72, y: 64)
+  const farmX = 72 * tilePx;
+  const farmY = 64 * tilePx;
+  ctx.save();
+  ctx.fillStyle = '#713f12';
+  ctx.fillRect(farmX - 24, farmY - 12, 64, 34);
+  ctx.fillStyle = '#eab308';
+  for (let r = 0; r < 4; r++) {
+    for (let w = 0; w < 7; w++) {
+      ctx.fillRect(farmX - 20 + w * 8, farmY - 8 + r * 8, 4, 5);
+    }
+  }
+  ctx.restore();
+
+  // 7. Mountain Cavern Dungeon Entrance (A-Rank) (x: 42, y: 40)
+  const dungX = 42 * tilePx;
+  const dungY = 40 * tilePx;
+  ctx.save();
+  ctx.fillStyle = '#334155';
+  ctx.beginPath();
+  ctx.arc(dungX, dungY, 26, Math.PI, 0);
+  ctx.fill();
+  ctx.fillStyle = '#0f172a';
+  ctx.beginPath();
+  ctx.arc(dungX, dungY + 2, 18, Math.PI, 0);
+  ctx.fill();
+
+  const runePulse = Math.sin(time * 0.008) * 3;
+  ctx.strokeStyle = '#ef4444';
+  ctx.shadowColor = '#dc2626';
+  ctx.shadowBlur = 12;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(dungX, dungY - 24, 12 + runePulse * 0.4, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.font = 'bold 12px Outfit, sans-serif';
+  ctx.fillStyle = '#f87171';
+  ctx.textAlign = 'center';
+  ctx.fillText('A', dungX, dungY - 20);
+
+  ctx.font = 'bold 10px Outfit, sans-serif';
+  ctx.fillStyle = '#fca5a5';
+  ctx.fillText('A-Rank', dungX, dungY - 38);
+  ctx.shadowBlur = 0;
+
+  // Adventurer Party outside dungeon (Warrior, Swordswoman, Wizard)
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillRect(dungX - 16, dungY + 6, 6, 9);
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillRect(dungX - 20, dungY + 7, 3, 7);
+
+  ctx.fillStyle = '#fed7aa';
+  ctx.fillRect(dungX - 4, dungY + 6, 6, 9);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillRect(dungX + 2, dungY + 4, 2, 10);
+
+  ctx.fillStyle = '#1d4ed8';
+  ctx.fillRect(dungX + 10, dungY + 4, 6, 11);
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(dungX + 17, dungY + 1, 2, 14);
+  ctx.fillStyle = '#38bdf8';
+  ctx.shadowColor = '#38bdf8';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(dungX + 18, dungY, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // 8. Feral Orc Camp (x: 44, y: 30)
+  const orcX = 44 * tilePx;
+  const orcY = 30 * tilePx;
+  ctx.save();
+  ctx.font = 'bold 10px Outfit, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#000000';
+  ctx.shadowBlur = 4;
+  ctx.fillText('Feral Orc', orcX + 8, orcY - 12);
+  ctx.shadowBlur = 0;
+
+  for (let o = 0; o < 2; o++) {
+    const ox = orcX + o * 14;
+    const oy = orcY;
+    ctx.fillStyle = '#15803d';
+    ctx.beginPath();
+    ctx.arc(ox, oy - 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(ox - 3, oy + 2, 6, 6);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(ox + 4, oy - 1, 4, 3);
+  }
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(orcX - 12, orcY + 4, 10, 4);
+  ctx.fillRect(orcX - 10, orcY + 1, 10, 4);
+  ctx.restore();
+
+  // 9. Quarry Cave with Timber Entrance (x: 76, y: 32)
+  const quarryX = 76 * tilePx;
+  const quarryY = 32 * tilePx;
+  ctx.save();
+  ctx.fillStyle = '#475569';
+  ctx.beginPath();
+  ctx.arc(quarryX, quarryY, 22, Math.PI, 0);
+  ctx.fill();
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.arc(quarryX, quarryY + 2, 14, Math.PI, 0);
+  ctx.fill();
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(quarryX - 15, quarryY - 14, 4, 16);
+  ctx.fillRect(quarryX + 11, quarryY - 14, 4, 16);
+  ctx.fillRect(quarryX - 16, quarryY - 16, 32, 4);
+
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.arc(quarryX + 18, quarryY - 16, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = 'bold 9px sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.fillText('!', quarryX + 18, quarryY - 13);
+  ctx.restore();
+}
 
 

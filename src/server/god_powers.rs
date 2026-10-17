@@ -33,6 +33,10 @@ pub enum DivineInterventionKind {
         y: usize,
     },
     GoldenAgePeace,
+    BlessItem {
+        target_agent_id: usize,
+        item_name: String,
+    },
 }
 
 impl DivineInterventionKind {
@@ -52,6 +56,7 @@ impl DivineInterventionKind {
                 "Cataclysmic Earthquake (Tectonic Fault)"
             }
             DivineInterventionKind::GoldenAgePeace => "Golden Age Peace Decree",
+            DivineInterventionKind::BlessItem { .. } => "Divine Item Consecration (Bless Item)",
         }
     }
 }

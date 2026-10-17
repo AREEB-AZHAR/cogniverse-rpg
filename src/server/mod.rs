@@ -22,7 +22,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 use protocol::ClientMessage;
-use state::SimulationEngine;
+pub use state::SimulationEngine;
 
 pub type SharedSimulation = Arc<RwLock<SimulationEngine>>;
 
@@ -191,6 +191,12 @@ async fn handle_socket(socket: WebSocket, sim: SharedSimulation) {
                                     engine.log_event(format!("Import failed: {}", err));
                                 }
                             }
+                        }
+                        ClientMessage::BlessItem {
+                            agent_id,
+                            item_name,
+                        } => {
+                            engine.bless_agent_item(agent_id, &item_name);
                         }
                     }
                 }

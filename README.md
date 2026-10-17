@@ -1205,12 +1205,38 @@ cargo fmt --check
 # 2. Strict lints & zero warnings
 cargo clippy --all-targets -- -D warnings
 
-# 3. Full test suite (53 passing tests across 10 test suites)
+# 3. Full test suite (57 passing tests across 11 test suites)
 cargo test
 
 # 4. Production release build (LTO, codegen-units = 1)
 cargo build --release
 ```
+
+---
+
+## ✨ Item Inspection & Divine Blessing System
+
+The Divine Item Inspection and Consecration Forge allows the player (God) to inspect the intricate details of items carried across the realm and perform direct miracles of sanctification.
+
+### 🔍 Interactive Item Inspector Modal
+Clicking any item badge in a character's **INVENTORY PACK** opens the glassmorphic Item Inspector:
+- **Hero Display**: Visual item iconography, item name, dynamic rarity pill, equipment slot, and celestial sanctification badge.
+- **Stats Matrix**: Real-time evaluation of Attack, Defense, Durability / Max Durability, and Gold Valuation.
+- **Arcane Energy Reserve**: For Mana Stones, displays active energy gauge (Current MP / Max Capacity) and crystal purity percentage ($50\%$ to $100\%$).
+- **Enchanted Affixes**: Lists all rolled magical affixes and stat modifiers (e.g., `Titan's: +15 STR`, `Vorpal: +20 ATK`).
+- **Lore Archive**: Contextual historical lore describing the origin and purpose of the item.
+
+### ⚡ Divine Blessing Miracle (`✨ Bestow Divine Blessing`)
+Actively channel divine energy into any mortal's equipment, tools, or mana batteries:
+1. **Rarity Promotion**: Automatically elevates the item's rarity tier:
+   $$\text{Common} \longrightarrow \text{Uncommon} \longrightarrow \text{Rare} \longrightarrow \text{Epic} \longrightarrow \text{Legendary} \longrightarrow \text{Mythic}$$
+2. **Celestial Affix Infusion**: Bestows the supreme `"God-Forged Celestial Radiance"` affix (+15 to all attributes, +25 Attack/Defense, +15% Critical Chance).
+3. **Purity & Mana Overcharge**: For Mana Stones, sets crystal purity to $1.0$ (flawless crystal) and overcharges stored mana to $125\%$ of capacity.
+4. **Mortal Psychological Impact**:
+   - The carrier agent experiences an epiphany of awe: Dopamine spikes to $1.0$, Piety increases to $+0.35$ (up to $1.0$), and Health is restored (+50 HP).
+   - An episodic memory is inscribed into the agent's Akashic memory stream:
+     `"Witnessed a blinding divine miracle as the Creator touched and blessed '[Item]' with holy light!"`
+   - Broadcasts a celestial miracle event across the realm to the live activity chronicle.
 
 ---
 

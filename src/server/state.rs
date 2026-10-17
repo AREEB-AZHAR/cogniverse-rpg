@@ -12,8 +12,9 @@ use super::covenants::{CovenantRewardType, DivineCovenant, QuestObjectiveType};
 pub use super::god_powers::DivineInterventionKind;
 use super::protocol::{
     encode_base64, AgentActivitySummary, AgentSummary, CivilizationRunSnapshot,
-    DemographicsTelemetry, LearningMilestonesSnapshot, MapArchetype, PlacedStructureSummary,
-    SelectedAgentDetail, TerraformBrush, WorldMetadataSnapshot, WorldStateTelemetry,
+    DemographicsTelemetry, InspectedItemSummary, LearningMilestonesSnapshot, MapArchetype,
+    PlacedStructureSummary, SelectedAgentDetail, TerraformBrush, WorldMetadataSnapshot,
+    WorldStateTelemetry,
 };
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -1980,8 +1981,58 @@ impl SimulationEngine {
                 }
                 self.log_event("GOLDEN AGE PEACE: Divine decree instituted universal peace! Calmed all aggression and enriched realm treasuries (+200 Gold).");
             }
+            DivineInterventionKind::BlessItem {
+                target_agent_id,
+                item_name,
+            } => {
+                self.bless_agent_item(target_agent_id, &item_name);
+            }
             _ => {}
         }
+    }
+
+    /// Bestows a divine blessing on an item in an agent's inventory
+    pub fn bless_agent_item(&mut self, agent_id: usize, item_name: &str) -> Option<String> {
+        let world_tick = self.world.gaia.world_tick;
+        let mut result_title = None;
+        let mut carrier_name = String::new();
+        let mut carrier_pos = (0, 0);
+
+        if let Some(agent) = self.agents.iter_mut().find(|a| a.id == agent_id) {
+            carrier_name = agent.name.clone();
+            carrier_pos = (agent.x, agent.y);
+            if let Some(blessed_title) = agent
+                .inventory
+                .bless_item(item_name, &mut self.world.next_item_id)
+            {
+                // Boost vitals and divine inspiration
+                agent.health = (agent.health + 50.0).min(agent.max_health);
+                agent.brain.piety = (agent.brain.piety + 0.35).min(1.0);
+                agent.brain.neuromod.dopamine = 1.0;
+                agent.brain.neuromod.serotonin = 0.95;
+
+                agent.brain.memory.log_episodic_event(
+                    world_tick,
+                    format!(
+                        "Witnessed a blinding divine miracle as the Creator touched and blessed '{}' with holy light!",
+                        blessed_title
+                    ),
+                    vec!["DivineBlessing".into(), "Miracle".into(), "HolyArtifact".into()],
+                    10.0,
+                );
+
+                result_title = Some(blessed_title);
+            }
+        }
+
+        if let Some(ref title) = result_title {
+            self.log_event(format!(
+                "✨ DIVINE MIRACLE: You blessed '{}' carried by {} at ({}, {})! It now shines with celestial splendor.",
+                title, carrier_name, carrier_pos.0, carrier_pos.1
+            ));
+        }
+
+        result_title
     }
 
     /// Generates telemetry payload for the God Panel Web Console
@@ -2083,6 +2134,166 @@ impl SimulationEngine {
                     .map(|(k, v)| (k.display_name().to_string(), *v))
                     .collect();
 
+                let mut detailed_items = Vec::new();
+
+                // 1. Stackable items
+                for (item_id, count) in &a.inventory.items {
+                    if *count > 0 {
+                        let name = item_id.display_name().to_string();
+                        let is_blessed = a.inventory.blessed_item_names.contains(&name)
+                            || a.inventory
+                                .blessed_item_names
+                                .contains(&format!("✦ Sanctified {}", name));
+                        let rarity_str = if is_blessed {
+                            "Mythic"
+                        } else if item_id.rarity_value() >= 45.0 {
+                            "Epic"
+                        } else if item_id.rarity_value() >= 25.0 {
+                            "Rare"
+                        } else if item_id.rarity_value() >= 10.0 {
+                            "Uncommon"
+                        } else {
+                            "Common"
+                        };
+                        let rarity_color = match rarity_str {
+                            "Mythic" => "#e91e63",
+                            "Legendary" => "#ff9800",
+                            "Epic" => "#9c27b0",
+                            "Rare" => "#2196f3",
+                            "Uncommon" => "#4caf50",
+                            _ => "#9e9e9e",
+                        };
+
+                        let (atk, def, slot) = match item_id {
+                            crate::world::items::ItemId::IronSword => {
+                                (if is_blessed { 65.0 } else { 35.0 }, 0.0, "Weapon")
+                            }
+                            crate::world::items::ItemId::HuntingBow => {
+                                (if is_blessed { 55.0 } else { 25.0 }, 0.0, "Weapon")
+                            }
+                            crate::world::items::ItemId::IronPickaxe => (
+                                if is_blessed { 40.0 } else { 18.0 },
+                                5.0,
+                                "Tool/Weapon",
+                            ),
+                            crate::world::items::ItemId::StonePickaxe => (
+                                if is_blessed { 25.0 } else { 10.0 },
+                                2.0,
+                                "Tool/Weapon",
+                            ),
+                            crate::world::items::ItemId::PrimitiveChopper => {
+                                (if is_blessed { 20.0 } else { 8.0 }, 2.0, "Tool/Weapon")
+                            }
+                            _ => (0.0, 0.0, "Resource"),
+                        };
+
+                        let affixes = if is_blessed {
+                            vec![
+                                "✦ Divine Blessing: +50% Potency".to_string(),
+                                "✦ Holy Radiance: +15 Piety".to_string(),
+                            ]
+                        } else {
+                            Vec::new()
+                        };
+
+                        detailed_items.push(InspectedItemSummary {
+                            id: *item_id as u64,
+                            name: if is_blessed {
+                                format!("✦ Sanctified {} x{}", name, count)
+                            } else {
+                                format!("{} x{}", name, count)
+                            },
+                            rarity: rarity_str.to_string(),
+                            rarity_color: rarity_color.to_string(),
+                            slot: slot.to_string(),
+                            attack: atk,
+                            defense: def,
+                            durability: if is_blessed { 200 } else { 100 },
+                            max_durability: if is_blessed { 200 } else { 100 },
+                            affixes,
+                            value: (item_id.rarity_value()
+                                * (*count as f32)
+                                * if is_blessed { 3.0 } else { 1.0 })
+                            .round() as u32,
+                            is_blessed,
+                            mana_charge: None,
+                            lore: format!(
+                                "Civilizational asset carried by {}. Essential for crafting, combat, and divine covenants.",
+                                a.name
+                            ),
+                        });
+                    }
+                }
+
+                // 2. Equipment items
+                for equip in &a.inventory.equipment {
+                    let affixes: Vec<String> = equip
+                        .affixes
+                        .iter()
+                        .map(|aff| {
+                            format!(
+                                "{}: +{:.0} ATK / +{:.0} DEF",
+                                aff.name, aff.modifier.bonus_attack, aff.modifier.bonus_defense
+                            )
+                        })
+                        .collect();
+                    detailed_items.push(InspectedItemSummary {
+                        id: equip.id,
+                        name: equip.name.clone(),
+                        rarity: equip.rarity.display_name().to_string(),
+                        rarity_color: equip.rarity.color_code().to_string(),
+                        slot: equip.slot.display_name().to_string(),
+                        attack: equip.total_attack(),
+                        defense: equip.total_defense(),
+                        durability: equip.durability,
+                        max_durability: equip.max_durability,
+                        affixes,
+                        value: equip.value,
+                        is_blessed: equip.is_blessed(),
+                        mana_charge: None,
+                        lore: format!(
+                            "Master-crafted gear forged for {}-rank combatants.",
+                            equip.required_rank.display_name()
+                        ),
+                    });
+                }
+
+                // 3. Mana stones
+                for stone in &a.inventory.mana_stones {
+                    let is_b = stone.is_blessed();
+                    detailed_items.push(InspectedItemSummary {
+                        id: stone.id,
+                        name: if is_b {
+                            format!("✦ Sanctified {}", stone.grade.display_name())
+                        } else {
+                            stone.grade.display_name().to_string()
+                        },
+                        rarity: if is_b {
+                            "Mythic".to_string()
+                        } else {
+                            "Rare".to_string()
+                        },
+                        rarity_color: if is_b {
+                            "#e91e63".to_string()
+                        } else {
+                            "#2196f3".to_string()
+                        },
+                        slot: "Arcane Energy Battery".to_string(),
+                        attack: 0.0,
+                        defense: 0.0,
+                        durability: 100,
+                        max_durability: 100,
+                        affixes: vec![
+                            format!("Crystal Purity: {:.0}%", stone.purity * 100.0),
+                            format!("Max Mana: {:.0}", stone.max_mana),
+                        ],
+                        value: stone.monetary_value(),
+                        is_blessed: is_b,
+                        mana_charge: Some((stone.stored_mana, stone.max_mana)),
+                        lore: "A concentrated crystalline node storing raw arcane energy harvested from dungeon depths.".to_string(),
+                    });
+                }
+
                 let beliefs = a
                     .brain
                     .knowledge
@@ -2118,6 +2329,7 @@ impl SimulationEngine {
                     neuromod: a.brain.neuromod.clone(),
                     current_thought: a.brain.current_thought.clone(),
                     inventory_items: items,
+                    detailed_items,
                     recent_memories,
                     beliefs,
                     genome: a.brain.genome.clone(),

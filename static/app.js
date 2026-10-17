@@ -1622,11 +1622,44 @@ function updateCharacterSheet(agent) {
   // Inventory
   const invBox = document.getElementById('cs-inventory-pack');
   invBox.innerHTML = '';
-  if (agent.inventory_items && agent.inventory_items.length > 0) {
+  if (agent.detailed_items && agent.detailed_items.length > 0) {
+    for (const item of agent.detailed_items) {
+      const tag = document.createElement('span');
+      tag.className = 'inv-item' + (item.is_blessed ? ' blessed-item' : '');
+      tag.title = 'Click to inspect item and bestow divine blessing';
+      tag.innerHTML = (item.is_blessed ? '✦ ' : '') + item.name;
+      tag.onclick = (e) => {
+        e.stopPropagation();
+        openItemInspector(item, agent.id);
+      };
+      invBox.appendChild(tag);
+    }
+  } else if (agent.inventory_items && agent.inventory_items.length > 0) {
     for (const [name, qty] of agent.inventory_items) {
       const tag = document.createElement('span');
-      tag.className = 'inv-item';
+      const isBlessed = name.includes('✦');
+      tag.className = 'inv-item' + (isBlessed ? ' blessed-item' : '');
       tag.textContent = `${name} x${qty}`;
+      tag.title = 'Click to inspect item and bestow divine blessing';
+      tag.onclick = (e) => {
+        e.stopPropagation();
+        openItemInspector({
+          id: 0,
+          name: name,
+          rarity: isBlessed ? 'Mythic' : 'Common',
+          rarity_color: isBlessed ? '#e91e63' : '#9e9e9e',
+          slot: 'Civilizational Good',
+          attack: isBlessed ? 25 : 0,
+          defense: isBlessed ? 20 : 0,
+          durability: 100,
+          max_durability: 100,
+          affixes: isBlessed ? ['✦ Divine Blessing: +50% Potency'] : [],
+          value: 20,
+          is_blessed: isBlessed,
+          mana_charge: null,
+          lore: `Resource carried by ${agent.name}. Click Cast Divine Blessing to consecrate it into a holy relic.`,
+        }, agent.id);
+      };
       invBox.appendChild(tag);
     }
   } else {
@@ -1735,6 +1768,135 @@ function smiteCurrentAgent() {
     });
     showToast(`⚡ Divine Smite struck character #${selectedAgentId}!`);
   }
+}
+
+// ----------------------------------------------------------------------------
+// ITEM INSPECTION & DIVINE BLESSING SYSTEM
+// ----------------------------------------------------------------------------
+let currentlyInspectedItem = null;
+let currentlyInspectedAgentId = null;
+
+function openItemInspector(item, agentId) {
+  playSound('click');
+  currentlyInspectedItem = item;
+  currentlyInspectedAgentId = agentId;
+
+  const modal = document.getElementById('modal-item-inspector');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  // Title & Hero
+  document.getElementById('ii-name').textContent = item.name;
+  const icon = getItemIcon(item.name, item.slot);
+  document.getElementById('ii-icon').textContent = icon;
+
+  const rarityBadge = document.getElementById('ii-rarity');
+  rarityBadge.textContent = item.rarity;
+  rarityBadge.style.color = item.rarity_color || '#e2e8f0';
+  rarityBadge.style.borderColor = item.rarity_color || 'rgba(255,255,255,0.2)';
+
+  document.getElementById('ii-slot').textContent = item.slot;
+
+  const blessedTag = document.getElementById('ii-blessed-tag');
+  if (item.is_blessed) {
+    blessedTag.classList.remove('hidden');
+  } else {
+    blessedTag.classList.add('hidden');
+  }
+
+  // Stats Matrix
+  document.getElementById('ii-atk').textContent = item.attack > 0 ? `+${item.attack.toFixed(0)}` : '0';
+  document.getElementById('ii-def').textContent = item.defense > 0 ? `+${item.defense.toFixed(0)}` : '0';
+  document.getElementById('ii-dur').textContent = `${item.durability}/${item.max_durability}`;
+  document.getElementById('ii-val').textContent = `${item.value}g`;
+
+  // Mana section
+  const manaSec = document.getElementById('ii-mana-section');
+  if (item.mana_charge) {
+    manaSec.classList.remove('hidden');
+    const [stored, max] = item.mana_charge;
+    document.getElementById('ii-mana-txt').textContent = `${stored.toFixed(0)} / ${max.toFixed(0)} MP`;
+    const pct = Math.min(100, Math.max(0, (stored / max) * 100));
+    document.getElementById('ii-mana-fill').style.width = `${pct}%`;
+  } else {
+    manaSec.classList.add('hidden');
+  }
+
+  // Affixes
+  const affList = document.getElementById('ii-affixes');
+  affList.innerHTML = '';
+  if (item.affixes && item.affixes.length > 0) {
+    for (const aff of item.affixes) {
+      const pill = document.createElement('span');
+      pill.className = 'affix-pill';
+      pill.textContent = aff;
+      affList.appendChild(pill);
+    }
+  } else {
+    affList.innerHTML = '<span class="affix-pill" style="opacity:0.6;border-style:dashed;">Mundane Item (No Enchantments)</span>';
+  }
+
+  // Lore
+  document.getElementById('ii-lore').textContent = `"${item.lore || 'An ancient relic steeped in mystery.'}"`;
+
+  // Bless button state
+  const btn = document.getElementById('btn-bless-item-act');
+  if (btn) {
+    if (item.is_blessed) {
+      btn.innerHTML = '✨ RENEW CELESTIAL BLESSING';
+    } else {
+      btn.innerHTML = '✨ CAST DIVINE BLESSING';
+    }
+  }
+}
+
+function closeItemInspector() {
+  playSound('click');
+  const modal = document.getElementById('modal-item-inspector');
+  if (modal) modal.classList.add('hidden');
+  currentlyInspectedItem = null;
+  currentlyInspectedAgentId = null;
+}
+
+function blessInspectedItem() {
+  if (!currentlyInspectedItem || !currentlyInspectedAgentId) return;
+  playSound('chime');
+
+  const itemName = currentlyInspectedItem.name.replace('✦ Sanctified ', '');
+  sendMsg({
+    type: 'BlessItem',
+    agent_id: currentlyInspectedAgentId,
+    item_name: itemName,
+  });
+
+  // Also trigger celestial particle beam on agent if visible
+  if (mouseWorldTile) {
+    activeEffects.push({
+      type: 'bless',
+      x: mouseWorldTile.x,
+      y: mouseWorldTile.y,
+      start: Date.now(),
+      duration: 500,
+    });
+  }
+
+  showToast(`✨ Bestowed Divine Blessing upon ${currentlyInspectedItem.name}! It radiates with holy power.`);
+  closeItemInspector();
+}
+
+function getItemIcon(name, slot) {
+  const n = name.toLowerCase();
+  if (n.includes('sword') || n.includes('warblade') || n.includes('axe')) return '⚔️';
+  if (n.includes('bow')) return '🏹';
+  if (n.includes('pickaxe')) return '⛏️';
+  if (n.includes('staff') || n.includes('wand')) return '🪄';
+  if (n.includes('armor') || n.includes('cuirass')) return '🛡️';
+  if (n.includes('stone') || n.includes('mana')) return '💎';
+  if (n.includes('bread') || n.includes('berry') || n.includes('fish') || n.includes('grain')) return '🍞';
+  if (n.includes('wood') || n.includes('plank')) return '🪵';
+  if (n.includes('ore') || n.includes('ingot')) return '🪙';
+  if (n.includes('rune')) return '📜';
+  return '📦';
 }
 
 // ----------------------------------------------------------------------------

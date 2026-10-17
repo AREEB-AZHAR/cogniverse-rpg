@@ -100,15 +100,26 @@ impl ItemId {
     }
 }
 
+use crate::economy::loot::{bless_basic_item, EquipmentItem, ManaStone};
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Inventory {
     pub items: std::collections::HashMap<ItemId, u32>,
+    #[serde(default)]
+    pub equipment: Vec<EquipmentItem>,
+    #[serde(default)]
+    pub mana_stones: Vec<ManaStone>,
+    #[serde(default)]
+    pub blessed_item_names: std::collections::HashSet<String>,
 }
 
 impl Inventory {
     pub fn new() -> Self {
         Self {
             items: std::collections::HashMap::new(),
+            equipment: Vec::new(),
+            mana_stones: Vec::new(),
+            blessed_item_names: std::collections::HashSet::new(),
         }
     }
 
@@ -133,11 +144,86 @@ impl Inventory {
         }
     }
 
+    pub fn add_equipment(&mut self, item: EquipmentItem) {
+        self.equipment.push(item);
+    }
+
+    pub fn add_mana_stone(&mut self, stone: ManaStone) {
+        self.mana_stones.push(stone);
+    }
+
+    /// Bestows a divine blessing on a matching item in the inventory (equipment, mana stone, or item stack).
+    /// Returns the sanctified item's title upon success.
+    pub fn bless_item(&mut self, target_name: &str, next_item_id: &mut u64) -> Option<String> {
+        // 1. Check equipment items first
+        if let Some(equip) = self.equipment.iter_mut().find(|e| {
+            e.name.eq_ignore_ascii_case(target_name)
+                || target_name.contains(&e.name)
+                || e.name.contains(target_name)
+        }) {
+            equip.bless();
+            self.blessed_item_names.insert(equip.name.clone());
+            return Some(equip.name.clone());
+        }
+
+        // 2. Check mana stones
+        if let Some(stone) = self.mana_stones.iter_mut().find(|s| {
+            s.grade.display_name().eq_ignore_ascii_case(target_name)
+                || target_name.contains(s.grade.display_name())
+        }) {
+            stone.bless();
+            let name = format!("✦ Sanctified {}", stone.grade.display_name());
+            self.blessed_item_names.insert(name.clone());
+            return Some(name);
+        }
+
+        // 3. Check basic item stacks: convert 1 unit to a divine equipment relic
+        let mut found_item = None;
+        for (item_id, count) in &mut self.items {
+            if (item_id.display_name().eq_ignore_ascii_case(target_name)
+                || target_name.contains(item_id.display_name()))
+                && *count > 0
+            {
+                *count -= 1;
+                found_item = Some(*item_id);
+                break;
+            }
+        }
+
+        if let Some(item_id) = found_item {
+            let blessed_equip = bless_basic_item(item_id, next_item_id);
+            let blessed_name = blessed_equip.name.clone();
+            self.blessed_item_names.insert(blessed_name.clone());
+            self.equipment.push(blessed_equip);
+            return Some(blessed_name);
+        }
+
+        // 4. Mark name as blessed if carried
+        for item_id in self.items.keys() {
+            let name = item_id.display_name();
+            if name.eq_ignore_ascii_case(target_name) || target_name.contains(name) {
+                let blessed_name = format!("✦ Sanctified {}", name);
+                self.blessed_item_names.insert(blessed_name.clone());
+                return Some(blessed_name);
+            }
+        }
+
+        None
+    }
+
     pub fn total_wealth(&self) -> f32 {
-        self.items
+        let stack_wealth: f32 = self
+            .items
             .iter()
             .map(|(id, count)| id.rarity_value() * (*count as f32))
-            .sum()
+            .sum();
+        let equip_wealth: f32 = self.equipment.iter().map(|e| e.value as f32).sum();
+        let stone_wealth: f32 = self
+            .mana_stones
+            .iter()
+            .map(|s| s.monetary_value() as f32)
+            .sum();
+        stack_wealth + equip_wealth + stone_wealth
     }
 }
 

@@ -180,6 +180,66 @@ impl EquipmentItem {
             attrs.luck += affix.modifier.luck;
         }
     }
+
+    /// Checks whether this item has received divine sanctification
+    pub fn is_blessed(&self) -> bool {
+        self.name.contains('✦')
+            || self
+                .affixes
+                .iter()
+                .any(|a| a.name.contains("God-Forged") || a.name.contains("Celestial"))
+    }
+
+    /// Bestows divine blessing on the item, upgrading its rarity tier, infusing celestial affixes,
+    /// multiplying base combat potency, restoring full durability, and consecrating its identity.
+    pub fn bless(&mut self) {
+        // Upgrade rarity tier up to Mythic
+        self.rarity = match self.rarity {
+            ItemRarity::Common => ItemRarity::Uncommon,
+            ItemRarity::Uncommon => ItemRarity::Rare,
+            ItemRarity::Rare => ItemRarity::Epic,
+            ItemRarity::Epic => ItemRarity::Legendary,
+            ItemRarity::Legendary | ItemRarity::Mythic => ItemRarity::Mythic,
+        };
+
+        // Boost base stats
+        if self.base_attack > 0.0 {
+            self.base_attack = (self.base_attack * 1.50).max(self.base_attack + 25.0);
+        }
+        if self.base_defense > 0.0 {
+            self.base_defense = (self.base_defense * 1.50).max(self.base_defense + 20.0);
+        }
+
+        // Add celestial divine affix
+        self.affixes.push(ItemAffix {
+            name: "God-Forged Celestial Radiance".to_string(),
+            modifier: StatModifier {
+                strength: 15.0,
+                agility: 15.0,
+                vitality: 20.0,
+                intelligence: 15.0,
+                wisdom: 20.0,
+                charisma: 15.0,
+                luck: 25.0,
+                bonus_attack: 25.0,
+                bonus_defense: 25.0,
+                crit_chance: 0.15,
+            },
+            tier: 10,
+        });
+
+        // Restore and expand durability
+        self.max_durability = (self.max_durability + 100).max(200);
+        self.durability = self.max_durability;
+
+        // Multiply gold valuation
+        self.value = ((self.value as f32) * 3.5).round() as u32;
+
+        // Consecrate name
+        if !self.name.contains('✦') {
+            self.name = format!("✦ Sanctified {}", self.name);
+        }
+    }
 }
 
 /// Mana Stone purity and capacity grades harvested from monsters and dungeon geodes
@@ -274,6 +334,73 @@ impl ManaStone {
         let charge_factor = 0.5 + 0.5 * (self.stored_mana / self.max_mana.max(1.0));
         (base * purity_mult * charge_factor).round() as u32
     }
+
+    /// Checks whether this mana stone has received divine sanctification
+    pub fn is_blessed(&self) -> bool {
+        self.purity >= 0.99 && self.stored_mana >= self.max_mana
+    }
+
+    /// Bestows divine blessing on the mana stone, elevating its grade, maximizing purity to 1.0,
+    /// and overcharging its stored energy capacity to 125%.
+    pub fn bless(&mut self) {
+        self.grade = match self.grade {
+            ManaStoneGrade::Flawed => ManaStoneGrade::Regular,
+            ManaStoneGrade::Regular => ManaStoneGrade::Flawless,
+            ManaStoneGrade::Flawless => ManaStoneGrade::Radiant,
+            ManaStoneGrade::Radiant | ManaStoneGrade::Astral => ManaStoneGrade::Astral,
+        };
+        self.purity = 1.0;
+        self.max_mana = self.grade.default_capacity() * 1.25;
+        self.stored_mana = self.max_mana;
+    }
+}
+
+/// Converts a standard mundane or crafted inventory item into a blessed celestial equipment relic
+pub fn bless_basic_item(item: ItemId, next_item_id: &mut u64) -> EquipmentItem {
+    let id = *next_item_id;
+    *next_item_id += 1;
+    let (slot, base_atk, base_def) = match item {
+        ItemId::IronSword => (EquipmentSlot::Weapon, 35.0, 0.0),
+        ItemId::HuntingBow => (EquipmentSlot::Weapon, 30.0, 0.0),
+        ItemId::IronPickaxe | ItemId::StonePickaxe | ItemId::PrimitiveChopper => {
+            (EquipmentSlot::Weapon, 20.0, 5.0)
+        }
+        ItemId::RuneSolarIgnition
+        | ItemId::RunePurifyingAura
+        | ItemId::RuneStoneWall
+        | ItemId::RuneShadowVeil
+        | ItemId::ManaCrystal => (EquipmentSlot::Accessory, 15.0, 15.0),
+        _ => (EquipmentSlot::Accessory, 10.0, 10.0),
+    };
+
+    let mut equip = EquipmentItem {
+        id,
+        name: format!("✦ God-Forged {}", item.display_name()),
+        rarity: ItemRarity::Legendary,
+        slot,
+        base_attack: base_atk,
+        base_defense: base_def,
+        affixes: vec![ItemAffix {
+            name: "Celestial Sanctification".to_string(),
+            modifier: StatModifier {
+                strength: 12.0,
+                vitality: 15.0,
+                wisdom: 15.0,
+                luck: 20.0,
+                bonus_attack: 20.0,
+                bonus_defense: 15.0,
+                crit_chance: 0.10,
+                ..Default::default()
+            },
+            tier: 7,
+        }],
+        value: (item.rarity_value() * 30.0).round() as u32,
+        required_rank: Rank::F,
+        durability: 150,
+        max_durability: 150,
+    };
+    equip.bless();
+    equip
 }
 
 /// Aggregated loot dropped from dungeon encounters or boss chambers

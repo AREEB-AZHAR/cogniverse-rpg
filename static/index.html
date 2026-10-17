@@ -1079,6 +1079,79 @@
         </table>
       </div>
     </div>
+  <!-- =========================================================
+       ITEM INSPECTOR & DIVINE BLESSING MODAL
+  ========================================================= -->
+  <aside id="modal-item-inspector" class="wb-modal-card hidden item-inspector-window">
+    <div class="modal-header">
+      <div class="name-row">
+        <h2 id="ii-title">✦ ITEM CONSECRATION FORGE</h2>
+      </div>
+      <button class="btn-close-modal" onclick="closeItemInspector()">✖</button>
+    </div>
+    <div class="item-inspector-body">
+      <div class="item-hero-card">
+        <div class="item-icon-display" id="ii-icon">⚔️</div>
+        <div class="item-title-meta">
+          <div class="item-name-heading" id="ii-name">Iron Broadsword</div>
+          <div class="item-badges-row">
+            <span class="rarity-badge" id="ii-rarity">Epic</span>
+            <span class="slot-badge" id="ii-slot">Weapon</span>
+            <span class="blessed-pill hidden" id="ii-blessed-tag">✦ Sanctified</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="item-stats-matrix">
+        <div class="stat-col">
+          <span class="stat-lbl">ATTACK</span>
+          <strong class="stat-val atk" id="ii-atk">+35.0</strong>
+        </div>
+        <div class="stat-col">
+          <span class="stat-lbl">DEFENSE</span>
+          <strong class="stat-val def" id="ii-def">+0.0</strong>
+        </div>
+        <div class="stat-col">
+          <span class="stat-lbl">DURABILITY</span>
+          <strong class="stat-val dur" id="ii-dur">100/100</strong>
+        </div>
+        <div class="stat-col">
+          <span class="stat-lbl">GOLD VALUE</span>
+          <strong class="stat-val val" id="ii-val">120g</strong>
+        </div>
+      </div>
+
+      <!-- Mana Battery Section (if applicable) -->
+      <div class="mana-charge-box hidden" id="ii-mana-section">
+        <div class="mana-charge-header">
+          <span>ARCANE ENERGY RESERVE:</span>
+          <strong id="ii-mana-txt">150 / 150 MP</strong>
+        </div>
+        <div class="mana-gauge-track">
+          <div class="mana-gauge-fill" id="ii-mana-fill" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- Affixes List -->
+      <div class="affixes-section">
+        <span class="sub-label">ENCHANTED AFFIXES:</span>
+        <div class="affixes-list" id="ii-affixes">
+          <span class="affix-pill">Titan's: +15 Strength</span>
+        </div>
+      </div>
+
+      <!-- Lore Description -->
+      <div class="item-lore-box">
+        <p id="ii-lore">"Forged by deep mountain blacksmiths and tempered in mountain spring waters."</p>
+      </div>
+
+      <!-- Divine Action Footer -->
+      <div class="inspector-footer">
+        <button id="btn-bless-item-act" class="btn-bless-item-celestial" onclick="blessInspectedItem()">
+          ✨ CAST DIVINE BLESSING
+        </button>
+      </div>
+    </div>
   </aside>
 
   <!-- Floating Toast Notification -->

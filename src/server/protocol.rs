@@ -93,6 +93,10 @@ pub enum ClientMessage {
     ImportState {
         snapshot_json: String,
     },
+    BlessItem {
+        agent_id: usize,
+        item_name: String,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -138,6 +142,24 @@ pub struct AgentSummary {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct InspectedItemSummary {
+    pub id: u64,
+    pub name: String,
+    pub rarity: String,
+    pub rarity_color: String,
+    pub slot: String,
+    pub attack: f32,
+    pub defense: f32,
+    pub durability: u32,
+    pub max_durability: u32,
+    pub affixes: Vec<String>,
+    pub value: u32,
+    pub is_blessed: bool,
+    pub mana_charge: Option<(f32, f32)>,
+    pub lore: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SelectedAgentDetail {
     pub id: usize,
     pub name: String,
@@ -156,6 +178,8 @@ pub struct SelectedAgentDetail {
     pub neuromod: NeuromodulationState,
     pub current_thought: String,
     pub inventory_items: Vec<(String, u32)>,
+    #[serde(default)]
+    pub detailed_items: Vec<InspectedItemSummary>,
     pub recent_memories: Vec<EpisodicMemory>,
     pub beliefs: Vec<String>,
     pub genome: BehavioralGenome,

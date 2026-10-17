@@ -790,3 +790,103 @@ impl LootTable {
         }
     }
 }
+
+/// Special mythic raid treasure chest awarded upon defeating a colossal World Boss
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct TitanLootChest {
+    pub boss_name: String,
+    pub gold: u32,
+    pub raw_ores: Vec<(ItemId, u32)>,
+    pub refined_ingots: Vec<(ItemId, u32)>,
+    pub divine_sparks: u32,
+    pub mana_stones: Vec<ManaStone>,
+    pub mythic_equipment: Vec<EquipmentItem>,
+}
+
+/// Specialized loot table generating boss-exclusive ores, refined ingots, Divine Sparks, and Mythic gear
+pub struct TitanLootTable;
+
+impl TitanLootTable {
+    pub fn generate_chest(
+        boss_name: &str,
+        ore_kind: ItemId,
+        ingot_kind: ItemId,
+        next_item_id: &mut u64,
+        next_stone_id: &mut u64,
+        rng: &mut impl Rng,
+    ) -> TitanLootChest {
+        let gold = rng.gen_range(1500..=3500);
+        let mut raw_ores = vec![(ore_kind, rng.gen_range(8..=20))];
+
+        // Boss chests have a chance to drop complementary primordial ores
+        if rng.gen_bool(0.60) {
+            let bonus_ore = match ore_kind {
+                ItemId::AbyssaliteOre => ItemId::PyrestoneOre,
+                ItemId::PyrestoneOre => ItemId::VoidstoneOre,
+                _ => ItemId::AbyssaliteOre,
+            };
+            raw_ores.push((bonus_ore, rng.gen_range(4..=12)));
+        }
+
+        let refined_ingots = vec![(ingot_kind, rng.gen_range(3..=8))];
+        let divine_sparks = if rng.gen_bool(0.35) { 2 } else { 1 };
+
+        // Guaranteed Astral and Radiant Mana Stones
+        let mut mana_stones = Vec::new();
+        mana_stones.push(ManaStone::new(*next_stone_id, ManaStoneGrade::Astral, 1.0));
+        *next_stone_id += 1;
+        mana_stones.push(ManaStone::new(
+            *next_stone_id,
+            ManaStoneGrade::Radiant,
+            0.95,
+        ));
+        *next_stone_id += 1;
+
+        // Guaranteed Mythic equipment piece (weapon or armour)
+        let mut mythic_equipment = Vec::new();
+        let equip_id = *next_item_id;
+        *next_item_id += 1;
+
+        let primary_equip =
+            LootTable::generate_equipment(equip_id, Rank::SSS, Some(ItemRarity::Mythic), 50.0, rng);
+        mythic_equipment.push(primary_equip);
+
+        // High chance to drop a second Legendary/Mythic weapon or armour piece
+        if rng.gen_bool(0.75) {
+            let extra_id = *next_item_id;
+            *next_item_id += 1;
+            let rarity = if rng.gen_bool(0.5) {
+                ItemRarity::Mythic
+            } else {
+                ItemRarity::Legendary
+            };
+            let second_equip =
+                LootTable::generate_equipment(extra_id, Rank::SSS, Some(rarity), 45.0, rng);
+            mythic_equipment.push(second_equip);
+        }
+
+        // Additional chance for a 3rd piece
+        if rng.gen_bool(0.40) {
+            let third_id = *next_item_id;
+            *next_item_id += 1;
+            let third_equip = LootTable::generate_equipment(
+                third_id,
+                Rank::SPlus,
+                Some(ItemRarity::Legendary),
+                40.0,
+                rng,
+            );
+            mythic_equipment.push(third_equip);
+        }
+
+        TitanLootChest {
+            boss_name: boss_name.to_string(),
+            gold,
+            raw_ores,
+            refined_ingots,
+            divine_sparks,
+            mana_stones,
+            mythic_equipment,
+        }
+    }
+}

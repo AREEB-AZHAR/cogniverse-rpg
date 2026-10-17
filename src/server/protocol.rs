@@ -243,6 +243,48 @@ pub struct WorldStateTelemetry {
     pub map_archetype: MapArchetype,
     pub full_map_sync: Option<String>,
     pub exported_snapshot: Option<String>,
+    #[serde(default)]
+    pub titans: Vec<TitanTelemetrySummary>,
+    #[serde(default)]
+    pub siege_engines: Vec<SiegeEngineTelemetrySummary>,
+    #[serde(default)]
+    pub demigods: Vec<DemigodTelemetrySummary>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TitanTelemetrySummary {
+    pub id: usize,
+    pub name: String,
+    pub kind: String,
+    pub x: usize,
+    pub y: usize,
+    pub hp: f32,
+    pub max_hp: f32,
+    pub state: String,
+    pub awakening_pressure: f32,
+    pub disruption_radius: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SiegeEngineTelemetrySummary {
+    pub id: usize,
+    pub kind: String,
+    pub faction: CivilizationRace,
+    pub x: usize,
+    pub y: usize,
+    pub target_x: usize,
+    pub target_y: usize,
+    pub health: f32,
+    pub is_operational: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DemigodTelemetrySummary {
+    pub agent_id: usize,
+    pub agent_name: String,
+    pub domain: String,
+    pub ascension_tier: u32,
+    pub heirloom_name: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

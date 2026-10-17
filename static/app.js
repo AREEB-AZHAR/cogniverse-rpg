@@ -1526,6 +1526,150 @@ function drawWorldMap(data) {
     ctx.restore();
   }
 
+  // 7.5 Primordial Titans & World Bosses
+  if (data.titans && Array.isArray(data.titans)) {
+    for (const t of data.titans) {
+      const tx = t.x * tilePx + tilePx / 2;
+      const ty = t.y * tilePx + tilePx / 2;
+      const isAlive = t.state !== 'Defeated';
+      const isAwake = t.state === 'Awakened' || t.state === 'Enraged';
+      const isEnraged = t.state === 'Enraged';
+
+      ctx.save();
+      // Colossal Pulsing Aura
+      const pulse = Math.sin(time * 0.003 + t.id) * 6;
+      const auraColor = isEnraged
+        ? 'rgba(239, 68, 68, 0.45)'
+        : isAwake
+        ? 'rgba(249, 115, 22, 0.35)'
+        : 'rgba(56, 189, 248, 0.25)';
+
+      const radGrad = ctx.createRadialGradient(
+        tx,
+        ty,
+        6,
+        tx,
+        ty,
+        t.disruption_radius * tilePx * 0.6 + pulse
+      );
+      radGrad.addColorStop(0, auraColor);
+      radGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = radGrad;
+      ctx.beginPath();
+      ctx.arc(tx, ty, t.disruption_radius * tilePx * 0.6 + pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Titan Icon Avatar
+      ctx.font = isAwake ? '28px sans-serif' : '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const icon = t.kind.includes('Leviathan')
+        ? '🌊'
+        : t.kind.includes('Magma')
+        ? '🔥'
+        : '🌌';
+      ctx.fillText(icon, tx, ty);
+
+      // Name & HP / Awakening Gauge
+      ctx.font = 'bold 10px Outfit, sans-serif';
+      ctx.fillStyle = '#f8fafc';
+      ctx.shadowColor = '#0f172a';
+      ctx.shadowBlur = 4;
+      ctx.fillText(t.name, tx, ty - tilePx * 1.6);
+
+      // Gauge Bar
+      const barW = tilePx * 3.5;
+      const barH = 5;
+      const barX = tx - barW / 2;
+      const barY = ty - tilePx * 1.2;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(barX, barY, barW, barH);
+
+      if (isAwake && isAlive) {
+        // Red / Orange Health Bar
+        const hpPct = Math.max(0, Math.min(1, t.hp / t.max_hp));
+        ctx.fillStyle = isEnraged ? '#ef4444' : '#f97316';
+        ctx.fillRect(barX, barY, barW * hpPct, barH);
+      } else if (!isAlive) {
+        // Slain
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(barX, barY, barW, barH);
+      } else {
+        // Awakening Pressure Meter (Purple to Cyan)
+        const pressurePct = Math.max(0, Math.min(1, t.awakening_pressure / 100));
+        ctx.fillStyle = '#a855f7';
+        ctx.fillRect(barX, barY, barW * pressurePct, barH);
+      }
+      ctx.restore();
+    }
+  }
+
+  // 7.6 Kingdom Warfare Siege Artillery
+  if (data.siege_engines && Array.isArray(data.siege_engines)) {
+    for (const eng of data.siege_engines) {
+      if (!eng.is_operational) continue;
+      const ex = eng.x * tilePx + tilePx / 2;
+      const ey = eng.y * tilePx + tilePx / 2;
+      const tx = eng.target_x * tilePx + tilePx / 2;
+      const ty = eng.target_y * tilePx + tilePx / 2;
+
+      ctx.save();
+      // Target Trajectory Line
+      ctx.strokeStyle =
+        eng.faction === 'SolarTerran'
+          ? 'rgba(251, 191, 36, 0.4)'
+          : 'rgba(192, 132, 252, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+
+      // Siege Unit Marker
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const sIcon = eng.kind.includes('Catapult')
+        ? '☄️'
+        : eng.kind.includes('Ballista')
+        ? '🏹'
+        : '🪵';
+      ctx.fillText(sIcon, ex, ey);
+      ctx.restore();
+    }
+  }
+
+  // 7.7 Ascended Demigods Celestial Halos
+  if (data.demigods && Array.isArray(data.demigods)) {
+    for (const dg of data.demigods) {
+      if (!data.agents) continue;
+      const agent = data.agents.find((a) => a.id === dg.agent_id);
+      if (!agent) continue;
+      const ax = agent.x * tilePx + tilePx / 2;
+      const ay = agent.y * tilePx + tilePx / 2;
+
+      ctx.save();
+      // Celestial Golden Corona
+      const corona = Math.sin(time * 0.005 + dg.agent_id) * 3;
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(ax, ay, tilePx * 1.1 + corona, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Domain Crown Emblem
+      ctx.font = 'bold 11px Outfit, sans-serif';
+      ctx.fillStyle = '#fde68a';
+      ctx.textAlign = 'center';
+      ctx.fillText(`✦ ${dg.domain} ✦`, ax, ay - tilePx * 1.1);
+      ctx.restore();
+    }
+  }
+
   // 8. Brush Hover Reticle
   if (activeTool.startsWith('brush-')) {
     ctx.save();

@@ -441,6 +441,14 @@ impl SimulationEngine {
             self.log_event(msg);
         }
 
+        // 2b. Tick primordial titans (awakening/cataclysms) and kingdom warfare (sieges/territory)
+        let titan_war_events = self
+            .world
+            .tick_titans_and_warfare(&mut self.civilizations, current_tick);
+        for msg in titan_war_events {
+            self.log_event(msg);
+        }
+
         // 2b. Emergent plot hatching by ambitious agents
         if current_tick.is_multiple_of(150)
             && self
@@ -859,7 +867,68 @@ impl SimulationEngine {
                 ActionChoice::MineIron => {
                     let (ax, ay) = (self.agents[idx].x, self.agents[idx].y);
                     let tile = self.world.tile_at_mut(ax, ay);
-                    if tile.gold_ore_amount > 0 {
+                    if tile.abyssalite_ore_amount > 0
+                        || tile.pyrestone_ore_amount > 0
+                        || tile.voidstone_ore_amount > 0
+                    {
+                        let agent = &mut self.agents[idx];
+                        let validation = crate::world::titans::validate_titan_mining(
+                            &agent.inventory,
+                            agent.progression.level,
+                            agent.progression.rank,
+                            agent.progression.subclass,
+                        );
+                        match validation {
+                            Ok(yield_amount) => {
+                                let (ore_item, ore_name) = if tile.abyssalite_ore_amount > 0 {
+                                    tile.abyssalite_ore_amount =
+                                        tile.abyssalite_ore_amount.saturating_sub(1);
+                                    (ItemId::AbyssaliteOre, "Abyssalite Ore")
+                                } else if tile.pyrestone_ore_amount > 0 {
+                                    tile.pyrestone_ore_amount =
+                                        tile.pyrestone_ore_amount.saturating_sub(1);
+                                    (ItemId::PyrestoneOre, "Pyrestone Ore")
+                                } else {
+                                    tile.voidstone_ore_amount =
+                                        tile.voidstone_ore_amount.saturating_sub(1);
+                                    (ItemId::VoidstoneOre, "Voidstone Ore")
+                                };
+
+                                agent.inventory.add(ore_item, yield_amount);
+                                agent.energy = (agent.energy - 0.12).max(0.0);
+                                agent.brain.neuromod.update(1.0, 0.85, false, false, 0.25);
+                                agent.brain.memory.log_episodic_event(
+                                    current_tick,
+                                    format!(
+                                        "Successfully extracted primordial {} from a titan's sanctum!",
+                                        ore_name
+                                    ),
+                                    vec![ore_name.into(), "Mythic".into(), "TitanMining".into()],
+                                    10.0,
+                                );
+                                let newly_unlocked = match agent.race {
+                                    CivilizationRace::SolarTerran => {
+                                        self.civilizations.terran_culture.add_knowledge(50)
+                                    }
+                                    CivilizationRace::ChthonicLunarian => {
+                                        self.civilizations.lunar_culture.add_knowledge(50)
+                                    }
+                                };
+                                for msg in newly_unlocked {
+                                    self.log_event(msg);
+                                }
+                            }
+                            Err(reason) => {
+                                agent.energy = (agent.energy - 0.05).max(0.0);
+                                agent.brain.memory.log_episodic_event(
+                                    current_tick,
+                                    format!("Failed to mine primordial boss ore: {}", reason),
+                                    vec!["MiningFailure".into()],
+                                    3.0,
+                                );
+                            }
+                        }
+                    } else if tile.gold_ore_amount > 0 {
                         tile.gold_ore_amount -= 1;
                         let agent = &mut self.agents[idx];
                         agent.inventory.add(ItemId::GoldOre, 1);
@@ -2403,6 +2472,60 @@ impl SimulationEngine {
             None
         };
 
+        let titans = self
+            .world
+            .titans
+            .titans
+            .iter()
+            .map(|t| super::protocol::TitanTelemetrySummary {
+                id: t.id,
+                name: t.name.clone(),
+                kind: format!("{:?}", t.kind),
+                x: t.x,
+                y: t.y,
+                hp: t.hp,
+                max_hp: t.max_hp,
+                state: format!("{:?}", t.state),
+                awakening_pressure: t.awakening_pressure,
+                disruption_radius: t.disruption_radius,
+            })
+            .collect();
+
+        let siege_engines = self
+            .civilizations
+            .warfare
+            .engines
+            .iter()
+            .map(|e| super::protocol::SiegeEngineTelemetrySummary {
+                id: e.id,
+                kind: e.kind.display_name().to_string(),
+                faction: e.faction,
+                x: e.x,
+                y: e.y,
+                target_x: e.target_x,
+                target_y: e.target_y,
+                health: e.health,
+                is_operational: e.is_operational,
+            })
+            .collect();
+
+        let demigods = self
+            .agents
+            .iter()
+            .filter(|a| a.is_alive && a.demigod.is_ascended)
+            .map(|a| super::protocol::DemigodTelemetrySummary {
+                agent_id: a.id,
+                agent_name: a.name.clone(),
+                domain: a
+                    .demigod
+                    .domain
+                    .map(|d| d.display_name().to_string())
+                    .unwrap_or_else(|| "Unknown Domain".to_string()),
+                ascension_tier: a.demigod.ascension_tier,
+                heirloom_name: a.demigod.heirloom.as_ref().map(|h| h.name.clone()),
+            })
+            .collect();
+
         WorldStateTelemetry {
             world_tick: self.world.gaia.world_tick,
             speed_multiplier: self.speed_multiplier,
@@ -2433,6 +2556,9 @@ impl SimulationEngine {
             map_archetype: self.map_archetype,
             full_map_sync,
             exported_snapshot: self.pending_exported_snapshot.lock().take(),
+            titans,
+            siege_engines,
+            demigods,
         }
     }
 }

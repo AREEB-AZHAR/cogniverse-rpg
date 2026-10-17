@@ -1,8 +1,10 @@
+pub mod apotheosis;
 pub mod needs;
 pub mod party;
 pub mod progression;
 pub mod utility_ai;
 
+pub use apotheosis::{ApotheosisEngine, DemigodAura, DemigodState, DivineDomain, DynastyHeirloom};
 pub use needs::NpcNeeds;
 pub use party::{CombatRole, Party, PartyFormationEngine, PartyMember, PartyStatus};
 pub use progression::{Attributes, CharacterClass, HeroicProgression, Rank, Subclass};
@@ -63,6 +65,8 @@ pub struct Agent {
     pub utility_ai: UtilityAi,
     #[serde(default)]
     pub progression: HeroicProgression,
+    #[serde(default)]
+    pub demigod: DemigodState,
 
     // Inventory & Tools
     pub inventory: Inventory,
@@ -168,6 +172,7 @@ impl Agent {
             needs: NpcNeeds::new(),
             utility_ai: UtilityAi::new(),
             progression: HeroicProgression::new(),
+            demigod: DemigodState::default(),
             inventory,
             brain,
             partner_id: None,

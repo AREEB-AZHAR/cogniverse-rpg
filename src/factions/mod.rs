@@ -1,6 +1,7 @@
 pub mod guild;
 pub mod plots;
 pub mod rival_god;
+pub mod warfare;
 
 use crate::agent::progression::Rank;
 use crate::agent::CivilizationRace;
@@ -8,6 +9,7 @@ use guild::AdventurerGuild;
 use plots::{CivilPlot, PlotType};
 use rival_god::RivalGodState;
 use serde::{Deserialize, Serialize};
+pub use warfare::{SiegeEngineEntity, SiegeEngineKind, TerritoryGrid, WarCampaign};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiplomaticStatus {
@@ -202,6 +204,7 @@ pub struct CivilizationsCoordinator {
     pub active_plots: Vec<CivilPlot>,
     pub next_plot_id: usize,
     pub guild: AdventurerGuild,
+    pub warfare: WarCampaign,
 }
 
 impl Default for CivilizationsCoordinator {
@@ -253,6 +256,7 @@ impl CivilizationsCoordinator {
                 65,
                 60,
             ),
+            warfare: WarCampaign::new(128, 128),
         }
     }
 

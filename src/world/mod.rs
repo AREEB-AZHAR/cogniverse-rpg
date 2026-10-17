@@ -17,6 +17,7 @@ pub mod planet;
 pub mod saves;
 pub mod shipping;
 pub mod tile;
+pub mod titans;
 pub mod trade_routes;
 pub mod views;
 
@@ -37,6 +38,9 @@ pub use saves::{SaveError, SaveSystem};
 pub use shipping::{
     find_water_path, is_navigable_water, launch_ship_from_boat_yard, ShipEntity, ShipStatus,
     VesselKind,
+};
+pub use titans::{
+    validate_titan_mining, validate_titan_refining, TitanKind, TitanManager, TitanState, WorldBoss,
 };
 pub use trade_routes::{DockPort, ShippingNetwork, TradeRoute};
 pub use views::{GlobeView, RegionView};
@@ -83,6 +87,8 @@ pub struct WorldGrid {
     pub outburst_system: DungeonOutburstSystem,
     #[serde(default)]
     pub parties: Vec<crate::agent::party::Party>,
+    #[serde(default)]
+    pub titans: TitanManager,
     #[serde(default = "default_party_seed_id")]
     pub next_party_id: usize,
     #[serde(default = "default_item_seed_id")]
@@ -116,9 +122,10 @@ impl WorldGrid {
 
         // Generate map with coherent fractal noise, elevation layers, and faction resource bases
         let (mut tiles, altars) = MapGenerator::generate_world(width, height);
-        Self::enrich_minerals(&mut tiles);
+        Self::enrich_minerals(&mut tiles, width, height);
         let (wildlife, next_id) = Self::spawn_initial_wildlife();
         let dungeons = Self::spawn_initial_dungeons(width, height, 42);
+        let titans = TitanManager::spawn_initial_titans(width, height);
 
         Self {
             width,
@@ -137,6 +144,7 @@ impl WorldGrid {
             expeditions: Vec::new(),
             outburst_system: DungeonOutburstSystem::new(),
             parties: Vec::new(),
+            titans,
             next_party_id: 1,
             next_item_id: 1001,
             next_stone_id: 5001,
@@ -160,7 +168,7 @@ impl WorldGrid {
             mountain_density,
         );
 
-        Self::enrich_minerals(&mut tiles);
+        Self::enrich_minerals(&mut tiles, self.width, self.height);
         let (wildlife, next_id) = Self::spawn_initial_wildlife();
 
         self.tiles = tiles;
@@ -175,11 +183,12 @@ impl WorldGrid {
         self.expeditions.clear();
         self.outburst_system = DungeonOutburstSystem::new();
         self.parties.clear();
+        self.titans = TitanManager::spawn_initial_titans(self.width, self.height);
 
         map_title
     }
 
-    fn enrich_minerals(tiles: &mut [Tile]) {
+    fn enrich_minerals(tiles: &mut [Tile], width: usize, height: usize) {
         for t in tiles.iter_mut() {
             if t.biome == BiomeType::IroncragMountains {
                 if (t.x + t.y) % 11 == 0 {
@@ -194,7 +203,59 @@ impl WorldGrid {
             } else if t.biome == BiomeType::AncientLeylineRuins && (t.x + t.y) % 7 == 0 {
                 t.mithril_amount += 35;
             }
+
+            // Phase 8: Mythic Boss-Exclusive Ore Seeding in Colossal Titan Domains
+            // 1. Abyssal Leviathan Domain (Deep Ocean / Maritime Abyss)
+            let lev_x = width / 8;
+            let lev_y = height / 8;
+            let dist_lev =
+                (t.x as isize - lev_x as isize).abs() + (t.y as isize - lev_y as isize).abs();
+            if dist_lev <= 8 && (t.x + t.y) % 2 == 0 {
+                t.abyssalite_ore_amount += 35;
+            }
+
+            // 2. Magma Wyrm Domain (Volcanic Crags & Magma Caverns)
+            let wyrm_x = width / 2;
+            let wyrm_y = height / 2;
+            let dist_wyrm =
+                (t.x as isize - wyrm_x as isize).abs() + (t.y as isize - wyrm_y as isize).abs();
+            if dist_wyrm <= 6 && (t.x * 2 + t.y) % 3 == 0 {
+                t.pyrestone_ore_amount += 35;
+            }
+
+            // 3. Void Colossus Domain (Leyline Pinnacle & Celestial Ruins)
+            let void_x = (width * 3) / 4;
+            let void_y = (height * 3) / 4;
+            let dist_void =
+                (t.x as isize - void_x as isize).abs() + (t.y as isize - void_y as isize).abs();
+            if dist_void <= 10 && (t.x + t.y * 2) % 3 == 0 {
+                t.voidstone_ore_amount += 35;
+            }
         }
+    }
+
+    /// Advances titan awakening / cataclysms and kingdom siege warfare operations
+    pub fn tick_titans_and_warfare(
+        &mut self,
+        civil_coordinator: &mut crate::factions::CivilizationsCoordinator,
+        _current_tick: u64,
+    ) -> Vec<String> {
+        let mut events = Vec::new();
+
+        // 1. Tick primordial titans (awakening pressures, regional cataclysms, shipping disruptions)
+        let mut rng = rand::thread_rng();
+        let titan_events = self
+            .titans
+            .tick(&mut self.danger_field, &mut self.shipping, &mut rng);
+        events.extend(titan_events);
+
+        // 2. Tick kingdom warfare and siege artillery bombardment
+        let siege_events = civil_coordinator
+            .warfare
+            .tick(&mut self.tiles, self.width, self.height);
+        events.extend(siege_events);
+
+        events
     }
 
     fn spawn_initial_wildlife() -> (Vec<WildlifeEntity>, usize) {

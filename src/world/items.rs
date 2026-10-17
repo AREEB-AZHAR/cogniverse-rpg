@@ -24,20 +24,31 @@ pub enum ItemId {
     IronIngot,
     Bread,
     ClayTablet,
+    AbyssaliteIngot,
+    PyrestoneIngot,
+    VoidstoneIngot,
+
+    // Boss Area Exclusive Ores
+    AbyssaliteOre,
+    PyrestoneOre,
+    VoidstoneOre,
 
     // Tools & Equipment
     PrimitiveChopper,
     StonePickaxe,
     IronPickaxe,
+    MithrilPickaxe,
+    TitanPickaxe,
     Firestriker,
     HuntingBow,
     IronSword,
 
-    // Arcane Inscribed Runes
+    // Arcane Inscribed Runes & Divine Sparks
     RuneSolarIgnition,
     RunePurifyingAura,
     RuneStoneWall,
     RuneShadowVeil,
+    DivineSpark,
 }
 
 impl ItemId {
@@ -65,13 +76,22 @@ impl ItemId {
             ItemId::PrimitiveChopper => "Primitive Chopper",
             ItemId::StonePickaxe => "Stone Pickaxe",
             ItemId::IronPickaxe => "Iron Pickaxe",
+            ItemId::MithrilPickaxe => "Mithril Pickaxe",
+            ItemId::TitanPickaxe => "Titan-Forged Pickaxe",
             ItemId::Firestriker => "Firestriker",
             ItemId::HuntingBow => "Hunting Bow",
             ItemId::IronSword => "Iron Sword",
+            ItemId::AbyssaliteOre => "Abyssalite Ore",
+            ItemId::PyrestoneOre => "Pyrestone Ore",
+            ItemId::VoidstoneOre => "Voidstone Ore",
+            ItemId::AbyssaliteIngot => "Abyssalite Ingot",
+            ItemId::PyrestoneIngot => "Pyrestone Ingot",
+            ItemId::VoidstoneIngot => "Voidstone Ingot",
             ItemId::RuneSolarIgnition => "Rune of Solar Ignition",
             ItemId::RunePurifyingAura => "Rune of Purifying Aura",
             ItemId::RuneStoneWall => "Rune of Stone Wall",
             ItemId::RuneShadowVeil => "Rune of Shadow Veil",
+            ItemId::DivineSpark => "✨ Divine Spark",
         }
     }
 
@@ -92,10 +112,15 @@ impl ItemId {
             ItemId::IronIngot => 25.0,
             ItemId::HuntingBow | ItemId::IronPickaxe => 30.0,
             ItemId::IronSword => 45.0,
+            ItemId::MithrilPickaxe => 90.0,
+            ItemId::TitanPickaxe => 180.0,
+            ItemId::AbyssaliteOre | ItemId::PyrestoneOre | ItemId::VoidstoneOre => 120.0,
+            ItemId::AbyssaliteIngot | ItemId::PyrestoneIngot | ItemId::VoidstoneIngot => 220.0,
             ItemId::ManaCrystal => 50.0,
             ItemId::ClayTablet => 15.0,
             ItemId::RuneSolarIgnition | ItemId::RunePurifyingAura => 60.0,
             ItemId::RuneStoneWall | ItemId::RuneShadowVeil => 75.0,
+            ItemId::DivineSpark => 500.0,
         }
     }
 }
@@ -247,6 +272,11 @@ pub enum RecipeId {
     BuildGranary,
     ErectSolarAltar,
     ErectLunarAltar,
+    SmeltAbyssaliteIngot,
+    SmeltPyrestoneIngot,
+    SmeltVoidstoneIngot,
+    CraftMithrilPickaxe,
+    CraftTitanPickaxe,
 }
 
 impl RecipeId {
@@ -280,6 +310,17 @@ impl RecipeId {
             RecipeId::BuildGranary => &[(ItemId::Wood, 12), (ItemId::Clay, 4)],
             RecipeId::ErectSolarAltar => &[(ItemId::Stone, 15), (ItemId::ManaCrystal, 1)],
             RecipeId::ErectLunarAltar => &[(ItemId::Stone, 15), (ItemId::ManaCrystal, 1)],
+            RecipeId::SmeltAbyssaliteIngot => {
+                &[(ItemId::AbyssaliteOre, 2), (ItemId::ManaCrystal, 1)]
+            }
+            RecipeId::SmeltPyrestoneIngot => &[(ItemId::PyrestoneOre, 2), (ItemId::ManaCrystal, 1)],
+            RecipeId::SmeltVoidstoneIngot => &[(ItemId::VoidstoneOre, 2), (ItemId::ManaCrystal, 1)],
+            RecipeId::CraftMithrilPickaxe => &[(ItemId::TimberPlanks, 2), (ItemId::MithrilOre, 3)],
+            RecipeId::CraftTitanPickaxe => &[
+                (ItemId::TimberPlanks, 2),
+                (ItemId::VoidstoneIngot, 2),
+                (ItemId::DivineSpark, 1),
+            ],
         }
     }
 
@@ -297,6 +338,11 @@ impl RecipeId {
             RecipeId::InscribePurifyingRune => Some((ItemId::RunePurifyingAura, 1)),
             RecipeId::InscribeStoneWallRune => Some((ItemId::RuneStoneWall, 1)),
             RecipeId::InscribeShadowVeilRune => Some((ItemId::RuneShadowVeil, 1)),
+            RecipeId::SmeltAbyssaliteIngot => Some((ItemId::AbyssaliteIngot, 1)),
+            RecipeId::SmeltPyrestoneIngot => Some((ItemId::PyrestoneIngot, 1)),
+            RecipeId::SmeltVoidstoneIngot => Some((ItemId::VoidstoneIngot, 1)),
+            RecipeId::CraftMithrilPickaxe => Some((ItemId::MithrilPickaxe, 1)),
+            RecipeId::CraftTitanPickaxe => Some((ItemId::TitanPickaxe, 1)),
             // Structures don't produce inventory items; they are placed in world
             RecipeId::BuildCampfire
             | RecipeId::BuildLeanTo

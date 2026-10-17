@@ -228,6 +228,12 @@ pub struct Tile {
     pub iron_ore_amount: u32,
     pub gold_ore_amount: u32,
     pub mithril_amount: u32,
+    #[serde(default)]
+    pub abyssalite_ore_amount: u32,
+    #[serde(default)]
+    pub pyrestone_ore_amount: u32,
+    #[serde(default)]
+    pub voidstone_ore_amount: u32,
     pub grain_amount: u32,
     pub berry_amount: u32,
     pub has_fresh_water: bool,
@@ -459,6 +465,9 @@ impl Tile {
             iron_ore_amount: 0,
             gold_ore_amount: 0,
             mithril_amount: 0,
+            abyssalite_ore_amount: 0,
+            pyrestone_ore_amount: 0,
+            voidstone_ore_amount: 0,
             grain_amount: 0,
             berry_amount: 0,
             has_fresh_water: false,

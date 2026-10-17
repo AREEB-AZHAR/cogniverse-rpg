@@ -1279,6 +1279,54 @@ Actively channel divine energy into any mortal's equipment, tools, or mana batte
 
 ---
 
+## 🐉 Phase 8: The Age of Titans & Sovereign Ascendance
+
+Phase 8 elevates Genesis Cogniverse from localized tactical skirmishes to macro-scale planetary warfare, primordial mythic titan ecologies, mortal apotheosis, and real-time canvas battle telemetry:
+
+### 1. Slumbering Titans & Colossal World Bosses (`src/world/titans.rs`)
+- **Colossal Primordial Entities**:
+  - `🌊 Leviathan, the Abyssal Dread` (Deep Ocean / Maritime Abyss, 6,000 HP).
+  - `🔥 Ignis-Ignash, the Magma Wyrm` (Volcanic Mountain Spine, 8,000 HP).
+  - `🌌 Aethelgard, the Void Colossus` (Ancient Leyline Ruins, 10,000 HP).
+- **Multi-Phase Awakening Engine**:
+  - Progresses from `Slumbering` $\longrightarrow$ `Awakened` $\longrightarrow$ `Enraged` (at $\le 40\%$ HP) $\longrightarrow$ `Defeated`.
+  - **Planetary Cataclysms**: Active titans inject severe hazard into `DangerField` across their disruption radius, and Leviathan's tidal waves batter and sink nearby maritime shipping vessels.
+- **Grand Raid Brigade Combat**: Multi-member tactical parties engage world bosses in multi-round battles using composite power, role synergy, and counter-attacks.
+
+### 2. Boss-Exclusive Ores, High-Skill Extraction & Raid Loot Tables (`src/economy/loot.rs`, `src/world/items.rs`)
+- **Primordial Mineral Veins**:
+  - `AbyssaliteOre` (Harvested exclusively from Leviathan maritime trenches).
+  - `PyrestoneOre` (Harvested exclusively from Magma Wyrm volcanic crags).
+  - `VoidstoneOre` (Harvested exclusively from Void Colossus leyline summits).
+- **Tool & Skill Gating**:
+  - Extraction requires specialized high-quality pickaxes: `MithrilPickaxe` or `TitanPickaxe`. Basic stone and iron tools shatter against primordial veins!
+  - Extraction and refining require Master-tier proficiency: Level $25+$, Rank $S/S+/SSS$, or `Subclass::RuneSmith` / `Subclass::DeepDelver`.
+- **Raid Treasure Chests (`TitanLootChest`)**:
+  - Slain titans drop mythic chests containing $1500-3500$ gold, raw boss ores, refined ingots (`AbyssaliteIngot`, `PyrestoneIngot`, `VoidstoneIngot`), Divine Sparks, Astral & Radiant Mana Stones, and guaranteed Legendary & Mythic weapons and armor.
+
+### 3. Demigod Apotheosis & Dynasty Heirlooms (`src/agent/apotheosis.rs`)
+- **The Sacred Trial of Apotheosis**:
+  - Elite heroes (Level $25+$, Rank $S$ or higher) holding a harvested `DivineSpark` can undertake the sacred trial.
+  - Consumes the Divine Spark, grants $+50\%$ max health, $+25$ to core attributes, and forges a unique `DynastyHeirloom` (e.g., `✦ Ancestral Crown`).
+- **Domain Auras (`DemigodAura`)**:
+  - Demigods project celestial auras (`SunHerald`, `WarBringer`, `VoidWalker`) granting $+20\%$ to $+35\%$ attack bonuses and $-20\%$ damage reduction to allied tactical brigades and armies.
+
+### 4. Kingdom Warfare & Siege Artillery (`src/factions/warfare.rs`)
+- **Heavy Siege Engines**:
+  - `☄️ Heavy Timber Catapult` (Range 6, 85 structural damage).
+  - `🏹 Iron-Bolt Ballista` (Range 8, 55 structural damage).
+  - `🪵 Iron-Headed Battering Ram` (Range 1, 140 structural damage).
+- **Fortress Bombardment & Collapse**:
+  - Engines step toward target coordinates and bombard enemy fortifications (`Barracks`, `TownHall`).
+  - Upon structural collapse, the building is demolished, the victor gains gold plunder, and territorial sovereignty shifts toward the conquerors in `TerritoryGrid`.
+
+### 5. Real-Time Front-End Canvas Telemetry & Overlays (`static/app.js`, `src/server/protocol.rs`)
+- **Colossal Titan Auras**: Dynamic pulsing radial fields rendered on the 60 FPS canvas with titan avatars and real-time health/awakening pressure gauges.
+- **Siege Trajectory Arcs**: Dashed ballistic targeting lines connecting active siege engines to fortified enemy structures.
+- **Demigod Celestial Halos**: Radiant golden corona particle rings and domain crests marking ascended heroes.
+
+---
+
 ## 🚀 Getting Started & Local Installation
 
 ### Prerequisites

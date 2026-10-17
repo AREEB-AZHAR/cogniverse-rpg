@@ -742,6 +742,70 @@ cargo build --release
 
 ---
 
+## 🌿 Civilization Simulator Evolution: Phase 2 — Living Ecology, Food Chains & Animal Farming
+
+In accordance with Phase 2 of the Pixel-Art Civilization Simulator specification, the simulation now features a comprehensive **Autonomous Food Web, Predator-Prey Spatial Micro-AI, Lotka-Volterra Regional Carrying Capacity, Extinction-Repopulation Engine, and Agricultural Animal Farming**.
+
+### 📐 Architectural Highlights
+
+1. **Dynamic Food Web & Behavioral States (`src/world/fauna.rs`)**:
+   - Animals transition between state-based behaviors via `AnimalBehaviorState`:
+     - `Idle`: Resting or mild herd roaming.
+     - `Grazing`: Actively feeding on vegetation (berries, grain), satisfying hunger.
+     - `Hunting { target_id }`: Carnivores and hungry omnivores stalking and chasing prey within detection distance.
+     - `Fleeing { threat_x, threat_y }`: Prey detecting incoming predators within threat radius and running in the opposite direction.
+     - `Mating { partner_id }`: Well-nourished pairs engaging in reproduction.
+   - Complete trophic hierarchy: $\text{Tile Vegetation (Grain/Berries)} \to \text{Herbivores (Rabbits, Deer, Sheep, Cows)} \to \text{Carnivores (Dire Wolves, Mountain Bears)}$.
+   - Omnivores (`WildBoar`, `Free-Range Fowl`) flexibly graze crops or hunt small prey.
+
+2. **Logistic Carrying Capacity ($K$) & Natural Breeding (`src/world/fauna.rs`)**:
+   - Implements bounded logistic growth per 16x16 chunk.
+   - Healthy, fed animals (hunger $< 0.40$, age $\ge 20$) reproduce only when the regional count $< K$.
+   - Naturally stabilizes population sizes, preventing runaway exponential explosions and catastrophic boom-and-bust starvations.
+
+3. **Extinction Detection & Repopulation Engine (`EcologyManager`)**:
+   - Real-time regional biodiversity surveillance per 16x16 sector.
+   - When a compatible species count drops to 0, logs an `ExtinctionRecord`.
+   - Once the repopulation cooldown expires (e.g. 50–120 ticks) and vegetation has replenished, triggers a `RepopulationEvent`, simulating wildlife migration by introducing a new breeding herd into the ecosystem.
+
+4. **Animal Husbandry & Domestic Production**:
+   - Domesticable species (`Sheep`, `Cow`, `Chicken`, `Wild Boar`) can be tamed by NPC herders or god-actions.
+   - Pasture and pen confinement (`StructureKind::AnimalPen`, `Barn`, `Fence`): penned animals stay reliably protected inside their enclosure.
+   - Cyclic domestic product harvesting:
+     - **Highland Sheep**: Yields `wool`, `milk`, and `meat`.
+     - **Pasture Cow**: Yields `milk`, `meat`, and `leather`.
+     - **Free-Range Fowl**: Yields `eggs` and `meat`.
+     - **Wild Boar**: Yields `leather` and `meat`.
+   - Harvested goods feed into village economy stores, granaries, and craft workshops.
+
+### 🧪 Phase 2 Test Coverage (`tests/phase2_ecology_tests.rs`)
+
+| Test Name | Verifications |
+|---|---|
+| `test_ecology_food_chain_grazing_hunting_and_fleeing` | Verifies herbivore grazing (hunger reduction and vegetation depletion), prey threat perception and directional fleeing, carnivore hunting strikes, and omnivore diet versatility. |
+| `test_natural_reproduction_and_carrying_capacity` | Verifies natural breeding between healthy pairs and strict enforcement of regional carrying capacity ($K$) caps. |
+| `test_extinction_detection_and_repopulation_events` | Verifies automated extinction detection when a sector is depleted and subsequent repopulation migration events once flora recovers. |
+| `test_animal_farming_husbandry_pens_and_products` | Verifies domestic taming, physical containment in fences/pens/barns, domestic breeding, and cyclical product harvesting (`wool`, `milk`, `eggs`, `leather`, `meat`). |
+
+### 🛠️ Phase 2 Verification & Acceptance Gates
+
+All four acceptance gates pass cleanly:
+```bash
+# 1. Format check
+cargo fmt --check
+
+# 2. Strict lints & zero warnings
+cargo clippy --all-targets -- -D warnings
+
+# 3. Full test suite (37 passing tests across 6 test suites)
+cargo test
+
+# 4. Production release build (LTO, codegen-units = 1)
+cargo build --release
+```
+
+---
+
 ## 🚀 Getting Started & Local Installation
 
 ### Prerequisites

@@ -326,7 +326,7 @@ impl CellularAutomataEngine {
         let mut conversions = Vec::new();
 
         // Sample a representative subset of tiles across the map
-        for _ in 0..450 {
+        for _ in 0..1200 {
             let rx = rng.gen_range(0..width);
             let ry = rng.gen_range(0..height);
             let idx = ry * width + rx;

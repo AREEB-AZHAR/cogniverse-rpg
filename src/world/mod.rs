@@ -21,7 +21,10 @@ pub use views::{GlobeView, RegionView};
 use altar::Altar;
 use cellular::CellularAutomataEngine;
 use ecology::GaiaEngine;
-use fauna::{AnimalSpecies, WildlifeEntity};
+pub use fauna::{
+    AnimalBehaviorState, AnimalSpawnError, AnimalSpawningSystem, AnimalSpecies, EcologyManager,
+    ExtinctionRecord, RepopulationEvent, SpawnAnimalRequest, WildlifeEntity,
+};
 pub use generation::MapArchetype;
 use generation::MapGenerator;
 use serde::{Deserialize, Serialize};
@@ -39,6 +42,8 @@ pub struct WorldGrid {
     pub altars: Vec<Altar>,
     pub wildlife: Vec<WildlifeEntity>,
     pub next_entity_id: usize,
+    #[serde(default)]
+    pub ecology: EcologyManager,
 }
 
 impl Default for WorldGrid {
@@ -65,6 +70,7 @@ impl WorldGrid {
             altars,
             wildlife,
             next_entity_id: next_id,
+            ecology: EcologyManager::default(),
         }
     }
 
@@ -93,6 +99,7 @@ impl WorldGrid {
         self.wildlife = wildlife;
         self.next_entity_id = next_id;
         self.gaia = GaiaEngine::new();
+        self.ecology = EcologyManager::default();
 
         map_title
     }

@@ -1,13 +1,47 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use parking_lot::RwLock;
+use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
 
 use cogniverse_rpg::server::create_router;
 use cogniverse_rpg::server::state::SimulationEngine;
+use cogniverse_rpg::world::headless::HeadlessSimulator;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+    let mut seed: u64 = 42;
+    let mut headless_years: Option<u32> = None;
+    let mut face_size: u16 = 64;
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--seed" if i + 1 < args.len() => {
+                seed = args[i + 1].parse().unwrap_or(42);
+                i += 1;
+            }
+            "--headless-years" if i + 1 < args.len() => {
+                headless_years = args[i + 1].parse().ok();
+                i += 1;
+            }
+            "--face-size" if i + 1 < args.len() => {
+                face_size = args[i + 1].parse().unwrap_or(64);
+                i += 1;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    if let Some(years) = headless_years {
+        HeadlessSimulator::run(years, seed, face_size);
+        return Ok(());
+    }
+
     println!("========================================================");
     println!("     GENESIS COGNIVERSE: AUTONOMOUS AI RPG SIMULATION   ");
     println!("  CPU-First Darwin-Gödel AST & Dual Pantheon Engine     ");

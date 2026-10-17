@@ -683,6 +683,65 @@ cargo build --release
 
 ---
 
+## 🌐 Civilization Simulator Evolution: Phase 1 — Cube-Sphere World & Headless Simulation
+
+In accordance with Phase 1 of the Pixel-Art Civilization Simulator specification, the planetary engine has transitioned to a continuous, singularity-free **Cube-Sphere ($6 \times N \times N$) World** supporting dual-scale viewports, seamless 3D noise biomes, atomic versioned binary persistence, and long-horizon headless soak testing.
+
+### 📐 Architectural Highlights
+
+1. **Singularity-Free $6 \times N \times N$ Cube-Sphere Geometry (`src/world/cube_sphere.rs`)**:
+   - Represents the planetary surface as six interconnected square faces ($N \times N$ cells each) mapped onto a sphere via 3D unit vectors (`cell_dir(face, x, y, n) -> glam::Vec3`).
+   - Completely eliminates polar pinching and map-edge wrapping artifacts common in 2D equirectangular grids.
+   - Robust edge-stitching logic in `CellId::neighbors(n)` provides seamless cross-face navigation and orthogonal neighbor symmetry, verified by both deterministic unit tests and randomized property-based fuzzing (`proptest`).
+
+2. **Continuous 3D Spherical Terrain & Climate Generation (`src/world/planet.rs`)**:
+   - Generates terrain and moisture using multi-octave 3D OpenSimplex noise evaluated directly at 3D spherical coordinates, ensuring zero seams across cube face boundaries.
+   - Simulates latitude-dependent thermal dynamics: equatorial warmth ($+32^\circ\text{C}$) transitioning to freezing polar caps ($-14^\circ\text{C}$) modulated by local elevation and micro-climatic roughness.
+   - Automatically establishes 12 distinct, vibrant biomes: `DeepOcean`, `CloseOcean`, `SunlitPlains`, `WhisperingForest`, `CrystalRiverlands`, `IroncragMountains`, `AncientLeylineRuins`, `Savanna`, `Jungle`, `CorruptedInfernal`, `PermafrostTundra`, and `Swamp`.
+   - Procedurally distributes Points of Interest (POIs) across landmasses: `AncientRuins`, `AncientWonder`, `DungeonEntrance`, and `SacredShrine`.
+
+3. **Dual Viewport System (`src/world/views.rs`)**:
+   - **`GlobeView`**: 3D nearest-neighbor orthographic sphere raycaster rendering real-time planetary pixel-art projections with latitude and longitude rotation.
+   - **`RegionView`**: Top-down 2D tile matrix window extraction around any target coordinate for tactical city management, god-mode interactions, and local settlement simulation.
+
+4. **Atomic Versioned Binary Save/Load Engine (`src/world/saves.rs`)**:
+   - Uses `bincode` for ultra-fast, compact binary serialization storing seed, world age, face size, active settlements, and all $6 \times N \times N$ tile states.
+   - Safe atomic double-buffering via temporary file generation followed by rename into `%APPDATA%/cogniverse-rpg/saves/<slot_name>.bin`.
+   - Embeds CRC32 checksum verification and schema versioning (`SAVE_VERSION = 1`) to guarantee save file integrity.
+
+5. **Headless 100-Year Simulation & CLI Runner (`src/world/headless.rs`, `src/main.rs`)**:
+   - Built-in headless execution mode running 100 simulated in-game years (1,200 monthly ticks) at maximum CPU speed without GUI overhead.
+   - CLI flags: `--headless-years <years>`, `--seed <seed>`, `--face-size <size>`.
+   - Verified natural population and environmental evolution with stable memory profiles and zero memory leaks.
+
+### 🧪 Phase 1 Test Coverage (`tests/phase1_cube_sphere_tests.rs`)
+
+| Test Name | Verifications |
+|---|---|
+| `test_cube_sphere_world_generation_and_biomes` | Verifies $6 \times N \times N$ cell layout, elevation bounds, continuous biome generation across oceans, mountains, forests, tundras, and polar thermal gradients. |
+| `test_globe_view_and_region_view` | Verifies 3D orthographic sphere projection rendering, pixel transparency bounds, and 2D local region window extraction. |
+| `test_atomic_binary_save_and_load` | Verifies atomic binary serialization, CRC32 integrity validation, round-trip state fidelity, and corruption rejection. |
+| `test_100_year_headless_simulation_soak_test` | Verifies headless 100-year simulation soak test (1,200 monthly ticks) with continuous demographic tracking and stable performance. |
+
+### 🛠️ Phase 1 Verification & Acceptance Gates
+
+All four acceptance gates pass cleanly:
+```bash
+# 1. Format check
+cargo fmt --check
+
+# 2. Strict lints & zero warnings
+cargo clippy --all-targets -- -D warnings
+
+# 3. Full test suite (33 passing tests across 5 test suites)
+cargo test
+
+# 4. Production release build (LTO, codegen-units = 1)
+cargo build --release
+```
+
+---
+
 ## 🚀 Getting Started & Local Installation
 
 ### Prerequisites

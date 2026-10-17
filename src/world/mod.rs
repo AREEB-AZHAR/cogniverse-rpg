@@ -1,11 +1,22 @@
 pub mod altar;
 pub mod cellular;
 pub mod commands;
+pub mod cube_sphere;
 pub mod ecology;
 pub mod fauna;
 pub mod generation;
+pub mod headless;
 pub mod items;
+pub mod planet;
+pub mod saves;
 pub mod tile;
+pub mod views;
+
+pub use cube_sphere::{cell_dir, CellId};
+pub use headless::{HeadlessSimResult, HeadlessSimulator, TICKS_PER_YEAR};
+pub use planet::{CubeSphereWorld, PoiKind, PointOfInterest};
+pub use saves::{SaveError, SaveSystem};
+pub use views::{GlobeView, RegionView};
 
 use altar::Altar;
 use cellular::CellularAutomataEngine;

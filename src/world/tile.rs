@@ -79,7 +79,7 @@ pub enum FrozenState {
     Snow,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BiomeType {
     SunlitPlains,
     WhisperingForest,
@@ -91,6 +91,8 @@ pub enum BiomeType {
     CorruptedInfernal,
     PermafrostTundra,
     Swamp,
+    DeepOcean,
+    CloseOcean,
 }
 
 impl BiomeType {
@@ -106,6 +108,8 @@ impl BiomeType {
             BiomeType::CorruptedInfernal => 7,
             BiomeType::PermafrostTundra => 8,
             BiomeType::Swamp => 9,
+            BiomeType::DeepOcean => 10,
+            BiomeType::CloseOcean => 11,
         }
     }
 
@@ -130,6 +134,8 @@ impl BiomeType {
             BiomeType::CorruptedInfernal => "Infernal Wasteland",
             BiomeType::PermafrostTundra => "Permafrost Tundra",
             BiomeType::Swamp => "Murky Swamp",
+            BiomeType::DeepOcean => "Deep Ocean",
+            BiomeType::CloseOcean => "Coastal Ocean",
         }
     }
 
@@ -145,6 +151,8 @@ impl BiomeType {
             BiomeType::CorruptedInfernal => "#991b1b", // Ash volcanic red
             BiomeType::PermafrostTundra => "#e0f2fe",  // Pale frosted snow
             BiomeType::Swamp => "#3f6212",             // Murky moss olive
+            BiomeType::DeepOcean => "#0c4a6e",         // Deep navy ocean
+            BiomeType::CloseOcean => "#0369a1",        // Coastal shelf ocean
         }
     }
 
@@ -160,6 +168,8 @@ impl BiomeType {
             BiomeType::CorruptedInfernal => 45.0,
             BiomeType::PermafrostTundra => -8.0,
             BiomeType::Swamp => 22.0,
+            BiomeType::DeepOcean => 12.0,
+            BiomeType::CloseOcean => 15.0,
         }
     }
 
@@ -175,6 +185,8 @@ impl BiomeType {
             BiomeType::Swamp => 6,
             BiomeType::CrystalRiverlands => 0,
             BiomeType::IroncragMountains => 0,
+            BiomeType::DeepOcean => 0,
+            BiomeType::CloseOcean => 0,
         }
     }
 
@@ -417,6 +429,7 @@ impl Tile {
                 BiomeType::AncientLeylineRuins => 0.45,
                 BiomeType::PermafrostTundra => 0.15,
                 BiomeType::CorruptedInfernal => 0.10,
+                BiomeType::DeepOcean | BiomeType::CloseOcean => 0.0,
             },
             temperature: biome.base_temperature(),
             mana_density: match biome {
@@ -524,6 +537,9 @@ impl Tile {
                 tile.wood_amount = 25;
                 tile.berry_amount = 14;
                 tile.flint_amount = 8;
+            }
+            BiomeType::DeepOcean | BiomeType::CloseOcean => {
+                // Ocean tiles have no land resources
             }
         }
 

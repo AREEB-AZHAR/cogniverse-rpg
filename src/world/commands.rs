@@ -160,6 +160,7 @@ impl PathCostCache {
                     0 // Impassable deep/close ocean without boat or ice
                 } else {
                     match tile.biome {
+                        BiomeType::DeepOcean | BiomeType::CloseOcean => 0,
                         BiomeType::CrystalRiverlands => 4, // Shallow fordable water
                         BiomeType::IroncragMountains => 6,
                         BiomeType::WhisperingForest | BiomeType::Jungle => 3,

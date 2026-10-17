@@ -1,6 +1,7 @@
 pub mod altar;
 pub mod cellular;
 pub mod commands;
+pub mod construction;
 pub mod cube_sphere;
 pub mod ecology;
 pub mod fauna;
@@ -12,6 +13,7 @@ pub mod saves;
 pub mod tile;
 pub mod views;
 
+pub use construction::{Blueprint, ConstructionStage, JobBoard};
 pub use cube_sphere::{cell_dir, CellId};
 pub use headless::{HeadlessSimResult, HeadlessSimulator, TICKS_PER_YEAR};
 pub use planet::{CubeSphereWorld, PoiKind, PointOfInterest};
@@ -44,6 +46,8 @@ pub struct WorldGrid {
     pub next_entity_id: usize,
     #[serde(default)]
     pub ecology: EcologyManager,
+    #[serde(default)]
+    pub job_board: JobBoard,
 }
 
 impl Default for WorldGrid {
@@ -71,6 +75,7 @@ impl WorldGrid {
             wildlife,
             next_entity_id: next_id,
             ecology: EcologyManager::default(),
+            job_board: JobBoard::new(),
         }
     }
 
@@ -100,6 +105,7 @@ impl WorldGrid {
         self.next_entity_id = next_id;
         self.gaia = GaiaEngine::new();
         self.ecology = EcologyManager::default();
+        self.job_board = JobBoard::new();
 
         map_title
     }
@@ -229,5 +235,22 @@ impl WorldGrid {
             };
             self.wildlife.push(WildlifeEntity::new(id, species, rx, ry));
         }
+    }
+
+    /// Executes one tick of autonomous construction work for an agent on the world's job board
+    pub fn perform_construction_step(
+        &mut self,
+        agent_id: usize,
+        inventory: &mut items::Inventory,
+        needs: &mut crate::agent::needs::NpcNeeds,
+    ) -> bool {
+        crate::agent::utility_ai::UtilityAi::perform_construction_step(
+            agent_id,
+            inventory,
+            needs,
+            &mut self.job_board,
+            &mut self.tiles,
+            self.width,
+        )
     }
 }

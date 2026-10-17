@@ -1,3 +1,9 @@
+pub mod needs;
+pub mod utility_ai;
+
+pub use needs::NpcNeeds;
+pub use utility_ai::{UtilityAi, UtilityGoal, UTILITY_STICKINESS};
+
 use super::brain::ast::EntityFilter;
 use super::brain::desire::AmbitionArchetype;
 use super::brain::memory::AncestralEcho;
@@ -46,6 +52,11 @@ pub struct Agent {
     pub energy: f32,      // 0.0 (exhausted) to 1.0 (energized)
     pub warmth: f32,      // 0.0 (freezing) to 1.0 (comfortably warm)
     pub social_need: f32, // 0.0 (content) to 1.0 (lonely)
+
+    #[serde(default)]
+    pub needs: NpcNeeds,
+    #[serde(default)]
+    pub utility_ai: UtilityAi,
 
     // Inventory & Tools
     pub inventory: Inventory,
@@ -148,6 +159,8 @@ impl Agent {
             energy: 0.90,
             warmth: 0.80,
             social_need: 0.30,
+            needs: NpcNeeds::new(),
+            utility_ai: UtilityAi::new(),
             inventory,
             brain,
             partner_id: None,
@@ -265,25 +278,21 @@ impl Agent {
         self.thirst = (self.thirst + 0.0010).min(1.0);
         self.social_need = (self.social_need + 0.0006).min(1.0);
 
-        // Auto-consume food from inventory if hungry
-        if self.hunger > 0.45 {
-            if self.inventory.count(ItemId::Berry) > 0 {
-                self.inventory.remove(ItemId::Berry, 1);
-                self.hunger = (self.hunger - 0.40).max(0.0);
-                self.brain
-                    .neuromod
-                    .update(0.3, 1.0 - self.hunger, false, false, 0.0);
-            } else if self.inventory.count(ItemId::Grain) > 0 {
-                self.inventory.remove(ItemId::Grain, 1);
-                self.hunger = (self.hunger - 0.30).max(0.0);
-                self.brain
-                    .neuromod
-                    .update(0.2, 1.0 - self.hunger, false, false, 0.0);
-            }
-        }
-
         // Environmental thermal balance
         let ambient_temp = current_tile.temperature + current_weather_temp_delta;
+        let has_shelter = current_tile.structure.is_some();
+        self.needs.tick_decay(ambient_temp, has_shelter, false);
+
+        // Auto-consume food from inventory if hungry (supports Bread, Berries, Grain)
+        if (self.hunger > 0.45 || self.needs.hunger > 0.45)
+            && UtilityAi::consume_best_food(&mut self.inventory, &mut self.needs)
+        {
+            self.hunger = self.needs.hunger;
+            self.brain
+                .neuromod
+                .update(0.3, 1.0 - self.hunger, false, false, 0.0);
+        }
+
         if ambient_temp < 8.0 {
             self.warmth = (self.warmth - 0.0015).max(0.0);
         } else if ambient_temp > 28.0 {

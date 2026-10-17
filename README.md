@@ -520,14 +520,25 @@ cogniverse-rpg/
 ├── src/
 │   ├── lib.rs                         # Exported library root for modular architecture & tests
 │   ├── main.rs                        # System entrypoint, CLI runner, background simulation ticker
-│   ├── world/                         # Environment & Living Nature
-│   │   ├── mod.rs                     # 128x128 spatial grid coordinator and tick dispatcher
-│   │   ├── tile.rs                    # Biomes, elevation layers, structures (TownHall, Barracks, etc.)
+│   ├── agent/                         # Autonomous NPC Agents & Utility AI
+│   │   ├── mod.rs                     # Agent entity, vitals, inventory, and sensory distances
+│   │   ├── needs.rs                   # Dave Mark's IAUS NpcNeeds (hunger, rest, safety, shelter, social)
+│   │   └── utility_ai.rs              # Quadratic utility curves U(x)=x^2, hysteresis (0.15), unbiased wander
+│   ├── world/                         # Environment, Cube-Sphere & Living Nature
+│   │   ├── mod.rs                     # Spatial grid coordinator, construction runner, tick dispatcher
+│   │   ├── tile.rs                    # Biomes, elevation layers, placed structures (TownHall, Docks, etc.)
+│   │   ├── construction.rs            # Multi-stage construction pipeline (Clearing -> Hauling -> Framing) & JobBoard
+│   │   ├── commands.rs                # Unified EditCommand pipeline with undo/redo & cache invalidation
+│   │   ├── cube_sphere.rs             # Continuous 6xNxN cube-sphere topology & seamless edge-stitching
+│   │   ├── planet.rs                  # 3D spherical OpenSimplex terrain, biomes, and Points of Interest
+│   │   ├── views.rs                   # Dual-viewport system (3D GlobeView raycaster & 2D RegionView)
+│   │   ├── saves.rs                   # Atomic versioned binary save/load engine with CRC32 verification
+│   │   ├── headless.rs                # 100-year headless simulation soak runner (1,200 monthly ticks)
 │   │   ├── generation.rs              # 7 procedural map archetypes with custom seeds & noise tuning
 │   │   ├── cellular.rs                # WorldBox cellular automata (Lava, Wildfire, Freeze/Thaw, Biome Creep)
 │   │   ├── items.rs                   # Item catalog, crafting recipe matrix, inventory system
 │   │   ├── ecology.rs                 # Gaia Engine: Thermodynamic solar cycle, flora logistic growth
-│   │   ├── fauna.rs                   # Adaptive wildlife AI (Predator/prey carrying capacity)
+│   │   ├── fauna.rs                   # Adaptive wildlife AI (Herbivore/Carnivore/Omnivore food chains & husbandry)
 │   │   └── altar.rs                   # Solar/Lunar Altars, sacrificial deposits, sincerity scoring
 │   ├── brain/                         # Cognitive Engine
 │   │   ├── mod.rs                     # Cognitive pipeline coordinator
@@ -555,7 +566,12 @@ cogniverse-rpg/
 │   ├── style.css                      # Sleek dark-mode glassmorphic styling, archetype cards, progress bars
 │   └── app.js                         # High-performance 60fps canvas renderer, pixel-art structures, WS client
 └── tests/
-    └── simulation_tests.rs            # 19-case comprehensive unit & integration test suite
+    ├── phase0_regression_tests.rs     # Regression tests for Bug 1 (terrain/undo), Bug 2 (mines), Bug 3 (animals)
+    ├── phase1_cube_sphere_tests.rs    # Cube-sphere generation, Globe/Region view, binary save/load, 100-year sim
+    ├── phase2_ecology_tests.rs        # Food web, grazing/hunting/fleeing, carrying capacity, extinction & farming
+    ├── phase3_utility_construction_tests.rs # Utility AI hysteresis, unbiased exploration, food nutrition & job board
+    ├── repro_known_bugs.rs            # Initial repro tests for known bugs
+    └── simulation_tests.rs            # Comprehensive unit & integration test suite (20 cases)
 ```
 
 ---
@@ -798,6 +814,79 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 
 # 3. Full test suite (37 passing tests across 6 test suites)
+cargo test
+
+# 4. Production release build (LTO, codegen-units = 1)
+cargo build --release
+```
+
+---
+
+## 🏘️ Civilization Simulator Evolution: Phase 3 — NPC Needs, Utility AI with Hysteresis & Construction Pipeline (Fixing Bug 4)
+
+In accordance with Phase 3 of the Pixel-Art Civilization Simulator specification, the agent cognition engine now features **Dave Mark's Infinite Axis Utility System (IAUS)** with quadratic response curves, **hysteresis stickiness** (`UTILITY_STICKINESS = 0.15`), a **decentralized multi-stage Construction Job Board**, and complete resolution of **Bug 4** (eliminating top-of-map wander drift and establishing diverse food consumption).
+
+### 📐 Architectural Highlights
+
+1. **Autonomous NPC Needs Model (`src/agent/needs.rs`)**:
+   - Implements 5 physiological and social drives:
+     - `hunger`: Metabolic food deficit ($0.0$ sated $\to 1.0$ starving).
+     - `rest`: Fatigue and sleep need ($0.0$ energized $\to 1.0$ exhausted).
+     - `safety`: Threat perception from nearby predators ($0.0$ safe $\to 1.0$ imminent mortal danger).
+     - `shelter`: Environmental exposure ($0.0$ sheltered warmly $\to 1.0$ exposed to freezing cold or rain).
+     - `social`: Loneliness and community drive ($0.0$ content $\to 1.0$ isolated).
+   - Labor fatigue multipliers: intensive construction or mining increases hunger and exhaustion rate by $1.8\times$.
+   - Environmental modifier decay: shelter need increases when ambient temperature drops below $10^\circ\text{C}$ and rapidly recovers when resting in cottages, cabins, or campfires.
+
+2. **Dave Mark's IAUS with Quadratic Response Curves & Hysteresis (`src/agent/utility_ai.rs`)**:
+   - Quadratic consideration curves $U(x) = x^2$ ensure that mild needs generate gentle utility while severe deficits escalate exponentially into decisive urgency.
+   - **Hysteresis Stickiness (`UTILITY_STICKINESS = 0.15`)**:
+     - Prevents rapid decision jitter / thrashing between competing goals (e.g. oscillating between eating and sleeping when both needs are near $0.55$).
+     - The currently active action receives a $+0.15$ utility persistence bonus. Competing needs must genuinely outweigh this threshold to induce a task switch.
+   - **Emergency Threat Preemption**:
+     - Imminent danger (`safety = 1.0`) evaluates with an emergency multiplier ($1.6\times$), instantly preempting all lower-priority tasks to trigger `UtilityGoal::FleeDanger`.
+
+3. **Complete Resolution of Bug 4: Unbiased Isotropic Exploration & Diverse Nutrition**:
+   - **Unbiased Isotropic Wander (`UtilityAi::unbiased_wander_step`)**:
+     - Replaced coordinate-clamped random walk with continuous angular trajectory dynamics ($\theta \in [0, 2\pi)$) featuring momentum perturbations, producing organic roaming arcs across the entire continent.
+   - **Symmetric Spatial Tie-Breaking (`src/server/state.rs`)**:
+     - Fixed deterministic north-bias in `find_nearest_target_coords`: previous code evaluated `min_y` first and strictly ignored equidistant southern tiles (`d_sq < best_dist_sq`).
+     - Added spatial/temporal hash tie-breaking (`should_replace`) balancing North, South, East, and West symmetrically, preventing systematic drift toward $y \to 0$.
+   - **Diverse Food Consumption Hierarchy (`UtilityAi::consume_best_food`)**:
+     - Satiates hunger using best available provisions: `Bread` ($+0.60$ nutrition), `Berry` ($+0.40$ nutrition), or `Grain` ($+0.30$ nutrition).
+     - Directly integrated into `tick_vitals`: hungry citizens automatically consume bread or berries from their inventory before starvation occurs.
+
+4. **Decentralized Multi-Stage Construction Pipeline & Job Board (`src/world/construction.rs`)**:
+   - **`JobBoard`**: Manages community architectural blueprints with claiming, material delivery, labor application, and release mechanics.
+   - **Multi-Stage Physical Progression**:
+     1. `SiteClearing`: Ground preparation (first 10 labor ticks).
+     2. `MaterialHauling`: Haulers fetch required wood and stone from inventory and deposit them into the blueprint.
+     3. `Framing`: Structural carpenters apply labor ticks once all materials are delivered.
+     4. `Completed`: Spawns finished pixel-art structure directly onto the `WorldGrid` tile and clears the job.
+   - **Maritime Structures Added (`src/world/tile.rs`)**:
+     - `StructureKind::Dock` (`⚓`): Fishing and coastal transit hub (requires 12 wood, 4 stone, 35 labor ticks; 140 HP).
+     - `StructureKind::BoatYard` (`⛵`): Shipwright boat yard (requires 20 wood, 8 stone, 60 labor ticks; 240 HP).
+
+### 🧪 Phase 3 Test Coverage (`tests/phase3_utility_construction_tests.rs`)
+
+| Test Name | Verifications |
+|---|---|
+| `test_utility_ai_hysteresis_and_preemption` | Verifies $U(x) = x^2$ curve evaluation, hysteresis stickiness preventing jitter when rest rises slightly above hunger, breakthrough switching on critical fatigue, and instantaneous preemption by mortal danger. |
+| `test_unbiased_isotropic_exploration_no_north_bias` | 1,000-step wander soak test verifying balanced directional movement across all four compass directions (North vs South ratio between 0.20 and 0.80) with zero drift or entrapment at $y = 0$. |
+| `test_food_consumption_diversity_hierarchy` | Verifies food consumption hierarchy: Bread (+0.60) prioritised over Berry (+0.40), followed by Grain (+0.30), with accurate hunger reduction and inventory accounting. |
+| `test_construction_pipeline_job_board_lifecycle` | Verifies full construction lifecycle: blueprint posting, site clearing stage transition, material hauling and delivery from inventory, framing labor, structure placement on `WorldGrid`, and maritime Dock & BoatYard blueprint definitions. |
+
+### 🛠️ Phase 3 Verification & Acceptance Gates
+
+All four acceptance gates pass cleanly:
+```bash
+# 1. Format check
+cargo fmt --check
+
+# 2. Strict lints & zero warnings
+cargo clippy --all-targets -- -D warnings
+
+# 3. Full test suite (41 passing tests across 6 test suites)
 cargo test
 
 # 4. Production release build (LTO, codegen-units = 1)

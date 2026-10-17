@@ -300,6 +300,8 @@ pub enum StructureKind {
     Fence,
     AnimalPen,
     Barn,
+    Dock,
+    BoatYard,
 }
 
 impl StructureKind {
@@ -320,6 +322,8 @@ impl StructureKind {
             StructureKind::Fence => "Wooden Fence",
             StructureKind::AnimalPen => "Pasture Animal Pen",
             StructureKind::Barn => "Livestock Barn",
+            StructureKind::Dock => "Fishing Dock",
+            StructureKind::BoatYard => "Shipwright Boat Yard",
         }
     }
 
@@ -351,6 +355,8 @@ impl StructureKind {
             StructureKind::Fence => "🪵",
             StructureKind::AnimalPen => "🐑",
             StructureKind::Barn => "🏚️",
+            StructureKind::Dock => "⚓",
+            StructureKind::BoatYard => "⛵",
         }
     }
 }
@@ -381,6 +387,8 @@ impl PlacedStructure {
             StructureKind::Fence => 60.0,
             StructureKind::AnimalPen => 120.0,
             StructureKind::Barn => 200.0,
+            StructureKind::Dock => 140.0,
+            StructureKind::BoatYard => 240.0,
         };
         Self {
             kind,

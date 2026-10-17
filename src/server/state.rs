@@ -1295,6 +1295,21 @@ impl SimulationEngine {
                 let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
                 let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
 
+                let should_replace = |d_sq: isize, best_d: isize, tx: usize, ty: usize| -> bool {
+                    if d_sq < best_d {
+                        true
+                    } else if d_sq == best_d {
+                        (tx.wrapping_mul(31)
+                            ^ ty.wrapping_mul(73)
+                            ^ agent.id.wrapping_mul(17)
+                            ^ (agent.age_ticks as usize))
+                            & 1
+                            == 0
+                    } else {
+                        false
+                    }
+                };
+
                 let mut best = None;
                 let mut best_dist_sq = 999999;
                 for y in min_y..=max_y {
@@ -1304,7 +1319,7 @@ impl SimulationEngine {
                             let dx = x as isize - ax;
                             let dy = y as isize - ay;
                             let d_sq = dx * dx + dy * dy;
-                            if d_sq < best_dist_sq {
+                            if should_replace(d_sq, best_dist_sq, x, y) {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
                                 if d_sq <= 4 {
@@ -1325,6 +1340,21 @@ impl SimulationEngine {
                 let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
                 let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
 
+                let should_replace = |d_sq: isize, best_d: isize, tx: usize, ty: usize| -> bool {
+                    if d_sq < best_d {
+                        true
+                    } else if d_sq == best_d {
+                        (tx.wrapping_mul(31)
+                            ^ ty.wrapping_mul(73)
+                            ^ agent.id.wrapping_mul(17)
+                            ^ (agent.age_ticks as usize))
+                            & 1
+                            == 0
+                    } else {
+                        false
+                    }
+                };
+
                 let mut best = None;
                 let mut best_dist_sq = 999999;
                 for y in min_y..=max_y {
@@ -1334,7 +1364,7 @@ impl SimulationEngine {
                             let dx = x as isize - ax;
                             let dy = y as isize - ay;
                             let d_sq = dx * dx + dy * dy;
-                            if d_sq < best_dist_sq {
+                            if should_replace(d_sq, best_dist_sq, x, y) {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
                                 if d_sq <= 4 {
@@ -1355,6 +1385,21 @@ impl SimulationEngine {
                 let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
                 let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
 
+                let should_replace = |d_sq: isize, best_d: isize, tx: usize, ty: usize| -> bool {
+                    if d_sq < best_d {
+                        true
+                    } else if d_sq == best_d {
+                        (tx.wrapping_mul(31)
+                            ^ ty.wrapping_mul(73)
+                            ^ agent.id.wrapping_mul(17)
+                            ^ (agent.age_ticks as usize))
+                            & 1
+                            == 0
+                    } else {
+                        false
+                    }
+                };
+
                 let mut best = None;
                 let mut best_dist_sq = 999999;
                 for y in min_y..=max_y {
@@ -1364,7 +1409,7 @@ impl SimulationEngine {
                             let dx = x as isize - ax;
                             let dy = y as isize - ay;
                             let d_sq = dx * dx + dy * dy;
-                            if d_sq < best_dist_sq {
+                            if should_replace(d_sq, best_dist_sq, x, y) {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
                                 if d_sq <= 4 {
@@ -1385,6 +1430,21 @@ impl SimulationEngine {
                 let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
                 let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
 
+                let should_replace = |d_sq: isize, best_d: isize, tx: usize, ty: usize| -> bool {
+                    if d_sq < best_d {
+                        true
+                    } else if d_sq == best_d {
+                        (tx.wrapping_mul(31)
+                            ^ ty.wrapping_mul(73)
+                            ^ agent.id.wrapping_mul(17)
+                            ^ (agent.age_ticks as usize))
+                            & 1
+                            == 0
+                    } else {
+                        false
+                    }
+                };
+
                 let mut best = None;
                 let mut best_dist_sq = 999999;
                 for y in min_y..=max_y {
@@ -1394,7 +1454,7 @@ impl SimulationEngine {
                             let dx = x as isize - ax;
                             let dy = y as isize - ay;
                             let d_sq = dx * dx + dy * dy;
-                            if d_sq < best_dist_sq {
+                            if should_replace(d_sq, best_dist_sq, x, y) {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
                                 if d_sq <= 4 {
@@ -1415,6 +1475,21 @@ impl SimulationEngine {
                 let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
                 let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
 
+                let should_replace = |d_sq: isize, best_d: isize, tx: usize, ty: usize| -> bool {
+                    if d_sq < best_d {
+                        true
+                    } else if d_sq == best_d {
+                        (tx.wrapping_mul(31)
+                            ^ ty.wrapping_mul(73)
+                            ^ agent.id.wrapping_mul(17)
+                            ^ (agent.age_ticks as usize))
+                            & 1
+                            == 0
+                    } else {
+                        false
+                    }
+                };
+
                 let mut best = None;
                 let mut best_dist_sq = 999999;
                 for y in min_y..=max_y {
@@ -1424,7 +1499,7 @@ impl SimulationEngine {
                             let dx = x as isize - ax;
                             let dy = y as isize - ay;
                             let d_sq = dx * dx + dy * dy;
-                            if d_sq < best_dist_sq {
+                            if should_replace(d_sq, best_dist_sq, x, y) {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
                                 if d_sq <= 4 {
@@ -1481,6 +1556,21 @@ impl SimulationEngine {
                 let min_y = (ay - r).clamp(0, (world.height - 1) as isize) as usize;
                 let max_y = (ay + r).clamp(0, (world.height - 1) as isize) as usize;
 
+                let should_replace = |d_sq: isize, best_d: isize, tx: usize, ty: usize| -> bool {
+                    if d_sq < best_d {
+                        true
+                    } else if d_sq == best_d {
+                        (tx.wrapping_mul(31)
+                            ^ ty.wrapping_mul(73)
+                            ^ agent.id.wrapping_mul(17)
+                            ^ (agent.age_ticks as usize))
+                            & 1
+                            == 0
+                    } else {
+                        false
+                    }
+                };
+
                 let mut best = None;
                 let mut best_dist_sq = 999999;
                 for y in min_y..=max_y {
@@ -1490,7 +1580,7 @@ impl SimulationEngine {
                             let dx = x as isize - ax;
                             let dy = y as isize - ay;
                             let d_sq = dx * dx + dy * dy;
-                            if d_sq < best_dist_sq {
+                            if should_replace(d_sq, best_dist_sq, x, y) {
                                 best_dist_sq = d_sq;
                                 best = Some((x, y));
                                 if d_sq <= 4 {

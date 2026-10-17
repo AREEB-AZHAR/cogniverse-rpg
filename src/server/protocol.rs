@@ -41,6 +41,31 @@ pub enum TerraformBrush {
     SeedJungle,
     SeedCorrupted,
     SeedPermafrost,
+    // Master Prompt Brushes: Elevation, All 10 Mine Types, Architecture & Wildlife
+    RaiseTerrain,
+    LowerTerrain,
+    FlattenTerrain,
+    PlaceSurfaceMine,
+    PlaceQuarry,
+    PlaceHillsideTunnel,
+    PlaceDeepMineShaft,
+    PlaceCaveMine,
+    PlaceHillsideDrift,
+    PlaceUnderwaterDredge,
+    PlaceManaCrystalMine,
+    PlaceRuinExcavation,
+    PlaceDungeonRiftMine,
+    BuildLivestockPen,
+    BuildDock,
+    BuildGuildHall,
+    SpawnAnimalRabbit,
+    SpawnAnimalDeer,
+    SpawnAnimalWolf,
+    SpawnAnimalBear,
+    SpawnAnimalSheep,
+    SpawnAnimalCow,
+    DivineHeal,
+    DivineAwaken,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -139,6 +164,14 @@ pub struct AgentSummary {
     pub last_action: String,
     pub generation: u32,
     pub traits: Vec<String>,
+    #[serde(default)]
+    pub class: String,
+    #[serde(default)]
+    pub rank: String,
+    #[serde(default)]
+    pub level: u32,
+    #[serde(default)]
+    pub current_goal: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -187,6 +220,34 @@ pub struct SelectedAgentDetail {
     pub children_count: u32,
     pub ancestral_echo: Option<String>,
     pub traits: Vec<String>,
+    #[serde(default)]
+    pub class: String,
+    #[serde(default)]
+    pub subclass: Option<String>,
+    #[serde(default)]
+    pub rank: String,
+    #[serde(default)]
+    pub level: u32,
+    #[serde(default)]
+    pub xp: u32,
+    #[serde(default)]
+    pub age: u32,
+    #[serde(default)]
+    pub strength: f32,
+    #[serde(default)]
+    pub vitality: f32,
+    #[serde(default)]
+    pub agility: f32,
+    #[serde(default)]
+    pub intelligence: f32,
+    #[serde(default)]
+    pub wisdom: f32,
+    #[serde(default)]
+    pub charisma: f32,
+    #[serde(default)]
+    pub luck: f32,
+    #[serde(default)]
+    pub current_goal: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

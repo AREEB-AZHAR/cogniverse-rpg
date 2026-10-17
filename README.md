@@ -1432,14 +1432,109 @@ The Genesis Cogniverse interface now features a **seamless dual-mode zoom engine
   - **Golden Maritime Trade Routes**: Dashed golden nautical lanes connecting oceanic ports.
   - **Surface Landmark Glyphs**: Interactive miniature icons for temples, castles, and dungeons with territorial realm tints.
 - **Side Stone Tablet Cards**:
-  - **Sovereign Realms Card (Left)**: Lists active world nations (`🇵🇸 森林聯邦 🕊️`, `🌲 eylias ⚔️`, `🇫🇷 laha ⚔️`, `🇬🇷 mont 🕊️`, `🇪🇸 烈灼帝国 🔥`) with peace doves and crossed sword war indicators.
-  - **Mether Planet Threat Rankings Card (Right)**: Categorizes planetary threat levels (`F`, `C`, `B`, `A` Monster Outburst, `S` Primordial Titan) with star badges.
+  - **Sovereign Realms Card (Left)**: Lists active world nations (`🇵🇸 森林聯邦 🕊️`, `🌲 eylias ⚔️`, `🇫🇷 laha ⚔️`, `🇬🇷 mont 🕊️`, `🇪🇸 烈灼帝国 🔥`) with peace doves and crossed sword war indicators. Clickable navigation instantly pans the camera to sovereign realm territories.
+  - **Mether Planet Threat Rankings Card (Right)**: Categorizes planetary threat levels (`F`, `C`, `B`, `A` Monster Outburst, `S` Primordial Titan) with star badges. Clickable navigation teleports to the Cavern Dungeon Rift or Titan lairs.
 - **Bottom Civilizational Era Progression Bar**:
   - Stone-carved banner tracking the world's technological advancement from `Iron Age → Mana Age` with a glowing purple mana gradient progress fill.
 
 ### 3. Seamless Zoom Navigation
 - **Scroll Mouse Wheel**: Zooming out past `zoom <= 0.35` seamlessly transitions into the Cosmic World Map; zooming in past `zoom > 0.35` seamlessly transitions into the detailed Tactical Village View.
 - **Hotkey `M` / Buttons**: Click `🌍 Map (M)` or `[Back to Village (M)]` at any time for instant mode switching.
+
+---
+
+## 🏛️ Phase 11: Aether Planet Master Suite & Interactive Completion
+
+Phase 11 fulfills the complete specifications of the **Aether Planet Master Prompt**, transitioning the simulation from passive wandering into **purposeful, goal-driven intelligent agents**, introducing the **Age-16 Temple Awakening Ritual**, integrating all **10 Master Mine Types**, complete **terrain elevation & biome modification**, and delivering a 100% interactive retro console interface where every button, feed entry, card, and popover is fully operational.
+
+### 📸 Verification Gallery
+
+| Tactical Village & Inspected Hero | Atmospheric Climate Codex |
+|:---:|:---:|
+| ![Tactical Village & Inspected Hero](screenshots/village_tactical_view_master.png) | ![Atmospheric Climate Codex](screenshots/climate_codex_popover.png) |
+| *Live tactical village showing dynamic NPC Inspector with Rank Badges, 4-stat attributes, live goal, and quick-jump mini-map.* | *Atmospheric Climate Codex detailing crop multipliers, movement modifiers, and divine weather miracle controls.* |
+
+| All 10 Master Mine Types | Terrain & Elevation Pipeline |
+|:---:|:---:|
+| ![All 10 Master Mine Types](screenshots/mines_sub_palette_10_types.png) | ![Terrain & Elevation Pipeline](screenshots/nature_sub_palette_elevation.png) |
+| *Sub-palette tray displaying all 10 specialized mine types from Surface Pits to Abyssal Dungeon Rifts.* | *Nature sub-palette displaying Raise, Lower, Flatten elevation brushes and rich biome painters.* |
+
+| Miracles & Wildlife Fauna | Awakened S-Rank Hero |
+|:---:|:---:|
+| ![Miracles & Wildlife Fauna](screenshots/miracles_sub_palette_fauna.png) | ![Awakened S-Rank Hero](screenshots/npc_live_inspector_awakened.png) |
+| *Miracles & Wildlife sub-palette with Divine Spark Heal, Awakening decree, and 6 huntable/farmable animals.* | *Awakened Warrior with S-Rank badge, golden armor styling, and combat pilgrimage motivation.* |
+
+| Cosmic World Map Navigation |
+|:---:|
+| ![Cosmic World Map Navigation](screenshots/cosmic_world_map_master.png) |
+| *Cosmic planetary view with interactive Sovereign Realms and Threat Rankings cards for one-click global camera panning.* |
+
+---
+
+### 🧠 Core Architectural Features Completed
+
+#### 1. Purposeful Goal-Driven Infinite Axis Utility AI
+- Replaced aimless origin-seeking wander routines with **Infinite Axis Utility AI** (`src/world/utility_ai.rs` & `src/server/state.rs`).
+- NPCs continuously evaluate competing biological drives and world opportunities with hysteresis and momentum:
+  - **Temple Blessing Pilgrimage (`UtilityGoal::SeekBlessing`)**: When reaching adulthood (age 16+), unawakened mortals embark on a spiritual journey across the continent to the **Solar Altar Temple at (68, 40)**.
+  - **Cavern Dungeon Expeditions (`UtilityGoal::ExploreDungeon`)**: Awakened warrior classes form combat parties to delve into the **Cavern Dungeon Rift at (42, 40)** to battle monsters, earn combat XP, and harvest raw Mana Crystals.
+  - **Job Board Construction Hauling (`UtilityGoal::ConstructBuilding`)**: Laborers accept public blueprints from `world.job_board`, hauling timber and hewn stone to erect civic architecture.
+  - **Farmland Harvesting & Forestry (`UtilityGoal::HarvestFood`)**: Agriculturalists harvest ripe golden wheat at Farmland (60, 48) and fell timber in Whispering Forest.
+  - **Unbiased Isotropic Wander**: When exploring, agents use `unbiased_wander_step`, preserving momentum without sticking to map margins or (0,0).
+
+#### 2. Coming-of-Age Temple Blessing & Class Awakening
+- **Age-16 Pilgrimage**: NPCs reaching adulthood journey to the Solar Altar at `(68, 40)`.
+- **Rank Tier Rolling**: Stochastically rolls an innate potential rank from **F to SSS** based on a weighted distribution (`F`: 40%, `E`: 25%, `D`: 15%, `C`: 10%, `B`: 5%, `A`: 3%, `S`: 1.5%, `SS`: 0.4%, `SSS`: 0.1%).
+- **Vocation Assignment**: Assigns an authentic RPG class based on dominant attributes:
+  - `Warrior`: High Strength & Vitality
+  - `Mage`: High Intelligence & Wisdom
+  - `Ranger`: High Agility & Luck
+  - `Paladin`: High Strength, Vitality & Piety
+  - `Cleric`: High Wisdom & Piety
+  - `Rogue`: High Agility & Charisma
+  - `Blacksmith` / `Alchemist` / `Farmer`: Skilled craft & labor vocations
+- **Stat Scaling & Gear**: Applies rank multiplier bonuses to `strength`, `vitality`, `agility`, and `intelligence`, equips starter weapon/tools, logs an episodic memory, and emits an event broadcast.
+
+#### 3. All 10 Master Mine Types & Mineral Extraction Pipeline
+Every mine type specified in the Master Prompt is fully placeable, persisted, and operational:
+1. **Surface Pit Mine (`PlaceSurfaceMine`)**: Shallow clay, sand, gravel, and surface coal extraction.
+2. **Stone Quarry (`PlaceQuarry`)**: Dimension stone, marble, and granite block extraction.
+3. **Hillside Tunnel Mine (`PlaceHillsideTunnel`)**: Horizontal adits into hillsides for copper and tin veins.
+4. **Deep Mine Shaft (`PlaceDeepMineShaft`)**: Deep vertical timber headframe tapping rich iron and gold lodes.
+5. **Natural Cave Mine (`PlaceCaveMine`)**: Subterranean mineral extraction for saltpeter, bat guano, and cave crystals.
+6. **Hillside Drift Mine (`PlaceHillsideDrift`)**: Horizontal coal seam and bauxite drift mines.
+7. **Underwater Dredge Mine (`PlaceUnderwaterDredge`)**: Waterfront dredging for gold flakes, gems, and river silt.
+8. **Mana Crystal Mine (`PlaceManaCrystalMine`)**: Extraction of raw glowing mana crystal nodes and geode formations.
+9. **Ancient Ruin Excavation (`PlaceRuinExcavation`)**: Archaeological digs yielding lost alloys, runestones, and relics.
+10. **Dungeon Rift Mine (`PlaceDungeonRiftMine`)**: Dangerous abyssal fissures yielding void stones and boss essence.
+
+#### 4. Terrain Editing, Elevation Modification & Wildlife Spawning
+- **Elevation Pipeline**:
+  - `⛰️ Raise Land (`RaiseTerrain`)`: Elevates terrain altitude upward (Deep Ocean → Shallow Water → Lowland Plain → Highland → Mountain Summit).
+  - `🕳️ Lower Land (`LowerTerrain`)`: Carves canyons, river trenches, and oceanic depressions.
+  - `🪨 Flatten Plateau (`FlattenTerrain`)`: Levels uneven terrain into flat buildable lowlands.
+- **Biome Painters**: Paint Whispering Forest, Sunlit Plains, Savanna, Jungle, Permafrost Tundra, Molten Lava, and Clear Land.
+- **Wildlife Fauna**: Spawn 6 distinct species (`Rabbit`, `Deer`, `Wolf`, `Bear`, `Sheep`, `Cow`) with autonomous foraging, flocking, and predator-prey food chains.
+- **Divine Miracles**: Cast `Divine Spark Heal`, issue `Divine Decree: Awakening`, summon `Rainstorms`, or bestow `Manna Drops`.
+
+#### 5. Interactive Retro Console Interface Suite
+- **Build & Edit Sub-Palettes**: Clicking `🏞️ Nature`, `⛏️ Mines`, `🏗️ Architecture`, or `🛡️ Miracles` opens a wood-textured sub-palette drawer directly above the toolbar with live tool selection and smooth sliding minimap coordination.
+- **Dynamic Live NPC Inspector**:
+  - Displays real character level, class, rank badge (`[SSS]`, `[S]`, `[A]`, `[Novice]`), age, STR, VIT, DEX, INT, and live AI goal.
+  - Dynamic anime portrait automatically tints armor and hair based on class and rank.
+  - One-click `⚡ Awaken` button instantly bestows class awakening upon the selected mortal.
+- **Mini-Map Navigation Radar**:
+  - Renders true continental terrain buffer, live agent dots, landmark POIs (Temple, Cavern Dungeon, Guild Hall, Farmlands), and glowing camera viewport rectangle.
+  - Full click-and-drag navigation panning the camera anywhere on the 128x128 continent.
+  - 4 quick-jump POI buttons: `🏛️ Temple`, `🐉 Dungeon`, `⚔️ Guild`, `🌾 Farm`.
+- **Live Event Feed**:
+  - Automatically captures and formats simulation events (`data.event_log`).
+  - Clicking any entry immediately pans the camera to the event location with a visual locator notification.
+- **Atmospheric Climate Codex**:
+  - Clicking the weather widget or `?` opens a popover detailing current climate, crop yield multipliers (+25% to +45%), mortal movement speed modifiers, and ambient mana flux.
+  - One-click God miracle controls to conjure Rainstorms, Clear Sun, Heatwaves, or Blizzards.
+- **Cosmic World Map Sovereign Navigation**:
+  - Clicking any Sovereign Realm (`🇵🇸 森林聯邦`, `🌲 eylias`, `🇫🇷 laha`, `🇬🇷 mont`, `🇪🇸 烈灼帝国`) or Threat Ranking (`F` through `S` Dungeon Rift) seamlessly navigates back to tactical village view and centers the camera on the target realm or dungeon.
 
 ---
 
@@ -1450,23 +1545,23 @@ The Genesis Cogniverse interface now features a **seamless dual-mode zoom engine
 - **C/C++ Build Tools**: MSVC on Windows (`x86_64-pc-windows-msvc`)
 - **Git**
 
-### Clone & Run
+### Clone, Test & Run
 ```bash
-# Clone the repository
-git clone <repo-url>
+# 1. Clone the repository
+git clone https://github.com/AREEB-AZHAR/cogniverse-rpg.git
 cd cogniverse-rpg
 
-# Verify environment and run tests
+# 2. Run all 13 integration test suites (100% pass rate)
 cargo test
 
-# Run the simulation server locally
+# 3. Launch the simulation server
 cargo run --release
 ```
-Once running, open `http://localhost:3000` in any modern web browser to access the God Console.
+Once launched, open **`http://localhost:3000`** in Google Chrome or any modern browser to command the living world!
 
 ---
 
 ## 📜 License
 
-MIT License. Designed and built with research in Artificial Life, Multi-Agent Reinforcement Learning, and Neuro-Symbolic Self-Improving AI.
+MIT License. Designed and built with research in Artificial Life, Multi-Agent Reinforcement Learning, Neuro-Symbolic Self-Improving AI, and WorldBox God Simulators.
 

@@ -1,3 +1,5 @@
+use super::super::agent::progression::{CharacterClass, Rank};
+use super::super::agent::utility_ai::{UtilityAi, UtilityGoal};
 use super::super::agent::{Agent, CivilizationRace};
 use super::super::brain::ast::{ActionChoice, EntityFilter};
 use super::super::brain::desire::AmbitionArchetype;
@@ -5,8 +7,9 @@ use super::super::brain::memory::AkashicCore;
 use super::super::brain::reproduction::ReproductionManager;
 use super::super::factions::CivilizationsCoordinator;
 use super::super::world::altar::DeityAlignment;
+use super::super::world::fauna::{AnimalSpecies, WildlifeEntity};
 use super::super::world::items::ItemId;
-use super::super::world::tile::{BiomeType, PlacedStructure, StructureKind};
+use super::super::world::tile::{BiomeType, ElevationLayer, PlacedStructure, StructureKind};
 use super::super::world::{WorldGrid, WORLD_HEIGHT, WORLD_WIDTH};
 use super::covenants::{CovenantRewardType, DivineCovenant, QuestObjectiveType};
 pub use super::god_powers::DivineInterventionKind;
@@ -52,7 +55,7 @@ impl Default for SimulationEngine {
 
 impl SimulationEngine {
     pub fn new() -> Self {
-        let world = WorldGrid::new();
+        let mut world = WorldGrid::new();
         let akashic_core = AkashicCore::new();
         let mut agents = Vec::new();
         let mut next_id = 1;
@@ -115,6 +118,17 @@ impl SimulationEngine {
             "Solar Terrans settled near the Golden Sun Altar (38, 86).".into(),
             "Chthonic Lunarians established presence at the Obsidian Moon Altar (92, 34).".into(),
         ];
+
+        // Canonical village infrastructure matching the tactical village view
+        world.tile_at_mut(68, 40).structure = Some(PlacedStructure::new(StructureKind::SolarAltar));
+        world.tile_at_mut(82, 44).structure = Some(PlacedStructure::new(StructureKind::Barracks));
+        world.tile_at_mut(70, 44).structure = Some(PlacedStructure::new(StructureKind::TownHall));
+        world.tile_at_mut(74, 46).structure = Some(PlacedStructure::new(StructureKind::Granary));
+        world.tile_at_mut(74, 52).structure = Some(PlacedStructure::new(StructureKind::AnimalPen));
+        world.tile_at_mut(42, 40).structure = Some(PlacedStructure::new_mine("dungeon_cavern"));
+
+        world.job_board.post_blueprint(StructureKind::WoodCottage, 72, 42);
+        world.job_board.post_blueprint(StructureKind::StoneCabin, 66, 46);
 
         Self {
             world,
@@ -553,15 +567,22 @@ impl SimulationEngine {
             self.agents.push(pioneer);
         }
 
-        // 3. Pre-compute environmental sensory data and decide agent actions
+        // 3. Pre-compute environmental sensory data and evaluate Utility AI goals
         let weather_delta = self.world.gaia.current_weather.temperature_delta();
         let mut actions_to_execute = Vec::with_capacity(self.agents.len());
+        let mut awakenings_to_broadcast = Vec::new();
+
+        let temple_coords = (68, 40);
+        let guild_coords = (82, 44);
+        let dungeon_coords = (42, 40);
+        let farm_coords = (60, 48);
 
         for agent in self.agents.iter_mut() {
             if !agent.is_alive {
                 continue;
             }
 
+            agent.age_ticks += 1;
             let tile = self.world.tile_at(agent.x, agent.y);
             agent.tick_vitals(tile, weather_delta);
 
@@ -569,34 +590,192 @@ impl SimulationEngine {
                 continue;
             }
 
-            let distances = agent.compute_sensory_distances(&self.world);
-            let has_fn = |item_name: &str| -> bool {
-                match item_name {
-                    "Wood" => agent.inventory.count(ItemId::Wood) > 0,
-                    "Stone" => agent.inventory.count(ItemId::Stone) > 0,
-                    "Iron" => agent.inventory.count(ItemId::IronOre) > 0,
-                    "Food" => {
-                        agent.inventory.count(ItemId::Berry) > 0
-                            || agent.inventory.count(ItemId::Grain) > 0
+            // Synchronize physiological vitals with Utility AI needs
+            agent.needs.hunger = agent.hunger;
+            agent.needs.rest = 1.0 - agent.energy;
+            agent.needs.safety = if agent.health < 40.0 { 0.85 } else { 0.1 };
+            agent.needs.social = agent.social_need;
+
+            let has_food = agent.inventory.count(ItemId::Berry) > 0
+                || agent.inventory.count(ItemId::Grain) > 0
+                || agent.inventory.count(ItemId::Bread) > 0;
+            let has_shelter = tile.structure.is_some();
+            let needs_blessing = agent.progression.class.is_none();
+            let local_danger = if agent.health < 35.0 { 60.0 } else { 0.0 };
+
+            let goal = agent.utility_ai.evaluate_best_goal_with_context(
+                &agent.needs,
+                has_food,
+                has_shelter,
+                &self.world.job_board,
+                local_danger,
+                needs_blessing,
+            );
+
+            // Determine action mapped from evaluated utility goal
+            let chosen_action = match goal {
+                UtilityGoal::SeekBlessing => {
+                    let dist = (agent.x as isize - temple_coords.0 as isize).abs()
+                        + (agent.y as isize - temple_coords.1 as isize).abs();
+                    if dist <= 2 {
+                        // At GODs Temple: Perform solemn Class Awakening ceremony!
+                        let mut rng = rand::thread_rng();
+                        let available_classes = [
+                            CharacterClass::Warrior,
+                            CharacterClass::Archer,
+                            CharacterClass::Mage,
+                            CharacterClass::Rogue,
+                            CharacterClass::Cleric,
+                            CharacterClass::Farmer,
+                            CharacterClass::Miner,
+                            CharacterClass::Woodcutter,
+                            CharacterClass::Builder,
+                            CharacterClass::Blacksmith,
+                            CharacterClass::Carpenter,
+                        ];
+                        use rand::seq::SliceRandom;
+                        let chosen_class = *available_classes.choose(&mut rng).unwrap_or(&CharacterClass::Warrior);
+                        let rolled_rank = agent.progression.bless_at_temple(
+                            &mut rng,
+                            &Rank::CANONICAL_WEIGHTS,
+                            chosen_class,
+                            current_tick,
+                        );
+
+                        match chosen_class {
+                            CharacterClass::Warrior | CharacterClass::Rogue => {
+                                agent.inventory.add(ItemId::IronSword, 1);
+                            }
+                            CharacterClass::Archer => {
+                                agent.inventory.add(ItemId::HuntingBow, 1);
+                            }
+                            CharacterClass::Mage | CharacterClass::Cleric => {
+                                agent.brain.mana = 100.0;
+                                agent.inventory.add(ItemId::ManaCrystal, 2);
+                            }
+                            CharacterClass::Miner => {
+                                agent.inventory.add(ItemId::IronPickaxe, 1);
+                            }
+                            CharacterClass::Woodcutter | CharacterClass::Carpenter => {
+                                agent.inventory.add(ItemId::Wood, 5);
+                            }
+                            CharacterClass::Farmer => {
+                                agent.inventory.add(ItemId::Grain, 5);
+                            }
+                            _ => {}
+                        }
+
+                        agent.brain.current_thought = format!(
+                            "Solemnly awakened at GODs Temple as {} ({})!",
+                            chosen_class.display_name(),
+                            rolled_rank.display_name()
+                        );
+                        agent.brain.memory.log_episodic_event(
+                            current_tick,
+                            format!(
+                                "Awakened at GODs Temple: Bestowed the divine vocation of {} ({}).",
+                                chosen_class.display_name(),
+                                rolled_rank.display_name()
+                            ),
+                            vec!["Temple".into(), "Awakening".into(), "Blessing".into()],
+                            10.0,
+                        );
+                        awakenings_to_broadcast.push(format!(
+                            "[Temple Awakening] {} was blessed as {} ({})!",
+                            agent.name,
+                            chosen_class.display_name(),
+                            rolled_rank.display_name()
+                        ));
+                        ActionChoice::MakeAltarOffering
+                    } else {
+                        agent.step_towards(temple_coords.0, temple_coords.1, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.brain.current_thought = "Walking to the GODs Temple for solemn Class Awakening...".into();
+                        ActionChoice::MoveToNearest(EntityFilter::Altar)
                     }
-                    _ => false,
+                }
+                UtilityGoal::EatFood => {
+                    if has_food {
+                        UtilityAi::consume_best_food(&mut agent.inventory, &mut agent.needs);
+                        agent.hunger = (agent.hunger - 0.40).max(0.0);
+                        agent.brain.current_thought = "Consuming harvested rations to restore vitality.".into();
+                        ActionChoice::ForageFood
+                    } else {
+                        agent.step_towards(farm_coords.0, farm_coords.1, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.brain.current_thought = "Heading to village farmland to harvest fresh grain and berries.".into();
+                        ActionChoice::MoveToNearest(EntityFilter::FoodSource)
+                    }
+                }
+                UtilityGoal::FleeDanger => {
+                    let (nx, ny) = agent.utility_ai.unbiased_wander_step(agent.x, agent.y, WORLD_WIDTH, WORLD_HEIGHT);
+                    agent.x = nx;
+                    agent.y = ny;
+                    agent.brain.current_thought = "Fleeing from danger towards settlement defenses!".into();
+                    ActionChoice::FleeThreat
+                }
+                UtilityGoal::Construct => {
+                    if agent.inventory.count(ItemId::Wood) >= 2 {
+                        agent.step_towards(70, 44, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.brain.current_thought = "Hauling hewn timber to construct community infrastructure.".into();
+                        ActionChoice::BuildShelter
+                    } else {
+                        agent.step_towards(64, 38, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.brain.current_thought = "Felling timber in the forest to supply construction lumber.".into();
+                        ActionChoice::ChopWood
+                    }
+                }
+                UtilityGoal::JoinParty | UtilityGoal::TakeGuildQuest => {
+                    let dist = (agent.x as isize - guild_coords.0 as isize).abs()
+                        + (agent.y as isize - guild_coords.1 as isize).abs();
+                    if dist <= 2 {
+                        agent.step_towards(dungeon_coords.0, dungeon_coords.1, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.brain.current_thought = "Assembled party at Guild Hall; marching to raid the A-Rank Dungeon!".into();
+                        ActionChoice::MoveToNearest(EntityFilter::HostilePredator)
+                    } else {
+                        agent.step_towards(guild_coords.0, guild_coords.1, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.brain.current_thought = "Reporting to Guild Hall to register for emergency subjugation contracts.".into();
+                        ActionChoice::CourtNearestMate
+                    }
+                }
+                UtilityGoal::Rest => {
+                    agent.energy = (agent.energy + 0.12).min(1.0);
+                    agent.brain.current_thought = "Resting in village shelter to replenish stamina.".into();
+                    ActionChoice::IdleRest
+                }
+                UtilityGoal::Socialize => {
+                    agent.social_need = (agent.social_need - 0.20).max(0.0);
+                    agent.brain.current_thought = "Sharing stories and trading at the village market.".into();
+                    ActionChoice::CourtNearestMate
+                }
+                UtilityGoal::Explore => {
+                    let is_combat = agent.progression.class.map_or(false, |c| c.is_combat());
+                    let dist_dungeon = (agent.x as isize - dungeon_coords.0 as isize).abs()
+                        + (agent.y as isize - dungeon_coords.1 as isize).abs();
+
+                    if is_combat && dist_dungeon <= 4 {
+                        agent.progression.gain_xp(35);
+                        agent.inventory.add(ItemId::ManaCrystal, 1);
+                        agent.brain.current_thought = "Engaged in ferocious dungeon combat; acquired glowing mana crystals!".into();
+                        ActionChoice::ChopWood
+                    } else if is_combat {
+                        agent.step_towards(dungeon_coords.0, dungeon_coords.1, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.brain.current_thought = "Patrolling toward the cavern dungeon to suppress monster outburst.".into();
+                        ActionChoice::MoveToNearest(EntityFilter::HostilePredator)
+                    } else {
+                        let (nx, ny) = agent.utility_ai.unbiased_wander_step(agent.x, agent.y, WORLD_WIDTH, WORLD_HEIGHT);
+                        agent.x = nx;
+                        agent.y = ny;
+                        agent.brain.current_thought = "Patrolling settlement borders and surveying local terrain.".into();
+                        ActionChoice::IdleRest
+                    }
                 }
             };
 
-            let chosen_action = agent.brain.decide_action(
-                agent.hunger,
-                agent.thirst,
-                agent.energy,
-                agent.warmth,
-                agent.social_need,
-                agent.health,
-                &distances,
-                &has_fn,
-                current_tick,
-                &agent.name,
-            );
-
+            agent.brain.last_action = chosen_action;
             actions_to_execute.push((agent.id, chosen_action));
+        }
+
+        for msg in awakenings_to_broadcast {
+            self.log_event(msg);
         }
 
         // 4. Resolve actions in physical world
@@ -1674,7 +1853,7 @@ impl SimulationEngine {
         brush: TerraformBrush,
         radius: usize,
     ) {
-        // Direct architectural structure placement at clicked tile
+        // Direct architectural structure, mine placement, animal spawning, and miracles
         match brush {
             TerraformBrush::BuildCabin
             | TerraformBrush::BuildCottage
@@ -1683,28 +1862,133 @@ impl SimulationEngine {
             | TerraformBrush::BuildBarracks
             | TerraformBrush::BuildGranary
             | TerraformBrush::BuildWatchtower
-            | TerraformBrush::BuildMineShaft => {
-                let kind = match brush {
-                    TerraformBrush::BuildCabin => StructureKind::StoneCabin,
-                    TerraformBrush::BuildCottage => StructureKind::WoodCottage,
-                    TerraformBrush::BuildCampfire => StructureKind::Campfire,
-                    TerraformBrush::BuildTownHall => StructureKind::TownHall,
-                    TerraformBrush::BuildBarracks => StructureKind::Barracks,
-                    TerraformBrush::BuildGranary => StructureKind::Granary,
-                    TerraformBrush::BuildWatchtower => StructureKind::Watchtower,
-                    TerraformBrush::BuildMineShaft => StructureKind::MineShaft,
+            | TerraformBrush::BuildMineShaft
+            | TerraformBrush::BuildLivestockPen
+            | TerraformBrush::BuildDock
+            | TerraformBrush::BuildGuildHall
+            | TerraformBrush::PlaceSurfaceMine
+            | TerraformBrush::PlaceQuarry
+            | TerraformBrush::PlaceHillsideTunnel
+            | TerraformBrush::PlaceDeepMineShaft
+            | TerraformBrush::PlaceCaveMine
+            | TerraformBrush::PlaceHillsideDrift
+            | TerraformBrush::PlaceUnderwaterDredge
+            | TerraformBrush::PlaceManaCrystalMine
+            | TerraformBrush::PlaceRuinExcavation
+            | TerraformBrush::PlaceDungeonRiftMine => {
+                let structure = match brush {
+                    TerraformBrush::BuildCabin => PlacedStructure::new(StructureKind::StoneCabin),
+                    TerraformBrush::BuildCottage => PlacedStructure::new(StructureKind::WoodCottage),
+                    TerraformBrush::BuildCampfire => PlacedStructure::new(StructureKind::Campfire),
+                    TerraformBrush::BuildTownHall => PlacedStructure::new(StructureKind::TownHall),
+                    TerraformBrush::BuildBarracks | TerraformBrush::BuildGuildHall => {
+                        PlacedStructure::new(StructureKind::Barracks)
+                    }
+                    TerraformBrush::BuildGranary => PlacedStructure::new(StructureKind::Granary),
+                    TerraformBrush::BuildWatchtower => PlacedStructure::new(StructureKind::Watchtower),
+                    TerraformBrush::BuildMineShaft => PlacedStructure::new(StructureKind::MineShaft),
+                    TerraformBrush::BuildLivestockPen => PlacedStructure::new(StructureKind::AnimalPen),
+                    TerraformBrush::BuildDock => PlacedStructure::new(StructureKind::Dock),
+                    TerraformBrush::PlaceSurfaceMine => PlacedStructure::new_mine("surface"),
+                    TerraformBrush::PlaceQuarry => PlacedStructure::new_mine("stone"),
+                    TerraformBrush::PlaceHillsideTunnel => PlacedStructure::new_mine("coal"),
+                    TerraformBrush::PlaceDeepMineShaft => PlacedStructure::new_mine("iron"),
+                    TerraformBrush::PlaceCaveMine => PlacedStructure::new_mine("gems"),
+                    TerraformBrush::PlaceHillsideDrift => PlacedStructure::new_mine("copper"),
+                    TerraformBrush::PlaceUnderwaterDredge => PlacedStructure::new_mine("underwater"),
+                    TerraformBrush::PlaceManaCrystalMine => PlacedStructure::new_mine("mana_crystal"),
+                    TerraformBrush::PlaceRuinExcavation => PlacedStructure::new_mine("ancient_ruin"),
+                    TerraformBrush::PlaceDungeonRiftMine => PlacedStructure::new_mine("dungeon_rift"),
                     _ => unreachable!(),
                 };
+                let desc = structure
+                    .custom_type
+                    .as_deref()
+                    .unwrap_or(structure.kind.display_name())
+                    .to_string();
                 let tile = self.world.tile_at_mut(center_x, center_y);
-                tile.structure = Some(PlacedStructure::new(kind));
+                tile.structure = Some(structure);
                 self.modified_tiles
                     .lock()
                     .push((center_x, center_y, tile.biome));
                 self.log_event(format!(
-                    "ARCHITECTURE: Divine mandate erected {} at ({}, {}).",
-                    kind.display_name(),
-                    center_x,
-                    center_y
+                    "ARCHITECTURE: Divine mandate established {} at ({}, {}).",
+                    desc, center_x, center_y
+                ));
+                return;
+            }
+            TerraformBrush::SpawnAnimalRabbit
+            | TerraformBrush::SpawnAnimalDeer
+            | TerraformBrush::SpawnAnimalWolf
+            | TerraformBrush::SpawnAnimalBear
+            | TerraformBrush::SpawnAnimalSheep
+            | TerraformBrush::SpawnAnimalCow => {
+                let id = self.world.next_entity_id;
+                self.world.next_entity_id += 1;
+                let animal = match brush {
+                    TerraformBrush::SpawnAnimalRabbit => {
+                        WildlifeEntity::new(id, AnimalSpecies::Rabbit, center_x, center_y)
+                    }
+                    TerraformBrush::SpawnAnimalDeer => {
+                        WildlifeEntity::new(id, AnimalSpecies::ForestDeer, center_x, center_y)
+                    }
+                    TerraformBrush::SpawnAnimalWolf => {
+                        WildlifeEntity::new(id, AnimalSpecies::DireWolf, center_x, center_y)
+                    }
+                    TerraformBrush::SpawnAnimalBear => {
+                        WildlifeEntity::new(id, AnimalSpecies::MountainBear, center_x, center_y)
+                    }
+                    TerraformBrush::SpawnAnimalSheep => {
+                        WildlifeEntity::new_custom(id, "sheep".into(), 50.0, center_x, center_y)
+                    }
+                    TerraformBrush::SpawnAnimalCow => {
+                        WildlifeEntity::new_custom(id, "cow".into(), 100.0, center_x, center_y)
+                    }
+                    _ => unreachable!(),
+                };
+                self.world.wildlife.push(animal);
+                self.log_event(format!(
+                    "WILDLIFE: Divine breath manifested creature at ({}, {}).",
+                    center_x, center_y
+                ));
+                return;
+            }
+            TerraformBrush::DivineHeal => {
+                for a in &mut self.agents {
+                    let d = (a.x as isize - center_x as isize).abs()
+                        + (a.y as isize - center_y as isize).abs();
+                    if d <= radius as isize {
+                        a.health = a.max_health;
+                        a.hunger = 0.0;
+                        a.energy = 1.0;
+                    }
+                }
+                self.log_event(format!(
+                    "MIRACLE: Divine Spark rejuvenated creatures around ({}, {}).",
+                    center_x, center_y
+                ));
+                return;
+            }
+            TerraformBrush::DivineAwaken => {
+                let mut count = 0;
+                for a in &mut self.agents {
+                    let d = (a.x as isize - center_x as isize).abs()
+                        + (a.y as isize - center_y as isize).abs();
+                    if d <= radius as isize {
+                        let mut rng = rand::thread_rng();
+                        let high_ranks = [Rank::B, Rank::A, Rank::S, Rank::SSS];
+                        use rand::seq::SliceRandom;
+                        let rank = *high_ranks.choose(&mut rng).unwrap_or(&Rank::A);
+                        a.progression.rank = Some(rank);
+                        a.progression.gain_xp(500);
+                        a.brain.current_thought =
+                            format!("Blessed by Divine Revelation as {} Chosen!", rank.display_name());
+                        count += 1;
+                    }
+                }
+                self.log_event(format!(
+                    "AWAKENING: Divine Decree awakened {} souls around ({}, {}).",
+                    count, center_x, center_y
                 ));
                 return;
             }
@@ -1807,6 +2091,25 @@ impl SimulationEngine {
                     }
                     TerraformBrush::SeedPermafrost => {
                         tile.biome = BiomeType::PermafrostTundra;
+                    }
+                    TerraformBrush::RaiseTerrain => {
+                        tile.elevation = (tile.elevation + 0.15).min(1.0);
+                        tile.elevation_layer = ElevationLayer::from_elevation(tile.elevation);
+                        if tile.elevation > 0.70 {
+                            tile.biome = BiomeType::IroncragMountains;
+                        }
+                    }
+                    TerraformBrush::LowerTerrain => {
+                        tile.elevation = (tile.elevation - 0.15).max(0.0);
+                        tile.elevation_layer = ElevationLayer::from_elevation(tile.elevation);
+                        if tile.elevation < 0.25 {
+                            tile.biome = BiomeType::DeepOcean;
+                        }
+                    }
+                    TerraformBrush::FlattenTerrain => {
+                        tile.elevation = 0.45;
+                        tile.elevation_layer = ElevationLayer::from_elevation(tile.elevation);
+                        tile.biome = BiomeType::SunlitPlains;
                     }
                     _ => {}
                 }
@@ -2131,6 +2434,18 @@ impl SimulationEngine {
                     max_gen = a.brain.genome.generation;
                 }
 
+                let class_name = a
+                    .progression
+                    .class
+                    .map(|c| c.display_name().to_string())
+                    .unwrap_or_else(|| "Novice".to_string());
+                let rank_name = a
+                    .progression
+                    .rank
+                    .map(|r| r.display_name().to_string())
+                    .unwrap_or_else(|| "F-Rank".to_string());
+                let current_goal_str = a.utility_ai.current_goal.display_name().to_string();
+
                 AgentSummary {
                     id: a.id,
                     name: a.name.clone(),
@@ -2146,6 +2461,10 @@ impl SimulationEngine {
                     last_action: format!("{:?}", a.brain.last_action),
                     generation: a.brain.genome.generation,
                     traits: a.traits.clone(),
+                    class: class_name,
+                    rank: rank_name,
+                    level: a.progression.level,
+                    current_goal: current_goal_str,
                 }
             })
             .collect();
@@ -2409,6 +2728,28 @@ impl SimulationEngine {
                         .as_ref()
                         .map(|e| format!("{}: {}", e.hero_name, e.gift_description)),
                     traits: a.traits.clone(),
+                    class: a
+                        .progression
+                        .class
+                        .map(|c| c.display_name().to_string())
+                        .unwrap_or_else(|| "Novice".to_string()),
+                    subclass: a.progression.subclass.map(|s| s.display_name().to_string()),
+                    rank: a
+                        .progression
+                        .rank
+                        .map(|r| r.display_name().to_string())
+                        .unwrap_or_else(|| "F-Rank".to_string()),
+                    level: a.progression.level,
+                    xp: a.progression.current_xp,
+                    age: (16 + (a.age_ticks / 100)) as u32,
+                    strength: a.progression.attributes.strength,
+                    vitality: a.progression.attributes.vitality,
+                    agility: a.progression.attributes.agility,
+                    intelligence: a.progression.attributes.intelligence,
+                    wisdom: a.progression.attributes.wisdom,
+                    charisma: a.progression.attributes.charisma,
+                    luck: a.progression.attributes.luck,
+                    current_goal: a.utility_ai.current_goal.display_name().to_string(),
                 }
             })
         });

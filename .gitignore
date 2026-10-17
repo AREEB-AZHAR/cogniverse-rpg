@@ -3,3 +3,5 @@
 Cargo.lock
 .vscode/
 .agents/skills/reverse-engineer-anything/*
+Aether_Planet_Master_Prompt.md
+.agents

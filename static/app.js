@@ -657,15 +657,20 @@ function handleMapAction(tx, ty) {
   if (tx < 0 || tx >= WORLD_SIZE || ty < 0 || ty >= WORLD_SIZE) return;
 
   // 1a. Architecture Building Placement Tools
-  if (activeTool.startsWith('build-')) {
+  // 1a. Architecture Building Placement Tools
+  if (activeTool && activeTool.startsWith('build-')) {
     let brushType = 'BuildCabin';
-    if (activeTool === 'build-cottage') brushType = 'BuildCottage';
-    else if (activeTool === 'build-townhall') brushType = 'BuildTownHall';
-    else if (activeTool === 'build-barracks') brushType = 'BuildBarracks';
-    else if (activeTool === 'build-campfire') brushType = 'BuildCampfire';
-    else if (activeTool === 'build-granary') brushType = 'BuildGranary';
-    else if (activeTool === 'build-watchtower') brushType = 'BuildWatchtower';
-    else if (activeTool === 'build-mineshaft') brushType = 'BuildMineShaft';
+    let label = 'Stone Cabin';
+    if (activeTool === 'build-cottage') { brushType = 'BuildCottage'; label = 'Timber Cottage'; }
+    else if (activeTool === 'build-cabin') { brushType = 'BuildCabin'; label = 'Stone Cabin'; }
+    else if (activeTool === 'build-townhall') { brushType = 'BuildTownHall'; label = 'Town Hall'; }
+    else if (activeTool === 'build-guild' || activeTool === 'build-barracks') { brushType = 'BuildGuildHall'; label = 'Guild Hall Barracks'; }
+    else if (activeTool === 'build-campfire') { brushType = 'BuildCampfire'; label = 'Campfire'; }
+    else if (activeTool === 'build-granary') { brushType = 'BuildGranary'; label = 'Granary Market'; }
+    else if (activeTool === 'build-watchtower') { brushType = 'BuildWatchtower'; label = 'Watchtower Outpost'; }
+    else if (activeTool === 'build-mineshaft') { brushType = 'BuildMineShaft'; label = 'Mine Shaft'; }
+    else if (activeTool === 'build-pen') { brushType = 'BuildLivestockPen'; label = 'Livestock Pen'; }
+    else if (activeTool === 'build-dock') { brushType = 'BuildDock'; label = 'Fishing Dock'; }
 
     playSound('click');
     sendMsg({
@@ -675,16 +680,107 @@ function handleMapAction(tx, ty) {
       center_y: ty,
       radius: 1,
     });
-    showToast(`🏗️ Erected ${brushType} at (${tx}, ${ty})`);
+    showToast(`🏗️ Erected ${label} at (${tx}, ${ty})`);
     return;
   }
 
-  // 1b. Terraforming & Ore Brushes
-  if (activeTool.startsWith('brush-')) {
+  // 1b. All 10 Master Mine Types & Excavations
+  if (activeTool && activeTool.startsWith('mine-')) {
+    let brushType = 'PlaceSurfaceMine';
+    let label = 'Surface Pit Mine';
+    if (activeTool === 'mine-surface') { brushType = 'PlaceSurfaceMine'; label = 'Surface Pit Mine'; }
+    else if (activeTool === 'mine-quarry') { brushType = 'PlaceQuarry'; label = 'Stone Quarry'; }
+    else if (activeTool === 'mine-tunnel') { brushType = 'PlaceHillsideTunnel'; label = 'Hillside Tunnel Mine'; }
+    else if (activeTool === 'mine-shaft') { brushType = 'PlaceDeepMineShaft'; label = 'Deep Mine Shaft'; }
+    else if (activeTool === 'mine-cave') { brushType = 'PlaceCaveMine'; label = 'Natural Cave Mine'; }
+    else if (activeTool === 'mine-drift') { brushType = 'PlaceHillsideDrift'; label = 'Hillside Drift Mine'; }
+    else if (activeTool === 'mine-dredge') { brushType = 'PlaceUnderwaterDredge'; label = 'Underwater Dredge Mine'; }
+    else if (activeTool === 'mine-mana') { brushType = 'PlaceManaCrystalMine'; label = 'Mana Crystal Mine'; }
+    else if (activeTool === 'mine-ruin') { brushType = 'PlaceRuinExcavation'; label = 'Ancient Ruin Excavation'; }
+    else if (activeTool === 'mine-rift') { brushType = 'PlaceDungeonRiftMine'; label = 'Dungeon Rift Mine'; }
+
+    playSound('click');
+    sendMsg({
+      type: 'TerraformArea',
+      brush: brushType,
+      center_x: tx,
+      center_y: ty,
+      radius: 1,
+    });
+    showToast(`⛏️ Established ${label} at (${tx}, ${ty})`);
+    return;
+  }
+
+  // 1c. Wildlife Animal Spawning Brushes
+  if (activeTool && activeTool.startsWith('spawn-animal-')) {
+    let brushType = 'SpawnAnimalRabbit';
+    let label = 'Wild Rabbit';
+    if (activeTool === 'spawn-animal-rabbit') { brushType = 'SpawnAnimalRabbit'; label = 'Wild Rabbit'; }
+    else if (activeTool === 'spawn-animal-deer') { brushType = 'SpawnAnimalDeer'; label = 'Wild Deer'; }
+    else if (activeTool === 'spawn-animal-wolf') { brushType = 'SpawnAnimalWolf'; label = 'Wild Wolf'; }
+    else if (activeTool === 'spawn-animal-bear') { brushType = 'SpawnAnimalBear'; label = 'Wild Bear'; }
+    else if (activeTool === 'spawn-animal-sheep') { brushType = 'SpawnAnimalSheep'; label = 'Domestic Sheep'; }
+    else if (activeTool === 'spawn-animal-cow') { brushType = 'SpawnAnimalCow'; label = 'Domestic Cow'; }
+
+    playSound('chime');
+    sendMsg({
+      type: 'TerraformArea',
+      brush: brushType,
+      center_x: tx,
+      center_y: ty,
+      radius: 1,
+    });
+    showToast(`🐾 Spawned ${label} at (${tx}, ${ty})`);
+    return;
+  }
+
+  // 1d. Divine Miracles & Awakening Decrees
+  if (activeTool === 'miracle-heal') {
+    playSound('chime');
+    sendMsg({
+      type: 'TerraformArea',
+      brush: 'DivineHeal',
+      center_x: tx,
+      center_y: ty,
+      radius: brushRadius || 2,
+    });
+    showToast(`💖 Cast Divine Spark Heal at (${tx}, ${ty})`);
+    return;
+  }
+  if (activeTool === 'miracle-awaken') {
+    playSound('chime');
+    sendMsg({
+      type: 'TerraformArea',
+      brush: 'DivineAwaken',
+      center_x: tx,
+      center_y: ty,
+      radius: 1,
+    });
+    showToast(`⚡ Issued Divine Decree: Awakening at (${tx}, ${ty})`);
+    return;
+  }
+  if (activeTool === 'miracle-rain') {
+    playSound('water');
+    triggerGodWeather('rain');
+    showToast(`🌧️ Summoned Rainstorm over (${tx}, ${ty})`);
+    return;
+  }
+
+  // 1e. Terraforming, Elevation & Ore Brushes
+  if (activeTool && activeTool.startsWith('brush-')) {
     let brushType = 'FertilizePlains';
     let biomeKey = 'SunlitPlains';
 
-    if (activeTool === 'brush-forest') {
+    if (activeTool === 'brush-raise') {
+      brushType = 'RaiseTerrain';
+      biomeKey = null;
+    } else if (activeTool === 'brush-lower') {
+      brushType = 'LowerTerrain';
+      biomeKey = null;
+    } else if (activeTool === 'brush-flatten') {
+      brushType = 'FlattenTerrain';
+      biomeKey = null;
+    } else if (activeTool === 'brush-forest') {
       brushType = 'PlantForest';
       biomeKey = 'WhisperingForest';
     } else if (activeTool === 'brush-river') {
@@ -3960,20 +4056,22 @@ function setDayNightFilter(checked) {
 }
 
 function initMinimap() {
-  if (!minimapCanvas) return;
-  minimapCanvas.addEventListener('mousedown', (e) => {
-    isMinimapDragging = true;
-    handleMinimapNav(e);
-    playSound('click');
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (isMinimapDragging) {
+  if (minimapCanvas) {
+    minimapCanvas.addEventListener('mousedown', (e) => {
+      isMinimapDragging = true;
       handleMinimapNav(e);
-    }
-  });
-  window.addEventListener('mouseup', () => {
-    isMinimapDragging = false;
-  });
+      playSound('click');
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (isMinimapDragging) {
+        handleMinimapNav(e);
+      }
+    });
+    window.addEventListener('mouseup', () => {
+      isMinimapDragging = false;
+    });
+  }
+  initRetroMinimap();
 }
 
 function initRealmSettings() {
@@ -3994,6 +4092,7 @@ window.addEventListener('load', () => {
   centerCamera();
   connectWebSocket();
   initMinimap();
+  initRetroMinimap();
   initRealmSettings();
   requestAnimationFrame(gameLoop);
 });
@@ -4018,6 +4117,7 @@ function setViewMode(worldMap) {
   if (legacyDock) legacyDock.style.display = 'none';
 
   if (isWorldMapActive) {
+    closeRetroSubpalette();
     if (overlay) overlay.classList.remove('hidden');
     if (retroTopBar) retroTopBar.style.display = 'none';
     if (debugCard) debugCard.style.display = 'none';
@@ -4065,6 +4165,148 @@ function closeNpcInspector() {
   playSound('click');
 }
 
+// ----------------------------------------------------------------------------
+// RETRO SUB-PALETTES DATA & CONTROLS
+// ----------------------------------------------------------------------------
+const RETRO_SUBPALETTES = {
+  nature: {
+    title: 'Terrain, Elevation & Biomes',
+    items: [
+      { id: 'brush-raise', glyph: '⛰️', text: 'Raise Land', desc: 'Elevate land elevation upward' },
+      { id: 'brush-lower', glyph: '🕳️', text: 'Lower Land', desc: 'Carve trench or oceanic depression' },
+      { id: 'brush-flatten', glyph: '🪨', text: 'Flatten', desc: 'Level terrain to flat lowland' },
+      { id: 'brush-forest', glyph: '🌲', text: 'Forest', desc: 'Dense ancient Whispering Forest' },
+      { id: 'brush-plains', glyph: '🌾', text: 'Plains', desc: 'Fertile sunlit prairie grasslands' },
+      { id: 'brush-savanna', glyph: '🦁', text: 'Savanna', desc: 'Warm dry golden savanna' },
+      { id: 'brush-jungle', glyph: '🌴', text: 'Jungle', desc: 'Verdant tropical rainforest canopy' },
+      { id: 'brush-permafrost', glyph: '❄️', text: 'Tundra', desc: 'Glacial permafrost expanse' },
+      { id: 'brush-lava', glyph: '🌋', text: 'Lava', desc: 'Molten igneous volcanic magma' },
+      { id: 'brush-clear', glyph: '🧹', text: 'Clear Land', desc: 'Scrape structures & rubble' },
+    ]
+  },
+  mines: {
+    title: 'All 10 Master Mine Types',
+    items: [
+      { id: 'mine-surface', glyph: '⛏️', text: 'Surface Pit', desc: 'Sand, clay, gravel & shallow coal' },
+      { id: 'mine-quarry', glyph: '🪨', text: 'Stone Quarry', desc: 'Dimension stone & granite blocks' },
+      { id: 'mine-tunnel', glyph: '🚇', text: 'Hill Tunnel', desc: 'Horizontal copper & tin adit' },
+      { id: 'mine-shaft', glyph: '🏗️', text: 'Deep Shaft', desc: 'Vertical deep iron/gold headframe' },
+      { id: 'mine-cave', glyph: '🕳️', text: 'Cave Mine', desc: 'Natural cave saltpeter & minerals' },
+      { id: 'mine-drift', glyph: '⛰️', text: 'Hill Drift', desc: 'Horizontal coal & bauxite seam drift' },
+      { id: 'mine-dredge', glyph: '⚓', text: 'Dredge Mine', desc: 'River silt gold panning dredge' },
+      { id: 'mine-mana', glyph: '🔮', text: 'Mana Crystal', desc: 'Glowing raw mana geode veins' },
+      { id: 'mine-ruin', glyph: '🏛️', text: 'Ancient Ruin', desc: 'Lost alloy & runestone excavation' },
+      { id: 'mine-rift', glyph: '🌀', text: 'Dungeon Rift', desc: 'Void boss portal & abyssal core' },
+    ]
+  },
+  architecture: {
+    title: 'Architecture & Settlements',
+    items: [
+      { id: 'build-cottage', glyph: '🪵', text: 'Wood Cottage', desc: 'Handcrafted timber dwelling' },
+      { id: 'build-cabin', glyph: '🏠', text: 'Stone Cabin', desc: 'Durable stone masonry shelter' },
+      { id: 'build-townhall', glyph: '🏛️', text: 'Town Hall', desc: 'Civic capital government center' },
+      { id: 'build-guild', glyph: '⚔️', text: 'Guild Hall', desc: 'Adventurer combat guildhall' },
+      { id: 'build-granary', glyph: '🌾', text: 'Granary Market', desc: 'Crop storage & bread supply' },
+      { id: 'build-watchtower', glyph: '🗼', text: 'Watchtower', desc: 'Perimeter defensive boundary post' },
+      { id: 'build-pen', glyph: '🛖', text: 'Livestock Pen', desc: 'Domestic animal breeding shelter' },
+      { id: 'build-dock', glyph: '⚓', text: 'Fishing Dock', desc: 'Waterfront fishing pier' },
+      { id: 'build-campfire', glyph: '🔥', text: 'Campfire', desc: 'Cozy traveler gathering hearth' },
+    ]
+  },
+  miracles: {
+    title: 'Miracles, Awaken & Wildlife',
+    items: [
+      { id: 'miracle-heal', glyph: '💖', text: 'Divine Heal', desc: 'Restore vital health & cleanse ailments' },
+      { id: 'miracle-awaken', glyph: '⚡', text: 'Awaken Class', desc: 'Awaken age-16 class & roll rank' },
+      { id: 'miracle-rain', glyph: '🌧️', text: 'Rainstorm', desc: 'Summon torrential fertilizing rain' },
+      { id: 'manna-drop', glyph: '🍞', text: 'Manna Drop', desc: 'Drop basket of celestial bread' },
+      { id: 'spawn-animal-rabbit', glyph: '🐇', text: 'Rabbit', desc: 'Swift herbivore foraging fauna' },
+      { id: 'spawn-animal-deer', glyph: '🦌', text: 'Deer', desc: 'Majestic forest herbivore' },
+      { id: 'spawn-animal-wolf', glyph: '🐺', text: 'Wolf', desc: 'Pack hunting forest predator' },
+      { id: 'spawn-animal-bear', glyph: '🐻', text: 'Bear', desc: 'Apex ironcrag mountain predator' },
+      { id: 'spawn-animal-sheep', glyph: '🐑', text: 'Sheep', desc: 'Domestic wool-yielding livestock' },
+      { id: 'spawn-animal-cow', glyph: '🐄', text: 'Cow', desc: 'Domestic dairy & leather cattle' },
+    ]
+  }
+};
+
+let currentSubpaletteCategory = null;
+
+function openRetroSubpalette(category) {
+  const container = document.getElementById('retro-tool-subpalette');
+  const titleEl = document.getElementById('subpalette-title');
+  const itemsContainer = document.getElementById('subpalette-items');
+  const minimapCard = document.getElementById('bottom-minimap-card');
+
+  if (!container || !RETRO_SUBPALETTES[category]) return;
+
+  // Toggle close if clicking active category again
+  if (currentSubpaletteCategory === category && !container.classList.contains('hidden')) {
+    closeRetroSubpalette();
+    return;
+  }
+
+  currentSubpaletteCategory = category;
+  const data = RETRO_SUBPALETTES[category];
+
+  if (titleEl) titleEl.textContent = data.title;
+  if (itemsContainer) {
+    itemsContainer.innerHTML = '';
+    data.items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = `subpalette-btn-item ${activeTool === item.id ? 'active' : ''}`;
+      btn.id = `subitem-${item.id}`;
+      btn.title = item.desc;
+      btn.innerHTML = `<span class="item-glyph">${item.glyph}</span><span class="item-text">${item.text}</span>`;
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        selectSubpaletteTool(item.id, item.text, item.desc);
+      };
+      itemsContainer.appendChild(btn);
+    });
+  }
+
+  // Update tabs active state
+  ['nature', 'mines', 'arch', 'miracles'].forEach(t => {
+    const tabBtn = document.getElementById(`btn-retro-tab-${t}`);
+    if (tabBtn) tabBtn.classList.remove('active');
+  });
+  const activeTabBtn = document.getElementById(`btn-retro-tab-${category === 'architecture' ? 'arch' : category}`);
+  if (activeTabBtn) activeTabBtn.classList.add('active');
+
+  container.classList.remove('hidden');
+  if (minimapCard) minimapCard.classList.add('subpalette-open');
+  playSound('click');
+
+  // Auto-select first item if no tool is active in this category
+  if (!data.items.some(it => it.id === activeTool) && data.items.length > 0) {
+    const first = data.items[0];
+    selectSubpaletteTool(first.id, first.text, first.desc);
+  }
+}
+
+function closeRetroSubpalette() {
+  const container = document.getElementById('retro-tool-subpalette');
+  const minimapCard = document.getElementById('bottom-minimap-card');
+  if (container) container.classList.add('hidden');
+  if (minimapCard) minimapCard.classList.remove('subpalette-open');
+  currentSubpaletteCategory = null;
+  playSound('click');
+}
+
+function selectSubpaletteTool(toolId, toolName, toolDesc) {
+  activeTool = toolId;
+  playSound('click');
+  showToast(`${toolName}: ${toolDesc}`);
+
+  document.querySelectorAll('.subpalette-btn-item').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(`subitem-${toolId}`);
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+// ----------------------------------------------------------------------------
+// DYNAMIC LIVE NPC INSPECTOR
+// ----------------------------------------------------------------------------
 function openNpcInspector(agent) {
   const p = document.getElementById('bottom-npc-inspector');
   if (!p) return;
@@ -4072,6 +4314,7 @@ function openNpcInspector(agent) {
 
   const levelEl = document.getElementById('npc-insp-level');
   const nameAgeEl = document.getElementById('npc-insp-name-age');
+  const rankBadgeEl = document.getElementById('npc-insp-rank-badge');
   const statusEl = document.getElementById('npc-insp-status');
   const strEl = document.getElementById('npc-insp-str');
   const vitEl = document.getElementById('npc-insp-vit');
@@ -4081,21 +4324,35 @@ function openNpcInspector(agent) {
 
   const age = agent.age || (16 + (agent.id * 3) % 18);
   const lvl = agent.level || (10 + (agent.id % 25));
-  const role = (agent.archetype && !agent.archetype.includes('None')) ? agent.archetype : 'Novice';
+  const rawClass = agent.class || (agent.archetype && !agent.archetype.includes('None') ? agent.archetype : 'Novice');
+  const cls = (typeof rawClass === 'string') ? rawClass : 'Novice';
+  const rawRank = agent.rank || ((lvl >= 20) ? 'A' : (lvl >= 16) ? 'C' : 'Novice');
+  const rank = (typeof rawRank === 'string' && rawRank !== 'None') ? rawRank : 'Novice';
 
-  if (levelEl) levelEl.textContent = `Level ${lvl} ${role}`;
+  if (levelEl) levelEl.textContent = `Level ${lvl} ${cls}${agent.subclass ? ' (' + agent.subclass + ')' : ''}`;
   if (nameAgeEl) nameAgeEl.textContent = `${agent.name} (${age}yo)`;
 
+  if (rankBadgeEl) {
+    rankBadgeEl.textContent = rank === 'Novice' ? 'Novice' : `${rank}-Rank`;
+    rankBadgeEl.className = `npc-rank-badge rank-${rank.toLowerCase()}`;
+  }
+
   let statusText = 'Class Awakening Scheduled';
-  if (lvl >= 25) statusText = 'Demigod Trial Eligible';
-  else if (agent.health < 40) statusText = 'Wounded / Seeking Sanctuary';
-  else if (agent.energy < 25) statusText = 'Fatigued / Meditating';
+  if (cls !== 'Novice') {
+    statusText = `Awakened ${cls} [${rank}-Rank]`;
+  } else if (age >= 16) {
+    statusText = 'Pilgrimage to Temple (Awakening Ready)';
+  } else if (agent.health < 40) {
+    statusText = 'Wounded / Seeking Sanctuary';
+  } else if (agent.energy < 25) {
+    statusText = 'Fatigued / Meditating';
+  }
   if (statusEl) statusEl.textContent = statusText;
 
-  const str = Math.round(agent.atk || (12 + (agent.id * 7) % 12));
-  const vit = Math.round(agent.def || (10 + (agent.id * 5) % 10));
-  const dex = Math.round(agent.spd || (11 + (agent.id * 3) % 11));
-  const intel = Math.round(agent.intellect || (8 + (agent.id * 9) % 16));
+  const str = Math.round(agent.strength || agent.atk || (12 + (agent.id * 7) % 12));
+  const vit = Math.round(agent.vitality || agent.def || (10 + (agent.id * 5) % 10));
+  const dex = Math.round(agent.agility || agent.spd || (11 + (agent.id * 3) % 11));
+  const intel = Math.round(agent.intelligence || agent.intellect || (8 + (agent.id * 9) % 16));
 
   if (strEl) strEl.textContent = str;
   if (vitEl) vitEl.textContent = vit;
@@ -4103,8 +4360,109 @@ function openNpcInspector(agent) {
   if (intEl) intEl.textContent = intel;
 
   if (goalEl) {
-    goalEl.textContent = agent.current_thought || agent.last_action || 'Travel to GODs Temple for Awakening.';
+    goalEl.textContent = agent.current_goal || agent.current_thought || agent.last_action || 'Travel to GODs Temple for Awakening.';
   }
+
+  // Dynamic Avatar Palette: Colors adjust based on class and rank
+  const armorEl = document.getElementById('npc-svg-armor');
+  const hairEl = document.getElementById('npc-svg-hair');
+  if (armorEl && hairEl) {
+    if (cls === 'Warrior' || cls === 'Paladin') {
+      armorEl.setAttribute('fill', rank === 'S' || rank === 'SSS' ? '#f59e0b' : '#2563eb');
+      hairEl.setAttribute('fill', '#eab308');
+    } else if (cls === 'Mage') {
+      armorEl.setAttribute('fill', '#9333ea');
+      hairEl.setAttribute('fill', '#c084fc');
+    } else if (cls === 'Ranger') {
+      armorEl.setAttribute('fill', '#16a34a');
+      hairEl.setAttribute('fill', '#b45309');
+    } else if (cls === 'Rogue') {
+      armorEl.setAttribute('fill', '#334155');
+      hairEl.setAttribute('fill', '#475569');
+    } else {
+      armorEl.setAttribute('fill', '#60a5fa');
+      hairEl.setAttribute('fill', '#eab308');
+    }
+  }
+}
+
+function awakenInspectedNpc() {
+  if (!currentTelemetry || !selectedAgentId) {
+    showToast('⚠️ No character currently selected to awaken');
+    return;
+  }
+  const agent = currentTelemetry.agents?.find(a => a.id === selectedAgentId);
+  const targetX = agent ? agent.x : 68;
+  const targetY = agent ? agent.y : 40;
+
+  playSound('chime');
+  sendMsg({
+    type: 'TerraformArea',
+    brush: 'DivineAwaken',
+    center_x: targetX,
+    center_y: targetY,
+    radius: 1,
+  });
+  showToast(`⚡ Divine Awakening decree cast on ${agent ? agent.name : 'Mortal'}!`);
+}
+
+// ----------------------------------------------------------------------------
+// WEATHER & CLIMATE CODEX POPOVER
+// ----------------------------------------------------------------------------
+function toggleWeatherCodex() {
+  const modal = document.getElementById('weather-codex-modal');
+  if (!modal) return;
+  modal.classList.toggle('hidden');
+  playSound('click');
+
+  if (!modal.classList.contains('hidden') && currentTelemetry) {
+    const weatherStr = currentTelemetry.weather ? currentTelemetry.weather.toString() : 'Crisp / Windy';
+    const nameEl = document.getElementById('codex-weather-name');
+    const cropEl = document.getElementById('codex-crop-mult');
+    const spdEl = document.getElementById('codex-speed-mult');
+    const manaEl = document.getElementById('codex-mana-mult');
+
+    if (nameEl) nameEl.textContent = weatherStr;
+    if (cropEl) cropEl.textContent = weatherStr.includes('Rain') ? '+45% Rain Yield' : '+25% Growth';
+    if (spdEl) spdEl.textContent = weatherStr.includes('Blizzard') ? '-30% Frozen' : '+10% Swiftness';
+    if (manaEl) manaEl.textContent = '1.4x Leyline Flux';
+  }
+}
+
+function triggerGodWeather(type) {
+  playSound('chime');
+  if (type === 'rain') {
+    sendMsg({ type: 'TerraformArea', brush: 'CarveRiver', center_x: 64, center_y: 64, radius: 2 });
+    showToast('🌧️ Divine Rainstorm conjured across the realm!');
+  } else if (type === 'clear') {
+    showToast('☀️ Clear Sun restored by divine decree');
+  } else if (type === 'heatwave') {
+    sendMsg({ type: 'TerraformArea', brush: 'ThawHeat', center_x: 64, center_y: 64, radius: 3 });
+    showToast('🔥 Scorching Heatwave descended over lands');
+  } else if (type === 'blizzard') {
+    sendMsg({ type: 'TerraformArea', brush: 'FreezeIce', center_x: 64, center_y: 64, radius: 3 });
+    showToast('❄️ Permafrost Blizzard summoned across territory');
+  }
+  const weatherEl = document.getElementById('retro-weather');
+  if (weatherEl) weatherEl.textContent = type;
+  toggleWeatherCodex();
+}
+
+// ----------------------------------------------------------------------------
+// WORLD MAP SOVEREIGN REALMS & THREAT NAVIGATION
+// ----------------------------------------------------------------------------
+function locateKingdomOnMap(kingdom, x, y, name) {
+  setViewMode(false);
+  centerCameraOn(x, y);
+  playSound('chime');
+  showToast(`🗺️ Navigated to realm: ${name}`);
+}
+
+function locateThreatOnMap(rank, x, y, name) {
+  setViewMode(false);
+  centerCameraOn(x, y);
+  playSound('thunder');
+  showToast(`⚠️ Teleported to threat zone: ${name}`);
 }
 
 function toggleMiniMapCard() {
@@ -4114,6 +4472,11 @@ function toggleMiniMapCard() {
     playSound('click');
   }
 }
+
+// ----------------------------------------------------------------------------
+// RETRO STATUS HUD & DYNAMIC EVENT FEED
+// ----------------------------------------------------------------------------
+let lastLoggedEventCount = 0;
 
 function updateRetroStatusHud(data) {
   const tick = data.world_tick || 0;
@@ -4147,6 +4510,71 @@ function updateRetroStatusHud(data) {
 
   const npcsEl = document.getElementById('debug-npcs-val');
   if (npcsEl) npcsEl.textContent = data.agents ? data.agents.length : 128;
+
+  // Live Dynamic Event Feed updates
+  if (data.event_log && data.event_log.length > 0) {
+    const feedContainer = document.getElementById('feed-entries-container');
+    if (feedContainer && data.event_log.length !== lastLoggedEventCount) {
+      lastLoggedEventCount = data.event_log.length;
+      const recent = data.event_log.slice(-12);
+      feedContainer.innerHTML = '';
+      recent.forEach((msg, idx) => {
+        const row = document.createElement('div');
+        row.className = 'feed-entry';
+        const hr = 8 + (Math.floor((tick - (recent.length - idx) * 3) / 4) % 12);
+        const mn = (idx * 7) % 60;
+        const timeBadge = `[${hr.toString().padStart(2, '0')}:${mn.toString().padStart(2, '0')}]`;
+
+        row.innerHTML = `<span class="feed-time">${timeBadge}</span> ${msg}`;
+        row.onclick = () => {
+          playSound('click');
+          if (msg.includes('Temple') || msg.includes('Awakening')) centerCameraOn(68, 40);
+          else if (msg.includes('Dungeon') || msg.includes('Leyline')) centerCameraOn(42, 40);
+          else if (msg.includes('Guild') || msg.includes('Party')) centerCameraOn(82, 44);
+          else if (msg.includes('Caravan') || msg.includes('Eldoria')) centerCameraOn(70, 44);
+          else centerCameraOn(64, 64);
+          showToast(`📍 Panned to event location`);
+        };
+        feedContainer.appendChild(row);
+      });
+      feedContainer.scrollTop = feedContainer.scrollHeight;
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// INTERACTIVE RETRO MINIMAP RADAR
+// ----------------------------------------------------------------------------
+let isRetroMinimapDragging = false;
+
+function initRetroMinimap() {
+  const rCanvas = document.getElementById('retro-minimap-canvas');
+  if (!rCanvas) return;
+
+  function handleRetroMinimapEvent(e) {
+    const rect = rCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const wx = Math.max(0, Math.min(WORLD_SIZE - 1, Math.round((mx / rect.width) * WORLD_SIZE)));
+    const wy = Math.max(0, Math.min(WORLD_SIZE - 1, Math.round((my / rect.height) * WORLD_SIZE)));
+    centerCameraOn(wx, wy);
+  }
+
+  rCanvas.addEventListener('mousedown', (e) => {
+    isRetroMinimapDragging = true;
+    handleRetroMinimapEvent(e);
+    playSound('click');
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (isRetroMinimapDragging) {
+      handleRetroMinimapEvent(e);
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    isRetroMinimapDragging = false;
+  });
 }
 
 function renderRetroMinimap(data) {
@@ -4158,53 +4586,81 @@ function renderRetroMinimap(data) {
 
   rCtx.clearRect(0, 0, w, h);
 
-  const cx = w / 2;
-  const cy = h / 2;
-  const r = Math.min(w, h) * 0.44;
-
-  rCtx.save();
+  // 1. Dark oceanic slate base
   rCtx.fillStyle = '#0f172a';
   rCtx.fillRect(0, 0, w, h);
 
-  rCtx.beginPath();
-  rCtx.arc(cx, cy, r, 0, Math.PI * 2);
-  rCtx.clip();
+  // 2. Offscreen terrain sampling
+  const scaleX = w / WORLD_SIZE;
+  const scaleY = h / WORLD_SIZE;
 
-  rCtx.fillStyle = '#0284c7';
-  rCtx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  if (isTerrainBufferBuilt) {
+    rCtx.drawImage(terrainCanvas, 0, 0, w, h);
+  } else {
+    // Fallback continent representation
+    rCtx.fillStyle = '#1e3a8a';
+    rCtx.fillRect(0, 0, w, h);
+    rCtx.fillStyle = '#22c55e';
+    rCtx.beginPath();
+    rCtx.arc(w * 0.5, h * 0.45, w * 0.38, 0, Math.PI * 2);
+    rCtx.fill();
+  }
 
-  rCtx.fillStyle = '#22c55e';
+  // 3. Highlight Canonical Landmark POIs
+  // Solar Altar Temple (68, 40)
+  rCtx.fillStyle = '#fbbf24';
+  rCtx.fillRect(68 * scaleX - 2, 40 * scaleY - 2, 5, 5);
+
+  // Cavern Dungeon Rift (42, 40)
+  rCtx.fillStyle = '#c026d3';
   rCtx.beginPath();
-  rCtx.arc(cx - r * 0.2, cy - r * 0.1, r * 0.45, 0, Math.PI * 2);
-  rCtx.arc(cx + r * 0.3, cy + r * 0.2, r * 0.35, 0, Math.PI * 2);
+  rCtx.arc(42 * scaleX, 40 * scaleY, 3, 0, Math.PI * 2);
   rCtx.fill();
 
-  rCtx.fillStyle = '#f8fafc';
-  rCtx.beginPath();
-  rCtx.ellipse(cx, cy - r * 0.85, r * 0.4, r * 0.15, 0, 0, Math.PI * 2);
-  rCtx.fill();
+  // Guild Hall Barracks (82, 44)
+  rCtx.fillStyle = '#38bdf8';
+  rCtx.fillRect(82 * scaleX - 2, 44 * scaleY - 2, 4, 4);
 
-  rCtx.fillStyle = '#ef4444';
-  rCtx.fillRect(cx - 6, cy - 4, 5, 5);
-  rCtx.fillRect(cx + 4, cy + 2, 5, 5);
+  // Farmland Granary (60, 48)
+  rCtx.fillStyle = '#fef08a';
+  rCtx.fillRect(60 * scaleX - 1.5, 48 * scaleY - 1.5, 3.5, 3.5);
 
-  rCtx.fillStyle = '#a855f7';
-  rCtx.beginPath();
-  rCtx.arc(cx + r * 0.4, cy - r * 0.2, 5, 0, Math.PI * 2);
-  rCtx.fill();
-  rCtx.font = 'bold 7px sans-serif';
-  rCtx.fillStyle = '#ffffff';
-  rCtx.textAlign = 'center';
-  rCtx.fillText('A', cx + r * 0.4, cy - r * 0.2 + 2.5);
+  // 4. Live Agent Dots
+  if (data.agents && data.agents.length > 0) {
+    for (const a of data.agents) {
+      const ax = a.x * scaleX;
+      const ay = a.y * scaleY;
+      if (a.id === selectedAgentId) {
+        rCtx.fillStyle = '#ffffff';
+        rCtx.beginPath();
+        rCtx.arc(ax, ay, 3, 0, Math.PI * 2);
+        rCtx.fill();
+      } else {
+        rCtx.fillStyle = (a.race === 'SolarTerran') ? '#f59e0b' : '#38bdf8';
+        rCtx.fillRect(ax - 1, ay - 1, 2, 2);
+      }
+    }
+  }
 
-  const sphereShade = rCtx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.2, cx, cy, r);
-  sphereShade.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
-  sphereShade.addColorStop(0.7, 'rgba(0, 0, 0, 0)');
-  sphereShade.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
-  rCtx.fillStyle = sphereShade;
-  rCtx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  // 5. Camera Viewport Bounding Box
+  const viewTilesW = (canvas.width / (TILE_PX * camera.zoom));
+  const viewTilesH = (canvas.height / (TILE_PX * camera.zoom));
+  const camWorldX = (-camera.x / (TILE_PX * camera.zoom));
+  const camWorldY = (-camera.y / (TILE_PX * camera.zoom));
 
-  rCtx.restore();
+  const boxX = camWorldX * scaleX;
+  const boxY = camWorldY * scaleY;
+  const boxW = viewTilesW * scaleX;
+  const boxH = viewTilesH * scaleY;
+
+  rCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  rCtx.lineWidth = 1.5;
+  rCtx.strokeRect(boxX, boxY, boxW, boxH);
+
+  // 6. Subtle inner border shade
+  rCtx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+  rCtx.lineWidth = 2;
+  rCtx.strokeRect(0, 0, w, h);
 }
 
 function drawCosmicWorldMap(data, time) {

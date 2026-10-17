@@ -50,10 +50,10 @@
     </div>
 
     <!-- Weather Widget -->
-    <div class="retro-hud-block weather">
-      <span>🌧️</span>
+    <div class="retro-hud-block weather" onclick="toggleWeatherCodex()" style="cursor: pointer;" title="Click to view Atmospheric & Climate Codex">
+      <span id="retro-weather-ico">🌧️</span>
       <span>Wire: <span id="retro-weather">crisp/windy</span></span>
-      <span class="weather-btn-help" title="Atmospheric conditions affect crop yields and movement speed">?</span>
+      <span class="weather-btn-help" onclick="toggleWeatherCodex(); event.stopPropagation();" title="Atmospheric conditions affect crop yields and movement speed">?</span>
     </div>
 
     <!-- Danger Level Badge -->
@@ -116,14 +116,19 @@
   ========================================================= -->
   <div id="bottom-npc-inspector">
     <div class="npc-panel-header">
-      <span class="npc-panel-title">NPC Inspector Panel</span>
-      <button class="btn-close-retro" onclick="closeNpcInspector()" title="Close Inspector">✕</button>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span class="npc-panel-title">NPC Inspector Panel</span>
+        <span id="npc-insp-rank-badge" class="npc-rank-badge rank-novice">Novice</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <button class="btn-insp-awaken" onclick="awakenInspectedNpc()" title="Bestow Divine Awakening upon this mortal">⚡ Awaken</button>
+        <button class="btn-close-retro" onclick="closeNpcInspector()" title="Close Inspector">✕</button>
+      </div>
     </div>
     <div class="npc-panel-body">
       <!-- Portrait Frame -->
       <div class="npc-avatar-frame" id="npc-avatar-box">
-        <svg viewBox="0 0 64 64" width="100%" height="100%">
-          <!-- Anime Hero Portrait (Aelric) -->
+        <svg id="npc-insp-svg" viewBox="0 0 64 64" width="100%" height="100%">
           <defs>
             <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#ffdfba"/>
@@ -139,8 +144,8 @@
             </linearGradient>
           </defs>
           <rect width="64" height="64" fill="#1e1b2e"/>
-          <!-- Shoulders & Blue Armor -->
-          <path d="M 8 64 Q 14 46 32 46 Q 50 46 56 64 Z" fill="url(#armorGrad)"/>
+          <!-- Shoulders & Armor -->
+          <path id="npc-svg-armor" d="M 8 64 Q 14 46 32 46 Q 50 46 56 64 Z" fill="url(#armorGrad)"/>
           <path d="M 18 52 L 32 47 L 46 52 L 40 64 L 24 64 Z" fill="#94a3b8"/>
           <!-- Neck -->
           <rect x="27" y="38" width="10" height="10" fill="#f5c296"/>
@@ -154,8 +159,8 @@
           <!-- Nose & Smile -->
           <path d="M 32 32 L 31 34 L 33 34" stroke="#d97706" stroke-width="1" fill="none"/>
           <path d="M 29 37 Q 32 39 35 37" stroke="#b45309" stroke-width="1.2" fill="none"/>
-          <!-- Spiky Blonde Hair -->
-          <path d="M 16 28 Q 12 14 24 10 Q 32 6 42 10 Q 52 14 48 28 Q 50 20 46 16 Q 38 12 32 14 Q 24 12 18 20 Z" fill="url(#hairGrad)"/>
+          <!-- Spiky Hair -->
+          <path id="npc-svg-hair" d="M 16 28 Q 12 14 24 10 Q 32 6 42 10 Q 52 14 48 28 Q 50 20 46 16 Q 38 12 32 14 Q 24 12 18 20 Z" fill="url(#hairGrad)"/>
           <path d="M 18 22 L 23 26 L 27 18 L 32 25 L 37 17 L 41 26 L 46 22 L 44 32 L 40 28 L 36 32 L 32 27 L 28 32 L 24 28 L 20 32 Z" fill="url(#hairGrad)"/>
         </svg>
       </div>
@@ -199,12 +204,15 @@
        BOTTOM-CENTER LIVE EVENT FEED (IMAGE 1)
   ========================================================= -->
   <div id="bottom-event-feed">
-    <div class="feed-header">Event Feed</div>
+    <div class="feed-header">
+      <span>Event Feed</span>
+      <span style="font-size: 0.62rem; color: #94a3b8; font-weight: normal;">Click entry to pan camera</span>
+    </div>
     <div class="feed-entries" id="feed-entries-container">
-      <div class="feed-entry"><span class="feed-time">[08:15]</span> <span class="feed-quest">Emergency Quest: Seal Corrupted Leyline near Dungeon!</span></div>
-      <div class="feed-entry"><span class="feed-time">[09:30]</span> <span class="feed-caravan">Caravan arrived from Nation of Eldoria</span></div>
-      <div class="feed-entry"><span class="feed-time">[10:12]</span> <span class="feed-party">Party 'Iron Shield' formed to clear Dungeon</span></div>
-      <div class="feed-entry"><span class="feed-time">[10:24]</span> Aelric set out toward GODs Temple for Awakening.</div>
+      <div class="feed-entry" onclick="centerCameraOn(42, 40); playSound('click'); showToast('📍 Panned to Dungeon Rift');"><span class="feed-time">[08:15]</span> <span class="feed-quest">Emergency Quest: Seal Corrupted Leyline near Dungeon!</span></div>
+      <div class="feed-entry" onclick="centerCameraOn(70, 44); playSound('click'); showToast('📍 Panned to Eldoria Town Hall');"><span class="feed-time">[09:30]</span> <span class="feed-caravan">Caravan arrived from Nation of Eldoria</span></div>
+      <div class="feed-entry" onclick="centerCameraOn(82, 44); playSound('click'); showToast('📍 Panned to Guild Hall');"><span class="feed-time">[10:12]</span> <span class="feed-party">Party 'Iron Shield' formed to clear Dungeon</span></div>
+      <div class="feed-entry" onclick="centerCameraOn(68, 40); playSound('click'); showToast('📍 Panned to GODs Solar Temple');"><span class="feed-time">[10:24]</span> Aelric set out toward GODs Temple for Awakening.</div>
     </div>
   </div>
 
@@ -217,17 +225,70 @@
       <button class="btn-close-retro" onclick="toggleMiniMapCard()" title="Close Mini-map">✕</button>
     </div>
     <div class="minimap-body-retro">
-      <canvas id="retro-minimap-canvas" width="180" height="150"></canvas>
+      <canvas id="retro-minimap-canvas" width="180" height="150" title="Click or drag to navigate world camera"></canvas>
+    </div>
+    <div class="minimap-quick-bar">
+      <button class="btn-mini-quick" onclick="centerCameraOn(68, 40); playSound('chime'); showToast('🏛️ GODs Solar Temple (68, 40)');" title="Jump to Solar Altar Temple">🏛️ Temple</button>
+      <button class="btn-mini-quick" onclick="centerCameraOn(42, 40); playSound('thunder'); showToast('🐉 Cavern Dungeon (42, 40)');" title="Jump to Cavern Dungeon">🐉 Dungeon</button>
+      <button class="btn-mini-quick" onclick="centerCameraOn(82, 44); playSound('click'); showToast('⚔️ Guild Hall Barracks (82, 44)');" title="Jump to Guild Hall">⚔️ Guild</button>
+      <button class="btn-mini-quick" onclick="centerCameraOn(60, 48); playSound('click'); showToast('🌾 Sunlit Farmlands (60, 48)');" title="Jump to Farmland Granary">🌾 Farm</button>
+    </div>
+  </div>
+
+  <!-- Retro Build & Edit Sub-Palette Tray (Opens Above Toolbar) -->
+  <div id="retro-tool-subpalette" class="retro-subpalette-container hidden">
+    <div class="subpalette-header">
+      <span id="subpalette-title" class="subpalette-title">Nature & Elevation</span>
+      <button class="btn-close-retro" onclick="closeRetroSubpalette()" title="Close Palette">✕</button>
+    </div>
+    <div class="subpalette-items-grid" id="subpalette-items">
+      <!-- Items dynamically populated via switchSubpalette -->
     </div>
   </div>
 
   <div id="bottom-build-toolbar">
     <div class="build-toolbar-title">Build & Edit</div>
     <div class="build-tools-grid">
-      <button class="btn-build-tool active" onclick="switchCategory('nature'); showToast('🌱 Nature & Terrain Tools');" title="Terrain & Nature">🏞️</button>
-      <button class="btn-build-tool" onclick="selectGodTool('brush-iron', 'Enrich Iron Vein', 'Seed raw iron ore'); showToast('⛏️ Mining & Mineral Veins');" title="Mining & Ores">⛏️</button>
-      <button class="btn-build-tool" onclick="switchCategory('architecture'); showToast('🏗️ Architecture & Town Construction');" title="Architecture Buildings">🏗️</button>
-      <button class="btn-build-tool" onclick="selectGodTool('blessing-spark', 'Divine Spark', 'Heal and protect characters'); showToast('🛡️ Defend & Divine Spark');" title="Defense & Divine Blessings">🛡️</button>
+      <button id="btn-retro-tab-nature" class="btn-build-tool active" onclick="openRetroSubpalette('nature')" title="Terrain, Elevation & Nature Tools">🏞️</button>
+      <button id="btn-retro-tab-mines" class="btn-build-tool" onclick="openRetroSubpalette('mines')" title="All 10 Master Mine Types & Mineral Veins">⛏️</button>
+      <button id="btn-retro-tab-arch" class="btn-build-tool" onclick="openRetroSubpalette('architecture')" title="Architecture, Buildings, Pens & Docks">🏗️</button>
+      <button id="btn-retro-tab-miracles" class="btn-build-tool" onclick="openRetroSubpalette('miracles')" title="Divine Miracles, Awakenings & Wildlife">🛡️</button>
+    </div>
+  </div>
+
+  <!-- Atmospheric & Weather Codex Popover Modal -->
+  <div id="weather-codex-modal" class="weather-codex-popover hidden">
+    <div class="weather-codex-header">
+      <span class="weather-codex-title">🌤️ Atmospheric Climate Codex</span>
+      <button class="btn-close-retro" onclick="toggleWeatherCodex()" title="Close Codex">✕</button>
+    </div>
+    <div class="weather-codex-body">
+      <div class="codex-stat-row">
+        <span class="c-label">Current Climate:</span>
+        <span class="c-val highlight" id="codex-weather-name">Crisp / Windy</span>
+      </div>
+      <div class="codex-stat-row">
+        <span class="c-label">Crop Yield Multiplier:</span>
+        <span class="c-val positive" id="codex-crop-mult">+25% Growth</span>
+      </div>
+      <div class="codex-stat-row">
+        <span class="c-label">Mortal Movement Speed:</span>
+        <span class="c-val positive" id="codex-speed-mult">+10% Swiftness</span>
+      </div>
+      <div class="codex-stat-row">
+        <span class="c-label">Ambient Mana Charge:</span>
+        <span class="c-val mana" id="codex-mana-mult">1.4x Leyline Flux</span>
+      </div>
+      <div class="codex-stat-row">
+        <span class="c-label">Wild Fauna Activity:</span>
+        <span class="c-val" id="codex-fauna-activity">High Migration</span>
+      </div>
+      <div class="codex-weather-triggers">
+        <button class="btn-codex-action" onclick="triggerGodWeather('rain')" title="Summon Rainstorm">🌧️ Rain</button>
+        <button class="btn-codex-action" onclick="triggerGodWeather('clear')" title="Clear Skies">☀️ Sun</button>
+        <button class="btn-codex-action" onclick="triggerGodWeather('heatwave')" title="Heatwave">🔥 Heat</button>
+        <button class="btn-codex-action" onclick="triggerGodWeather('blizzard')" title="Permafrost Blizzard">❄️ Cold</button>
+      </div>
     </div>
   </div>
 
@@ -248,27 +309,27 @@
       <div class="stone-frame-card">
         <div class="stone-card-header">Sovereign Realms</div>
         <div class="kingdom-list-stone" id="world-kingdoms-list">
-          <div class="kingdom-stone-row">
+          <div class="kingdom-stone-row" onclick="locateKingdomOnMap('forest', 35, 50, '🇵🇸 森林聯邦')" title="Click to pan to realm territory">
             <span class="k-flag">🇵🇸</span>
             <span class="k-name">森林聯邦</span>
             <span class="k-status-ico" title="Peace">🕊️</span>
           </div>
-          <div class="kingdom-stone-row">
+          <div class="kingdom-stone-row" onclick="locateKingdomOnMap('eylias', 50, 30, '🌲 eylias')" title="Click to pan to realm territory">
             <span class="k-flag">🌲</span>
             <span class="k-name">eylias</span>
             <span class="k-status-ico" title="War">⚔️</span>
           </div>
-          <div class="kingdom-stone-row">
+          <div class="kingdom-stone-row" onclick="locateKingdomOnMap('laha', 70, 44, '🇫🇷 laha Capital')" title="Click to pan to realm territory">
             <span class="k-flag">🇫🇷</span>
             <span class="k-name">laha</span>
             <span class="k-status-ico" title="War">⚔️</span>
           </div>
-          <div class="kingdom-stone-row">
+          <div class="kingdom-stone-row" onclick="locateKingdomOnMap('mont', 90, 60, '🇬🇷 mont')" title="Click to pan to realm territory">
             <span class="k-flag">🇬🇷</span>
             <span class="k-name">mont</span>
             <span class="k-status-ico" title="Peace">🕊️</span>
           </div>
-          <div class="kingdom-stone-row">
+          <div class="kingdom-stone-row" onclick="locateKingdomOnMap('volcano', 105, 25, '🇪🇸 烈灼帝国')" title="Click to pan to realm territory">
             <span class="k-flag">🇪🇸</span>
             <span class="k-name">烈灼帝国</span>
             <span class="k-status-ico" title="Hostile War">🔥</span>
@@ -280,27 +341,27 @@
       <div class="stone-frame-card">
         <div class="stone-card-header">Mether Planet</div>
         <div class="threat-list-stone" id="world-threats-list">
-          <div class="threat-stone-row">
+          <div class="threat-stone-row" onclick="locateThreatOnMap('F', 30, 70, 'F-Rank: 应同极帝盟')" title="Click to inspect threat">
             <span class="threat-badge f">F</span>
             <span class="threat-name">应同极帝盟</span>
             <span class="threat-star">⭐</span>
           </div>
-          <div class="threat-stone-row">
+          <div class="threat-stone-row" onclick="locateThreatOnMap('C', 78, 20, 'C-Rank: 海同物畏变')" title="Click to inspect threat">
             <span class="threat-badge c">C</span>
             <span class="threat-name">海同物畏变</span>
             <span class="threat-star">⭐</span>
           </div>
-          <div class="threat-stone-row">
+          <div class="threat-stone-row" onclick="locateThreatOnMap('B', 58, 85, 'B-Rank: 海央繁')" title="Click to inspect threat">
             <span class="threat-badge b">B</span>
             <span class="threat-name">海央繁</span>
             <span class="threat-star">🌟</span>
           </div>
-          <div class="threat-stone-row">
+          <div class="threat-stone-row" onclick="locateThreatOnMap('A', 88, 38, 'A-Rank: 魔物暴动')" title="Click to inspect threat">
             <span class="threat-badge a">A</span>
             <span class="threat-name">魔物暴动</span>
             <span class="threat-star" style="color: #c084fc;">🌟</span>
           </div>
-          <div class="threat-stone-row">
+          <div class="threat-stone-row" onclick="locateThreatOnMap('S', 42, 40, 'S-Rank: 渊帝暴 Cavern Dungeon Rift')" title="Click to inspect threat">
             <span class="threat-badge s">S</span>
             <span class="threat-name">渊帝暴</span>
             <span class="threat-star">⭐</span>

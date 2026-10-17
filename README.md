@@ -1114,6 +1114,106 @@ cargo build --release
 
 ---
 
+## 🗝️ Phase 6: Dungeons, Loot Tables, Mana Stones & Off-Screen Combat Resolution
+
+Phase 6 introduces deep procedural subterranean dungeons, tiered loot tables with attribute-modifying magical affixes, harvestable mana stones across 5 purity grades, and a high-throughput off-screen combat simulation engine capable of resolving party expeditions without rendering overhead.
+
+### 🏰 Procedural Dungeon Generation (`src/world/dungeon.rs`)
+
+Dungeons are generated procedurally across the continental grid, anchored by world seeds and scaling monotonically by rank from $F$ to $SSS$:
+
+| Dungeon Rank | Floor Count | Rooms per Floor | Monster Density | Apex Dungeon Boss | Mana Density |
+| :---: | :---: | :---: | :---: | :--- | :---: |
+| **F** | 1 Floor | 3 Chambers | 2-4 Goblins / Sewer Rats | Goblin Chieftain Grashnak | 25.0 |
+| **E** | 2 Floors | 3 Chambers | 2-4 Shadow Wolves / Kobolds | Grave Lord Malvok | 30.0 |
+| **D** | 2 Floors | 3-4 Chambers | 2-4 Cave Trolls / Blight Spiders | Broodmother Arachna | 37.5 |
+| **C** | 3 Floors | 4 Chambers | 2-4 Minotaurs / Gargoyles | Minotaur Bloodrager Taurus | 45.0 |
+| **B** | 4 Floors | 4 Chambers | 2-4 Frost Drakes / Automatons | Forgemaster Automaton Aegis-9 | 55.0 |
+| **A** | 5 Floors | 4 Chambers | 2-4 Infernal Chimeras / Liches | Elder Lich Malakor the Undying | 70.0 |
+| **S** | 6 Floors | 5 Chambers | 2-4 Void Fiends / Behemoths | Ancient Storm Dragon Valstrath | 87.5 |
+| **S+** | 7 Floors | 5 Chambers | 2-4 Titan Fragments / Nether Minions | Astral Dreadnought Xyphos | 105.0 |
+| **SSS** | 8 Floors | 6 Chambers | 2-4 Chaos God Aspects / Leviathans | Primordial Void Sovereign Azathoth | 125.0 |
+
+#### Chamber Archetypes (`RoomKind`):
+1. **Entry Hall (`EntryHall`)**: The threshold chamber. Safe exploration room with no hostile encounters.
+2. **Monster Chamber (`MobChamber`)**: Deep lair populated by packs of ranked monsters.
+3. **Treasure Vault (`TreasureVault`)**: High-value chamber containing treasure chests and mana stone geodes.
+4. **Ancient Shrine (`Shrine`)**: Restorative consecrated ground restoring 50% max HP to wounded party members.
+5. **Boss Lair (`BossLair`)**: The final chamber of the final floor, hosting an apex boss with boosted stats ($3.0\times$ HP, $1.8\times$ Attack).
+
+---
+
+### 💎 Loot Tables, Equipment Affixes & Mana Stones (`src/economy/loot.rs`)
+
+#### 1. Equipment Rarities & Procedural Affixes
+Equipment drops are rolled using weighted probability distributions adjusted dynamically by party luck:
+
+$$\text{Rarity Roll Weights}(R, \text{Luck}) = \mathbf{w}_{\text{base}}(R) \pm \Delta(\text{Luck})$$
+
+| Rarity Tier | Color | Max Affixes | Value Multiplier | Typical Equipment Suffix/Prefix |
+| :--- | :---: | :---: | :---: | :--- |
+| **Common** | Gray (`#9e9e9e`) | 0 | $1.0\times$ | Plain / Novice |
+| **Uncommon** | Green (`#4caf50`) | 1 | $1.75\times$ | Swiftwind, Juggernaut's |
+| **Rare** | Blue (`#2196f3`) | 2 | $3.0\times$ | Titan's, Archmage's |
+| **Epic** | Purple (`#9c27b0`) | 3 | $6.5\times$ | Vorpal, Aegis of Fortitude |
+| **Legendary** | Orange (`#ff9800`) | 4 | $15.0\times$ | Sovereign's, Gambler's |
+| **Mythic** | Crimson (`#e91e63`) | 5 | $40.0\times$ | God-Forged, Astral Resplendence |
+
+#### 2. Mana Stone Grading & Arcane Batteries
+Harvested from defeated dungeon monsters and crystal geodes:
+- **`Flawed`**: Base capacity 50.0 mana, base value 15 gold coins.
+- **`Regular`**: Base capacity 150.0 mana, base value 60 gold coins.
+- **`Flawless`**: Base capacity 400.0 mana, base value 250 gold coins.
+- **`Radiant`**: Base capacity 1,000.0 mana, base value 1,000 gold coins.
+- **`Astral`**: Base capacity 2,500.0 mana, base value 5,000 gold coins.
+- **Dynamic Valuation**:
+  $$V(g, p, c) = V_{\text{base}}(g) \cdot p \cdot \left(0.5 + 0.5 \cdot \frac{c}{c_{\text{max}}}\right)$$
+  where $p \in [0.5, 1.0]$ is stone purity and $c / c_{\text{max}}$ is the fraction of stored charge remaining.
+
+---
+
+### ⚔️ Off-Screen Statistical Combat Simulation (`src/world/encounter.rs`)
+
+Parties dispatched to explore subterranean dungeons are resolved through high-throughput deterministic simulation without graphics pipeline overhead:
+
+- **Damage Equations**:
+  $$\text{Damage}_{\text{party} \to \text{mob}} = \max\left(1.0, \text{ATK}_{\text{eff}} - 0.4 \cdot \text{DEF}_{\text{mob}}\right) \times (\text{Crit ? } 1.75 : 1.0)$$
+  $$\text{Damage}_{\text{mob} \to \text{party}} = \max\left(1.0, \text{ATK}_{\text{mob}} - 0.4 \cdot \text{DEF}_{\text{eff}}\right)$$
+- **Tactical Retreat Protocol**:
+  If the party's average health falls below 15% ($\text{HP}_{\text{avg}} / \text{HP}_{\text{max}} < 0.15$), the party executes an emergency tactical retreat to preserve member lives.
+- **Conquest & Respawning**:
+  Clearing the final boss chamber sets dungeon state to `DungeonState::Cleared`, rewards pooled EXP, gold, and mana stones to expedition participants, and initiates a 200-tick respawn cooldown.
+
+---
+
+### 🧪 Phase 6 Test Suite (`tests/phase6_dungeons_loot_mana_stones_tests.rs`)
+
+| Test Case | Description & Verification Target |
+| :--- | :--- |
+| `test_procedural_dungeon_generation_across_ranks` | Generates procedural dungeons across ranks $F, D, B, A, S, SSS$; verifies floor depth scaling (1 to 8 floors), entry halls at floor 0, boss lair at climax, and monotonic stat scaling ($SSS \text{ boss HP} > 4\times F \text{ boss HP}$). |
+| `test_loot_table_equipment_and_affix_rolls` | Validates rarity distributions across ranks and luck attributes; verifies affix counts respect rarity caps; validates equipment stat modifications apply correctly to 7 core attributes. |
+| `test_mana_stone_harvesting_and_energy_capacity` | Tests mana stone harvesting across ranks; validates discharge, recharge, and energy capacity limits; confirms monetary depreciation upon energy depletion. |
+| `test_off_screen_encounter_combat_resolution` | Simulates high-level party conquering an F-rank dungeon to victory with loot, EXP, and state transitions; tests fragile commoners against lethal S-rank dungeons to verify wipe-out / retreat bounds without infinite loops. |
+
+### 🛠️ Phase 6 Verification & Acceptance Gates
+
+All four acceptance gates pass cleanly:
+```bash
+# 1. Format check
+cargo fmt --check
+
+# 2. Strict lints & zero warnings
+cargo clippy --all-targets -- -D warnings
+
+# 3. Full test suite (53 passing tests across 10 test suites)
+cargo test
+
+# 4. Production release build (LTO, codegen-units = 1)
+cargo build --release
+```
+
+---
+
 ## 🚀 Getting Started & Local Installation
 
 ### Prerequisites

@@ -5,7 +5,9 @@ pub mod construction;
 pub mod cube_sphere;
 pub mod danger;
 pub mod disaster;
+pub mod dungeon;
 pub mod ecology;
+pub mod encounter;
 pub mod fauna;
 pub mod generation;
 pub mod headless;
@@ -21,6 +23,12 @@ pub use construction::{Blueprint, ConstructionStage, JobBoard};
 pub use cube_sphere::{cell_dir, CellId};
 pub use danger::DangerField;
 pub use disaster::{ActiveDisaster, AdaptationTracker, DisasterEngine, DisasterKind};
+pub use dungeon::{
+    generate_dungeon, Dungeon, DungeonFloor, DungeonMonster, DungeonRoom, DungeonState, RoomKind,
+};
+pub use encounter::{
+    DungeonExpedition, EncounterSimulator, ExpeditionMember, ExpeditionState, StepResult,
+};
 pub use headless::{HeadlessSimResult, HeadlessSimulator, TICKS_PER_YEAR};
 pub use planet::{CubeSphereWorld, PoiKind, PointOfInterest};
 pub use saves::{SaveError, SaveSystem};
@@ -65,6 +73,22 @@ pub struct WorldGrid {
     pub danger_field: DangerField,
     #[serde(default)]
     pub disasters: DisasterEngine,
+    #[serde(default)]
+    pub dungeons: Vec<Dungeon>,
+    #[serde(default)]
+    pub expeditions: Vec<DungeonExpedition>,
+    #[serde(default = "default_item_seed_id")]
+    pub next_item_id: u64,
+    #[serde(default = "default_stone_seed_id")]
+    pub next_stone_id: u64,
+}
+
+fn default_item_seed_id() -> u64 {
+    1001
+}
+
+fn default_stone_seed_id() -> u64 {
+    5001
 }
 
 impl Default for WorldGrid {
@@ -82,6 +106,7 @@ impl WorldGrid {
         let (mut tiles, altars) = MapGenerator::generate_world(width, height);
         Self::enrich_minerals(&mut tiles);
         let (wildlife, next_id) = Self::spawn_initial_wildlife();
+        let dungeons = Self::spawn_initial_dungeons(width, height, 42);
 
         Self {
             width,
@@ -96,6 +121,10 @@ impl WorldGrid {
             shipping: ShippingNetwork::new(),
             danger_field: DangerField::new(width, height),
             disasters: DisasterEngine::new(),
+            dungeons,
+            expeditions: Vec::new(),
+            next_item_id: 1001,
+            next_stone_id: 5001,
         }
     }
 
@@ -127,6 +156,8 @@ impl WorldGrid {
         self.ecology = EcologyManager::default();
         self.job_board = JobBoard::new();
         self.shipping = ShippingNetwork::new();
+        self.dungeons = Self::spawn_initial_dungeons(self.width, self.height, seed);
+        self.expeditions.clear();
 
         map_title
     }
@@ -265,6 +296,97 @@ impl WorldGrid {
             self.width,
             self.height,
         );
+
+        // Tick dungeons & expeditions
+        self.tick_dungeons();
+    }
+
+    /// Spawns the initial canonical set of diverse procedural dungeons across ranks
+    pub fn spawn_initial_dungeons(width: usize, height: usize, seed: u64) -> Vec<Dungeon> {
+        use crate::agent::progression::Rank;
+        vec![
+            generate_dungeon(
+                1,
+                "Whispering Caverns",
+                width / 4,
+                height / 4,
+                Rank::F,
+                seed.wrapping_add(101),
+            ),
+            generate_dungeon(
+                2,
+                "Blighted Catacombs",
+                (width * 3) / 4,
+                height / 4,
+                Rank::D,
+                seed.wrapping_add(102),
+            ),
+            generate_dungeon(
+                3,
+                "Minotaur Labyrinth",
+                width / 2,
+                height / 2,
+                Rank::C,
+                seed.wrapping_add(103),
+            ),
+            generate_dungeon(
+                4,
+                "Sunken Citadel",
+                width / 4,
+                (height * 3) / 4,
+                Rank::B,
+                seed.wrapping_add(104),
+            ),
+            generate_dungeon(
+                5,
+                "Infernal Spire",
+                (width * 3) / 4,
+                (height * 3) / 4,
+                Rank::A,
+                seed.wrapping_add(105),
+            ),
+            generate_dungeon(
+                6,
+                "Astral Sanctum",
+                width / 2,
+                height / 6,
+                Rank::S,
+                seed.wrapping_add(106),
+            ),
+        ]
+    }
+
+    /// Advances active dungeon expeditions and respawn timers
+    pub fn tick_dungeons(&mut self) {
+        let mut rng = rand::thread_rng();
+
+        // Respawn cleared dungeons if respawn cooldown elapses
+        let world_seed = 9999;
+        for dungeon in &mut self.dungeons {
+            if dungeon.state == DungeonState::Cleared {
+                dungeon.respawn_timer += 1;
+                if dungeon.respawn_timer >= 200 {
+                    dungeon.respawn(world_seed);
+                }
+            }
+        }
+
+        // Advance active expeditions
+        for expedition in &mut self.expeditions {
+            if let Some(dungeon) = self
+                .dungeons
+                .iter_mut()
+                .find(|d| d.id == expedition.dungeon_id)
+            {
+                EncounterSimulator::step(
+                    expedition,
+                    dungeon,
+                    &mut rng,
+                    &mut self.next_item_id,
+                    &mut self.next_stone_id,
+                );
+            }
+        }
     }
 
     /// Executes one tick of autonomous construction work for an agent on the world's job board

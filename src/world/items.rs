@@ -16,6 +16,8 @@ pub enum ItemId {
     Fur,
     Clay,
     ManaCrystal,
+    Fish,
+    WoolCloth,
 
     // Processed & Intermediate Materials
     TimberPlanks,
@@ -58,6 +60,8 @@ impl ItemId {
             ItemId::IronIngot => "Iron Ingot",
             ItemId::Bread => "Baked Bread",
             ItemId::ClayTablet => "Clay Tablet",
+            ItemId::Fish => "Fresh Fish",
+            ItemId::WoolCloth => "Luxury Wool Cloth",
             ItemId::PrimitiveChopper => "Primitive Chopper",
             ItemId::StonePickaxe => "Stone Pickaxe",
             ItemId::IronPickaxe => "Iron Pickaxe",
@@ -75,8 +79,10 @@ impl ItemId {
         match self {
             ItemId::FreshWater | ItemId::Berry => 1.0,
             ItemId::Wood | ItemId::Stone | ItemId::Grain => 2.0,
+            ItemId::Fish => 4.0,
             ItemId::Flint | ItemId::Clay | ItemId::Fur => 4.0,
             ItemId::TimberPlanks | ItemId::Bread => 5.0,
+            ItemId::WoolCloth => 18.0,
             ItemId::PrimitiveChopper | ItemId::Firestriker => 8.0,
             ItemId::StonePickaxe => 10.0,
             ItemId::IronOre => 12.0,

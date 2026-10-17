@@ -10,7 +10,9 @@ pub mod headless;
 pub mod items;
 pub mod planet;
 pub mod saves;
+pub mod shipping;
 pub mod tile;
+pub mod trade_routes;
 pub mod views;
 
 pub use construction::{Blueprint, ConstructionStage, JobBoard};
@@ -18,6 +20,11 @@ pub use cube_sphere::{cell_dir, CellId};
 pub use headless::{HeadlessSimResult, HeadlessSimulator, TICKS_PER_YEAR};
 pub use planet::{CubeSphereWorld, PoiKind, PointOfInterest};
 pub use saves::{SaveError, SaveSystem};
+pub use shipping::{
+    find_water_path, is_navigable_water, launch_ship_from_boat_yard, ShipEntity, ShipStatus,
+    VesselKind,
+};
+pub use trade_routes::{DockPort, ShippingNetwork, TradeRoute};
 pub use views::{GlobeView, RegionView};
 
 use altar::Altar;
@@ -48,6 +55,8 @@ pub struct WorldGrid {
     pub ecology: EcologyManager,
     #[serde(default)]
     pub job_board: JobBoard,
+    #[serde(default)]
+    pub shipping: ShippingNetwork,
 }
 
 impl Default for WorldGrid {
@@ -76,6 +85,7 @@ impl WorldGrid {
             next_entity_id: next_id,
             ecology: EcologyManager::default(),
             job_board: JobBoard::new(),
+            shipping: ShippingNetwork::new(),
         }
     }
 
@@ -106,6 +116,7 @@ impl WorldGrid {
         self.gaia = GaiaEngine::new();
         self.ecology = EcologyManager::default();
         self.job_board = JobBoard::new();
+        self.shipping = ShippingNetwork::new();
 
         map_title
     }
@@ -252,5 +263,11 @@ impl WorldGrid {
             &mut self.tiles,
             self.width,
         )
+    }
+
+    /// Advances maritime trade, shipping fleets, and cargo transfers across coastal docks
+    pub fn tick_shipping(&mut self, markets: &mut [crate::economy::Market]) {
+        self.shipping
+            .tick_trade_arbitrage(&self.tiles, self.width, self.height, markets);
     }
 }

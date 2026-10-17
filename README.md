@@ -524,10 +524,15 @@ cogniverse-rpg/
 │   │   ├── mod.rs                     # Agent entity, vitals, inventory, and sensory distances
 │   │   ├── needs.rs                   # Dave Mark's IAUS NpcNeeds (hunger, rest, safety, shelter, social)
 │   │   └── utility_ai.rs              # Quadratic utility curves U(x)=x^2, hysteresis (0.15), unbiased wander
+│   ├── economy/                       # Market Economics & Commodity Trading
+│   │   ├── mod.rs                     # Economy module coordinator
+│   │   └── market.rs                  # Local markets, supply/demand square-root pricing, inertia & ledger
 │   ├── world/                         # Environment, Cube-Sphere & Living Nature
 │   │   ├── mod.rs                     # Spatial grid coordinator, construction runner, tick dispatcher
 │   │   ├── tile.rs                    # Biomes, elevation layers, placed structures (TownHall, Docks, etc.)
 │   │   ├── construction.rs            # Multi-stage construction pipeline (Clearing -> Hauling -> Framing) & JobBoard
+│   │   ├── shipping.rs                # Vessels (FishingBoat, CargoCog, Galleon), A* water pathfinding & launch
+│   │   ├── trade_routes.rs            # DockPort, TradeRoute, and ShippingNetwork automated trade arbitrage
 │   │   ├── commands.rs                # Unified EditCommand pipeline with undo/redo & cache invalidation
 │   │   ├── cube_sphere.rs             # Continuous 6xNxN cube-sphere topology & seamless edge-stitching
 │   │   ├── planet.rs                  # 3D spherical OpenSimplex terrain, biomes, and Points of Interest
@@ -570,6 +575,7 @@ cogniverse-rpg/
     ├── phase1_cube_sphere_tests.rs    # Cube-sphere generation, Globe/Region view, binary save/load, 100-year sim
     ├── phase2_ecology_tests.rs        # Food web, grazing/hunting/fleeing, carrying capacity, extinction & farming
     ├── phase3_utility_construction_tests.rs # Utility AI hysteresis, unbiased exploration, food nutrition & job board
+    ├── phase4_economy_shipping_tests.rs # Supply/demand pricing, boat launch, water pathfinding, sea-trade arbitrage
     ├── repro_known_bugs.rs            # Initial repro tests for known bugs
     └── simulation_tests.rs            # Comprehensive unit & integration test suite (20 cases)
 ```
@@ -887,6 +893,100 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 
 # 3. Full test suite (41 passing tests across 6 test suites)
+cargo test
+
+# 4. Production release build (LTO, codegen-units = 1)
+cargo build --release
+```
+
+---
+
+## ⚓ Phase 4: Economy, Trade & Shipping (Boats, Docks, Sea-Trade Routes)
+
+Phase 4 introduces a living macro-economy, local commodity markets with non-linear supply/demand dynamic pricing, boat building, coastal dockyards, navigable water pathfinding, and automated maritime trade routes with inter-settlement arbitrage.
+
+### 💰 Local Commodity Markets & Dynamic Supply/Demand Pricing (`src/economy/market.rs`)
+
+Settlements and ports host local markets facilitating barter and currency-based commerce across 10 essential commodities:
+- **Food & Forage**: `Grain`, `Bread`, `Berries`, `Fish`
+- **Raw Materials**: `Wood`, `Stone`, `IronOre`, `WoolCloth`
+- **Manufactured Goods**: `IronIngot`, `Tools`
+
+#### 1. Non-Linear Square-Root Pricing Curve
+Prices dynamically adjust according to available market inventory ($S$) relative to outstanding buyer demand ($D$):
+$$P_{\text{target}} = P_{\text{base}} \cdot \sqrt{\frac{D + 1}{S + 1}}$$
+
+#### 2. Price Bounding
+To protect against runaway hyperinflation or complete economic collapse during extreme shortages or gluts, prices are strictly bounded within a $32\times$ dynamic range:
+$$P \in [0.25 \cdot P_{\text{base}}, \, 8.0 \cdot P_{\text{base}}]$$
+
+#### 3. Price Inertia & Market Friction
+Markets do not jump instantaneously to target prices. An exponential moving average (EMA) with smoothing factor $\alpha = 0.20$ simulates price stickiness and market friction:
+$$P_{t+1} = (1 - \alpha) P_t + \alpha P_{\text{target}}$$
+
+#### 4. Ledger & Settlement
+Transactions deduct/credit currency and transfer commodities atomically, rejecting purchases with insufficient stock or buyer funds.
+
+---
+
+### ⛵ Maritime Shipping & Waterway Navigation (`src/world/shipping.rs`)
+
+Vessels navigate oceans, seas, and rivers, connecting disconnected landmasses and coastal outposts.
+
+#### 1. Vessel Hierarchy (`VesselKind`)
+| Vessel | Speed | Cargo Capacity | Hull Durability | Description |
+| :--- | :---: | :---: | :---: | :--- |
+| **Fishing Boat** | 2.0 tiles/tick | 20 units | 50 HP | Nimble coastal craft for near-shore harvesting and rapid scouting |
+| **Cargo Cog** | 1.0 tiles/tick | 120 units | 120 HP | Broad-beamed merchant workhorse designed for inter-port freight hauling |
+| **Galleon** | 0.8 tiles/tick | 250 units | 300 HP | High-capacity armored flagship built for deep-sea routes and heavy cargo |
+
+#### 2. Waterway A* Pathfinding
+Ships calculate paths exclusively over navigable water (`tile.elevation_layer.is_water()`), routing around coastlines, headlands, and shoals. The pathfinder employs an admissible Manhattan distance heuristic with diagonal penalties to produce natural nautical routes.
+
+#### 3. Boat Yard Construction & Launch
+Boat yards constructed on shorelines scan orthogonal neighbors for navigable water cells. Upon launch, newly christened ships spawn directly into deep water, preventing land entrapment.
+
+---
+
+### 🚢 Docks, Trade Routes & Automated Arbitrage (`src/world/trade_routes.rs`)
+
+#### 1. Deepwater Docks (`DockPort`)
+Ports serve as multimodal transit hubs, featuring deepwater berths, dedicated cargo storage, and an attached local commodity market.
+
+#### 2. Cyclic Trade Route Scheduling (`TradeRoute`)
+Trade routes automate recurring commercial voyages across four discrete lifecycle stages:
+```
+Loading (Source Dock) ➔ Sailing to Destination ➔ Unloading (Dest Dock) ➔ Returning to Source
+```
+
+#### 3. Automated Arbitrage Engine
+The `ShippingNetwork` coordinator processes active routes on each simulation tick:
+- **Source Market**: The ship purchases available surplus goods at discounted source rates ($P_{\text{source}} = P_{\text{base}} \sqrt{\frac{D_{\text{low}} + 1}{S_{\text{high}} + 1}}$).
+- **Transit**: The vessel navigates along calculated water waypoints towards the destination port.
+- **Destination Market**: The ship sells its cargo at high-demand market prices ($P_{\text{dest}} = P_{\text{base}} \sqrt{\frac{D_{\text{high}} + 1}{S_{\text{low}} + 1}}$), recording net commercial profit and balancing regional resource disparities.
+
+---
+
+### 🧪 Phase 4 Test Suite (`tests/phase4_economy_shipping_tests.rs`)
+
+| Test Case | Description & Verification Target |
+| :--- | :--- |
+| `test_local_market_supply_demand_pricing_and_inertia` | Validates square-root pricing response under supply glut and scarcity, verifies price bounding $[0.25\times, 8.0\times]$, confirms EMA smoothing inertia ($\alpha = 0.20$), and validates ledger currency and commodity exchange. |
+| `test_boat_construction_and_launch_to_navigable_water` | Verifies coastal boatyard detection, directional launch of newly constructed `CargoCog` onto adjacent water tiles, and vessel property initialisation. |
+| `test_vessel_waterway_pathfinding_avoids_land` | Creates an ocean map with a protruding land peninsula; verifies that maritime A* navigates around the obstacle through water tiles without crossing dry land. |
+| `test_dock_trade_route_automated_arbitrage_cycle` | Simulates an end-to-end commercial trade loop between an agricultural surplus dock and an industrial deficit dock. Verifies loading, transit, unloading, automated commodity arbitrage, and profit accumulation. |
+
+### 🛠️ Phase 4 Verification & Acceptance Gates
+
+All four acceptance gates pass cleanly:
+```bash
+# 1. Format check
+cargo fmt --check
+
+# 2. Strict lints & zero warnings
+cargo clippy --all-targets -- -D warnings
+
+# 3. Full test suite (45 passing tests across 7 test suites)
 cargo test
 
 # 4. Production release build (LTO, codegen-units = 1)

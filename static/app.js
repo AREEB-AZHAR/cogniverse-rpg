@@ -3717,7 +3717,7 @@ function renderWarRoom(data) {
           <div>
             <strong>${eng.kind} (${eng.faction})</strong>
             <div class="small-text">Pos: [${eng.x}, ${eng.y}] → Target: [${eng.target_x}, ${eng.target_y}]</div>
-            <div class="small-text">Status: ${eng.is_operational ? '⚔️ Firing' : '🔧 Damaged'} (HP: ${eng.hp}/${eng.max_hp})</div>
+            <div class="small-text">Status: ${eng.is_operational ? '⚔️ Firing' : '🔧 Damaged'} (HP: ${Math.round(eng.health ?? eng.hp ?? 0)}/${Math.round(eng.max_health ?? eng.max_hp ?? 100)})</div>
           </div>
           <button class="btn-micro" onclick="centerCameraOn(${eng.x}, ${eng.y}); toggleWarRoomModal();">Locate</button>
         </div>
@@ -3735,7 +3735,9 @@ function renderWarRoom(data) {
     } else {
       titanGrid.innerHTML = data.titans
         .map((t) => {
-          const hpPct = Math.round((t.health / Math.max(1, t.max_health)) * 100);
+          const curHp = Math.round(t.hp ?? t.health ?? 0);
+          const maxHp = Math.round(t.max_hp ?? t.max_health ?? 1);
+          const hpPct = Math.round((curHp / Math.max(1, maxHp)) * 100);
           const icon = t.kind.includes('Leviathan') ? '🌊' : t.kind.includes('Magma') ? '🔥' : '🌌';
           return `
           <div class="titan-card ${t.state.toLowerCase()}">
@@ -3750,7 +3752,7 @@ function renderWarRoom(data) {
               <div class="titan-health-bar" style="width: ${hpPct}%;"></div>
             </div>
             <div class="titan-stats-row">
-              <span>HP: ${t.health} / ${t.max_health}</span>
+              <span>HP: ${curHp} / ${maxHp}</span>
               <span class="titan-state-pill ${t.state.toLowerCase()}">${t.state}</span>
             </div>
             <div class="titan-loc-row">
@@ -3774,7 +3776,7 @@ function renderWarRoom(data) {
       demigodList.innerHTML = data.demigods
         .map((dg) => {
           const agent = data.agents ? data.agents.find((a) => a.id === dg.agent_id) : null;
-          const name = agent ? agent.name : `Demigod #${dg.agent_id}`;
+          const name = dg.agent_name || (agent ? agent.name : `Demigod #${dg.agent_id}`);
           const ax = agent ? agent.x : 64;
           const ay = agent ? agent.y : 64;
           return `
@@ -3788,16 +3790,16 @@ function renderWarRoom(data) {
             </div>
             <div class="demigod-stats">
               <div class="demigod-stat-item">
-                <span class="dg-label">Divine Favor:</span>
-                <span class="dg-val gold-text">${dg.divine_favor || 100}</span>
+                <span class="dg-label">Ascension Tier:</span>
+                <span class="dg-val gold-text">Tier ${dg.ascension_tier || 1}</span>
               </div>
               <div class="demigod-stat-item">
-                <span class="dg-label">Miracles Invoked:</span>
-                <span class="dg-val">${dg.miracles_invoked || 0}</span>
+                <span class="dg-label">Dynasty Heirloom:</span>
+                <span class="dg-val">${dg.heirloom_name || 'Ancestral Relic'}</span>
               </div>
               <div class="demigod-stat-item">
-                <span class="dg-label">Ascendance Epoch:</span>
-                <span class="dg-val">Year ${dg.ascendance_epoch || 1}</span>
+                <span class="dg-label">Divine Status:</span>
+                <span class="dg-val">Immortal Champion</span>
               </div>
             </div>
             <button class="btn-micro" onclick="selectedAgentId = ${dg.agent_id}; centerCameraOn(${ax}, ${ay}); openCharacterSheet(); toggleWarRoomModal();">Inspect Demigod & Relics</button>
@@ -3816,24 +3818,31 @@ function toggleSettingsModal() {
   const isHidden = modal.classList.toggle('hidden');
   if (!isHidden) {
     playSound('click');
-    if (window.soundManager) {
-      const v = window.soundManager.volumes;
-      const sMaster = document.getElementById('slider-master-vol');
-      const sSfx = document.getElementById('slider-sfx-vol');
-      const sAmb = document.getElementById('slider-ambient-vol');
-      if (sMaster) sMaster.value = Math.round(v.master * 100);
-      if (sSfx) sSfx.value = Math.round(v.sfx * 100);
-      if (sAmb) sAmb.value = Math.round(v.ambient * 100);
+    const v = (window.soundManager && window.soundManager.volumes)
+      ? window.soundManager.volumes
+      : {
+          master: (window.soundManager && window.soundManager.masterVolume) ?? 0.8,
+          sfx: (window.soundManager && window.soundManager.sfxVolume) ?? 0.85,
+          ambient: (window.soundManager && window.soundManager.ambientVolume) ?? 0.4,
+        };
 
-      const lMaster = document.getElementById('label-master-vol');
-      const lSfx = document.getElementById('label-sfx-vol');
-      const lAmb = document.getElementById('label-ambient-vol');
-      if (lMaster) lMaster.textContent = Math.round(v.master * 100) + '%';
-      if (lSfx) lSfx.textContent = Math.round(v.sfx * 100) + '%';
-      if (lAmb) lAmb.textContent = Math.round(v.ambient * 100) + '%';
+    const sMaster = document.getElementById('slider-master-vol');
+    const sSfx = document.getElementById('slider-sfx-vol');
+    const sAmb = document.getElementById('slider-ambient-vol');
+    if (sMaster) sMaster.value = Math.round(v.master * 100);
+    if (sSfx) sSfx.value = Math.round(v.sfx * 100);
+    if (sAmb) sAmb.value = Math.round(v.ambient * 100);
 
-      const btnMute = document.getElementById('btn-toggle-mute');
-      if (btnMute) btnMute.textContent = window.soundManager.isMuted ? 'Unmute Audio' : 'Mute Audio';
+    const lMaster = document.getElementById('label-master-vol');
+    const lSfx = document.getElementById('label-sfx-vol');
+    const lAmb = document.getElementById('label-ambient-vol');
+    if (lMaster) lMaster.textContent = Math.round(v.master * 100) + '%';
+    if (lSfx) lSfx.textContent = Math.round(v.sfx * 100) + '%';
+    if (lAmb) lAmb.textContent = Math.round(v.ambient * 100) + '%';
+
+    const btnMute = document.getElementById('btn-toggle-mute');
+    if (btnMute && window.soundManager) {
+      btnMute.textContent = window.soundManager.isMuted ? 'Unmute Audio' : 'Mute Audio';
     }
 
     const cMinimap = document.getElementById('check-minimap-toggle');

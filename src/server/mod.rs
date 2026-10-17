@@ -29,9 +29,28 @@ pub type SharedSimulation = Arc<RwLock<SimulationEngine>>;
 pub fn create_router(sim: SharedSimulation) -> Router {
     Router::new()
         .route("/ws", get(ws_handler))
+        .route("/api/audio/{asset}", get(audio_asset_handler))
         .fallback_service(ServeDir::new("static"))
         .layer(CorsLayer::permissive())
         .with_state(sim)
+}
+
+async fn audio_asset_handler(
+    axum::extract::Path(asset): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let clean_name = asset.trim_end_matches(".wav");
+    let file_path = format!("static/audio/{}.wav", clean_name);
+    match tokio::fs::read(&file_path).await {
+        Ok(bytes) => (
+            [
+                (axum::http::header::CONTENT_TYPE, "audio/wav"),
+                (axum::http::header::CONTENT_DISPOSITION, "inline"),
+            ],
+            bytes,
+        )
+            .into_response(),
+        Err(_) => axum::http::StatusCode::NOT_FOUND.into_response(),
+    }
 }
 
 async fn ws_handler(

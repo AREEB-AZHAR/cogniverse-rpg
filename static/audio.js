@@ -42,6 +42,14 @@ class SoundManager {
     } catch (_) {}
   }
 
+  get volumes() {
+    return {
+      master: this.masterVolume,
+      sfx: this.sfxVolume,
+      ambient: this.ambientVolume,
+    };
+  }
+
   ensureContext() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -77,7 +85,7 @@ class SoundManager {
 
     for (const name of this.assetList) {
       try {
-        const response = await fetch(`/audio/${name}.wav`);
+        const response = await fetch(`/api/audio/${name}`);
         if (response.ok) {
           const arrayBuffer = await response.arrayBuffer();
           const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
@@ -97,7 +105,7 @@ class SoundManager {
     const buffer = this.buffers.get(name);
     if (!buffer) {
       // If buffer not preloaded yet, fetch on-the-fly
-      fetch(`/audio/${name}.wav`)
+      fetch(`/api/audio/${name}`)
         .then((r) => r.arrayBuffer())
         .then((ab) => this.ctx.decodeAudioData(ab))
         .then((decoded) => {
@@ -131,7 +139,7 @@ class SoundManager {
 
     const buffer = this.buffers.get('ambient_breeze');
     if (!buffer) {
-      fetch('/audio/ambient_breeze.wav')
+      fetch('/api/audio/ambient_breeze')
         .then((r) => r.arrayBuffer())
         .then((ab) => this.ctx.decodeAudioData(ab))
         .then((decoded) => {

@@ -47,6 +47,9 @@
 > 5. **Live Plots & Rebellions Codex Tab** (`screenshots/codex_plots_rebellions.png`): Open the Codex (`🧠 Codex & Activities`) and switch to the `⚔️ Live Plots & Rebellions` tab showing active civil plots, conspirators, treasuries, and progress bars.
 > 6. **Monumental Town Hall & Barracks Architecture** (`screenshots/worldbox_townhall_barracks.png`): Place a Town Hall and Barracks using the `🏗️ Architecture` tool tray near a village center and capture their pixel-art rendering.
 > 7. **World Archetypes & Generation Forge Modal** (`screenshots/worldbox_world_management_modal.png`): Open the `🌍 Worlds & Maps` modal showing the 7 archetype cards, seed randomizer, sea level & mountain ruggedness sliders, and dual divine Reset / Forge action buttons.
+> 8. **Sovereign Radar Minimap** (`screenshots/minimap_radar_active.png`): Overview radar HUD showing full-realm territory colors, camera view rectangle, and boss pings.
+> 9. **Sovereign War Room & Titan Dossier** (`screenshots/war_room_titan_codex.png`): War Room modal showcasing territorial sovereignty balance, active siege artillery list, and Primordial Titan health dossiers.
+> 10. **Audio Fidelity & Realm Settings** (`screenshots/realm_settings_audio_modal.png`): Settings modal with Master, SFX, and Ambient sliders, mute button, and visual toggles.
 
 ---
 
@@ -1324,6 +1327,53 @@ Phase 8 elevates Genesis Cogniverse from localized tactical skirmishes to macro-
 - **Colossal Titan Auras**: Dynamic pulsing radial fields rendered on the 60 FPS canvas with titan avatars and real-time health/awakening pressure gauges.
 - **Siege Trajectory Arcs**: Dashed ballistic targeting lines connecting active siege engines to fortified enemy structures.
 - **Demigod Celestial Halos**: Radiant golden corona particle rings and domain crests marking ascended heroes.
+
+---
+
+## 🧭 Phase 9: Realm Polish, Audio Asset Engine, Minimap Radar & Sovereign War Room
+
+Phase 9 completes the sensory and navigational apex of the Genesis Cogniverse simulation, bringing physical audio assets, real-time minimap radar tracking, strategic warfare management, and granular user customization.
+
+### 1. Physical Audio Asset Engine (`static/audio/*.wav`, `static/audio.js`)
+- **Saved Audio Files on Disk**:
+  - Rather than synthesizing transient tones solely in memory, actual physical 16-bit 44.1kHz mono PCM `.wav` files are generated, stored in `static/audio/`, served over HTTP via `ServeDir`, and preloaded into audio buffers.
+  - `static/audio/click.wav`: Snappy wooden/tactile UI click feedback.
+  - `static/audio/mining.wav`: Resonant metallic pickaxe clink for ore extraction.
+  - `static/audio/explosion.wav`: Deep low-frequency concussive rumble for catapult bombardment and cataclysms.
+  - `static/audio/titan_roar.wav`: Terrifying low-frequency primordial beast growl with frequency modulation and tremor.
+  - `static/audio/chime.wav`: Celestial harmonic sparkle for divine blessings and apotheosis ascendance.
+  - `static/audio/victory.wav`: Triumphant major-seventh fanfare chord for coalition triumphs.
+  - `static/audio/defeat.wav`: Somber minor-chord cadence for kingdom defeat.
+  - `static/audio/ambient_breeze.wav`: Seamlessly looping organic planetary wind and ocean breeze backdrop.
+- **SoundManager Architecture**:
+  - Web Audio API hierarchy with Master Gain Node, SFX Gain Node, and Ambient Loop Gain Node.
+  - Interactive volume control with automatic `localStorage` persistence and fallback synthesizer.
+
+### 2. Sovereign Minimap Radar & Viewport Teleportation (`static/app.js`, `static/style.css`)
+- **Real-Time 160×160 Radar**:
+  - High-performance GPU canvas blit of the 128×128 continental terrain buffer.
+  - **Territory Tinting**: Dynamic semi-transparent color washes depicting Solar Terran (golden/amber) and Lunar Elf (purple/violet) regional control.
+  - **Camera Frustum Viewport**: Golden bounding box outlining the player's active camera perspective on the world.
+  - **Titan Blip Tracking**: Pulsing crimson/orange boss blips indicating titan locations across the globe.
+  - **Interactive Drag-to-Pan**: Clicking or dragging on the minimap canvas instantly glides or teleports the camera to world coordinates.
+  - **Collapsible Radar**: Header toggle button to minimize radar HUD when maximizing cinematic immersion.
+
+### 3. Sovereign War Room & Titan Threat Dossier (`static/index.html`, `static/app.js`)
+- **Three Strategic Command Portals**:
+  1. **🛡️ Theater of War**:
+     - Live territorial sovereignty bar comparing percentage and tile count of Solaria vs. Lunaria.
+     - Real-time diplomatic status and kingdom treasury reserves.
+     - Active siege engine ballistics monitor with direct "Locate" camera centering.
+  2. **🐉 Primordial Titans**:
+     - Dynamic threat dossiers for all world bosses (`Abyssal Leviathan`, `Magma Wyrm`, `Void Colossus`).
+     - Real-time health gauges, awakening states, disruption radiuses, and "Locate Boss on Map" targeting buttons.
+  3. **✦ Demigods & Relics**:
+     - Demigod registry documenting ascended mortal heroes, divine domains (`SunHerald`, `WarBringer`, `VoidWalker`), divine favor levels, and direct inspection links.
+
+### 4. Audio Fidelity & Realm Settings Console
+- **Granular Volume Sliders**: Independent sliders for Master, SFX, and Ambient Environment volumes with real-time percentage readouts.
+- **Global Audio Mute**: Instant toggle preserving configured volumes when unmuted.
+- **Visual Display Overlays**: Checkboxes to toggle Minimap Radar, Titan Pulsing Auras, Demigod Celestial Halos, and Dynamic Day/Night Lighting Masks.
 
 ---
 

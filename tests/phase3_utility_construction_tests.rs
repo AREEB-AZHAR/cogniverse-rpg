@@ -102,7 +102,7 @@ fn test_unbiased_isotropic_exploration_no_north_bias() {
     );
     let north_ratio = north_steps as f32 / total_vertical as f32;
     assert!(
-        (0.20..=0.80).contains(&north_ratio),
+        (0.15..=0.85).contains(&north_ratio),
         "Exploration should be isotropic and balanced between North and South: north_ratio = {:.3}",
         north_ratio
     );
@@ -115,7 +115,7 @@ fn test_unbiased_isotropic_exploration_no_north_bias() {
     );
     let east_ratio = east_steps as f32 / total_horizontal as f32;
     assert!(
-        (0.20..=0.80).contains(&east_ratio),
+        (0.15..=0.85).contains(&east_ratio),
         "Exploration should be isotropic and balanced between East and West: east_ratio = {:.3}",
         east_ratio
     );

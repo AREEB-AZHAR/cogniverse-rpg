@@ -114,6 +114,8 @@
       <input type="file" id="file-import-input" accept=".json" style="display:none" onchange="onFileImportSelected(event)" />
       <button id="btn-world-manage" class="btn-hud-action world-btn" onclick="toggleWorldModal()" title="World Archetypes, Map Forge & Reset">🌍 Worlds & Maps</button>
       <button id="btn-codex" class="btn-hud-action codex-btn" onclick="toggleCodexModal()" title="Knowledge & Activities Codex">🧠 Codex</button>
+      <button id="btn-war-room" class="btn-hud-action war-btn" onclick="toggleWarRoomModal()" title="Sovereign War Room, Titan Codex & Demigods">⚔️ War Room</button>
+      <button id="btn-settings" class="btn-hud-action settings-btn" onclick="toggleSettingsModal()" title="Audio & Visual Settings">⚙️</button>
       <button class="btn-hud-action" onclick="zoomIn()" title="Zoom In (+)">🔍+</button>
       <button class="btn-hud-action" onclick="zoomOut()" title="Zoom Out (-)">🔍-</button>
       <button class="btn-hud-action" onclick="resetCamera()" title="Reset Camera View">🎯</button>
@@ -1154,9 +1156,159 @@
     </div>
   </aside>
 
+  <!-- =========================================================
+       MINIMAP REALM RADAR (BOTTOM RIGHT)
+  ========================================================= -->
+  <div id="minimap-container" class="minimap-container">
+    <div class="minimap-header">
+      <span class="minimap-title">🧭 Realm Radar</span>
+      <span id="minimap-coords" class="minimap-coords">64, 64</span>
+      <button class="minimap-toggle-btn" onclick="toggleMinimap()" title="Toggle Radar View">_</button>
+    </div>
+    <div id="minimap-body" class="minimap-body">
+      <canvas id="minimap-canvas" width="160" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       WAR ROOM & TITAN CODEX MODAL
+  ========================================================= -->
+  <div id="war-room-modal" class="modal-backdrop hidden">
+    <div class="modal-card war-room-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">⚔️</span>
+          <div>
+            <h2 class="modal-title">Sovereign War Room & Titan Codex</h2>
+            <p class="modal-subtitle">Geopolitical Warfare, Mythic Titan Threat Levels & Demigod Ascendance</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="toggleWarRoomModal()">✕</button>
+      </div>
+
+      <div class="war-room-tabs">
+        <button id="wrtab-war" class="wr-tab active" onclick="switchWarRoomTab('war')">🛡️ Theater of War</button>
+        <button id="wrtab-titans" class="wr-tab" onclick="switchWarRoomTab('titans')">🐉 Primordial Titans</button>
+        <button id="wrtab-demigods" class="wr-tab" onclick="switchWarRoomTab('demigods')">✦ Demigods & Relics</button>
+      </div>
+
+      <div class="modal-body war-room-body">
+        <!-- Tab 1: Theater of War -->
+        <div id="wr-content-war" class="wr-content active">
+          <div class="wr-grid-2col">
+            <div class="wr-panel">
+              <h3 class="panel-subhead">Territorial Sovereignty</h3>
+              <div class="territory-balance-bar">
+                <div id="terran-territory-bar" class="terran-bar" style="width: 50%;">50% Solaria</div>
+                <div id="lunar-territory-bar" class="lunar-bar" style="width: 50%;">50% Lunaria</div>
+              </div>
+              <div class="wr-stat-row">
+                <span>Diplomatic Status:</span>
+                <span id="wr-diplomacy" class="gold-text">Peaceful Coexistence</span>
+              </div>
+              <div class="wr-stat-row">
+                <span>Solaria Treasury:</span>
+                <span id="wr-terran-gold" class="amber-text">250 Gold</span>
+              </div>
+              <div class="wr-stat-row">
+                <span>Lunaria Treasury:</span>
+                <span id="wr-lunar-gold" class="purple-text">250 Gold</span>
+              </div>
+            </div>
+
+            <div class="wr-panel">
+              <h3 class="panel-subhead">Siege Artillery & Ballistics</h3>
+              <div id="wr-siege-list" class="wr-siege-list">
+                <div class="empty-notice">No siege artillery currently deployed in the field.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Primordial Titans -->
+        <div id="wr-content-titans" class="wr-content">
+          <div id="wr-titan-grid" class="titan-dossier-grid">
+            <!-- Dynamically populated titan cards -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Demigods & Relics -->
+        <div id="wr-content-demigods" class="wr-content">
+          <div id="wr-demigod-list" class="demigod-dossier-grid">
+            <!-- Dynamically populated demigod cards -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       SETTINGS & AUDIO FIDELITY MODAL
+  ========================================================= -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal-card settings-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">⚙️</span>
+          <div>
+            <h2 class="modal-title">Realm Settings & Audio Fidelity</h2>
+            <p class="modal-subtitle">Configure Audio Volumes, Visual Effects & Simulation Preferences</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="toggleSettingsModal()">✕</button>
+      </div>
+
+      <div class="modal-body settings-body">
+        <div class="settings-section">
+          <h3 class="settings-heading">🔊 Audio & Sound Assets</h3>
+          <div class="setting-row">
+            <label for="slider-master-vol">Master Volume</label>
+            <input type="range" id="slider-master-vol" min="0" max="100" value="80" oninput="onMasterVolChange(this.value)" />
+            <span id="label-master-vol">80%</span>
+          </div>
+          <div class="setting-row">
+            <label for="slider-sfx-vol">Sound Effects (SFX)</label>
+            <input type="range" id="slider-sfx-vol" min="0" max="100" value="85" oninput="onSfxVolChange(this.value)" />
+            <span id="label-sfx-vol">85%</span>
+          </div>
+          <div class="setting-row">
+            <label for="slider-ambient-vol">Ambient Environment</label>
+            <input type="range" id="slider-ambient-vol" min="0" max="100" value="40" oninput="onAmbientVolChange(this.value)" />
+            <span id="label-ambient-vol">40%</span>
+          </div>
+          <div class="setting-row">
+            <label>Mute Audio Assets</label>
+            <button id="btn-toggle-mute" class="btn-setting-action" onclick="toggleAudioMute()">Mute Audio</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3 class="settings-heading">🎨 Visual Overlays & Display</h3>
+          <div class="setting-toggle-row">
+            <span>Show Minimap Radar</span>
+            <input type="checkbox" id="check-minimap-toggle" checked onchange="setRadarVisibility(this.checked)" />
+          </div>
+          <div class="setting-toggle-row">
+            <span>Show Titan Pulsing Auras</span>
+            <input type="checkbox" id="check-titan-auras" checked onchange="setTitanAuras(this.checked)" />
+          </div>
+          <div class="setting-toggle-row">
+            <span>Show Demigod Halos</span>
+            <input type="checkbox" id="check-demigod-halos" checked onchange="setDemigodHalos(this.checked)" />
+          </div>
+          <div class="setting-toggle-row">
+            <span>Show Day/Night Ambient Filter</span>
+            <input type="checkbox" id="check-day-night" checked onchange="setDayNightFilter(this.checked)" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating Toast Notification -->
   <div id="tool-toast" class="wb-toast hidden"></div>
 
-  <script src="app.js?v=codex60fps"></script>
+  <script src="audio.js"></script>
+  <script src="app.js?v=phase9polish"></script>
 </body>
 </html>

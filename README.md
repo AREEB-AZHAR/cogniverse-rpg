@@ -56,6 +56,93 @@
 > 8. **Sovereign Radar Minimap** (`screenshots/minimap_radar_active.png`): Overview radar HUD showing full-realm territory colors, camera view rectangle, and boss pings.
 > 9. **Sovereign War Room & Titan Dossier** (`screenshots/war_room_titan_codex.png`): War Room modal showcasing territorial sovereignty balance, active siege artillery list, and Primordial Titan health dossiers.
 > 10. **Audio Fidelity & Realm Settings** (`screenshots/realm_settings_audio_modal.png`): Settings modal with Master, SFX, and Ambient sliders, mute button, and visual toggles.
+> 11. **Hero Character & RPG Inventory UI** (`screenshots/rpg_hero_inventory_equipment.png`): Open the player inventory (`I` or `B`) showing the 24-slot backpack, 5-slot paperdoll gear, hover tooltips, and real-time RPG stats.
+> 12. **Procedural Dungeon Chamber & Abyssal Rift Titan Boss** (`screenshots/rpg_dungeon_boss_encounter.png`): Step onto the stone stairs portal in the Overworld to enter the 40x40 obsidian dungeon arena and face the Titan boss.
+
+---
+
+## ⚔️ Genesis Cogniverse 2D: Playable Hero, Animated Sprites, Combat, Inventory & Abyssal Dungeon
+
+In Phase 4, the engine introduced an authentic, real-time 2D Action RPG gameplay loop built directly within Godot 4.7 (`C:\Users\areeb\Documents\new-game-project`), pairing the God-Mode Overseer simulation with direct, responsive third-person Hero control.
+
+### 🎮 Player Hero & Dual-Control Architecture
+- **Dual Perspective Switch**: Press **`P`** or **`Tab`** to toggle instantly between:
+  1. **Direct Player Hero Mode**: Camera smoothly tracks the hero (`Valerius`), with direct keyboard controls.
+  2. **Divine Overseer Free-Cam Mode**: Free-flight camera with drag/edge panning, zoom, and civilization inspection.
+- **Controls**:
+  - **`WASD` / Arrow Keys**: 8-directional smooth movement with normalized vectors.
+  - **`Shift` (Hold)**: Sprint mode ($1.5\times$ base speed).
+  - **`Space` / Left Mouse Button**: Directional sword attack combo with arc slash particle animations.
+  - **`I` / `B` / TopBar `🎒 Inv (I)`**: Toggle retro wooden Inventory & Equipment UI modal.
+  - **`Q`**: Instant quick-heal potion consumption from backpack.
+  - **`E` / Touch**: Enter/exit dungeon portals and trigger interactions.
+
+---
+
+### 🎨 AnimatedSprite2D & Transparent PNG Spritesheet Engine
+Characters and monsters utilize multi-animation `AnimatedSprite2D` nodes driven by programmatically synthesized 32x32 transparent PNG spritesheets:
+- **Hero Spritesheet** (`asserts/characters/hero_spritesheet.png`):
+  - `idle`: 4-frame breathing cycle with royal blue tunic and gold crest.
+  - `walk`: 6-frame running gait cycle with alternating leg strides.
+  - `attack`: 4-frame directional sword slash with cyan energy arc trails.
+  - `hurt`: 2-frame crimson damage flash and recoil.
+- **Villager Spritesheet** (`asserts/characters/villager_spritesheet.png`): 4-frame idle, 4-frame walk.
+- **Mage Spritesheet** (`asserts/characters/mage_spritesheet.png`): 4-frame idle, 4-frame walk, 3-frame cast.
+- **Skeleton Spritesheet** (`asserts/characters/skeleton_spritesheet.png`): 4-frame idle, 4-frame walk, 3-frame rusted scimitar slash.
+- **Abyssal Titan Boss Spritesheet** (`asserts/characters/boss_spritesheet.png`): 64x64 demonic obsidian titan with pulsing core and ground slam attack.
+- **Items Spritesheet** (`asserts/items/items_spritesheet.png`): 32x32 icons for Sword, Heavy Armor, Iron Helm, Leather Boots, Sapphire Ring, Health Potion, Mana Crystal, and Gold Coins.
+
+---
+
+### 🎒 RPG Inventory & Equipment System (`InventoryManager.gd`, `PlayerInventoryUI.gd`)
+- **24-Slot Backpack**: Dynamic grid with item stacking, selection, and ground dropping.
+- **5-Slot Paperdoll Equipment**:
+  - `⚔️ Weapon`: Grants base Attack Power and Critical Hit bonuses.
+  - `🛡️ Armor`: Grants flat Defense and Max HP bonuses.
+  - `🪖 Helmet`: Grants Defense and Health bonuses.
+  - `🥾 Boots`: Grants Movement Speed bonuses.
+  - `💍 Ring / Accessory`: Grants Attack, Crit, and Speed bonuses.
+- **Real-Time Stat Calculations**:
+  - Combined Stats: $\text{Total ATK} = \text{Base ATK} + \sum \text{Gear ATK}$
+  - $\text{Total DEF} = \text{Base DEF} + \sum \text{Gear DEF}$
+  - $\text{Total HP} = \text{Base HP} + \sum \text{Gear HP}$
+  - $\text{Move Speed} = (\text{Base SPD} + \sum \text{Gear SPD}) \times \text{SprintMultiplier}$
+  - $\text{Crit Chance} = \text{Base Crit} + \sum \text{Gear Crit}$
+- **Tiered Rarity Color Coding**:
+  - ⚪ `COMMON` (White)
+  - 🟢 `UNCOMMON` (Lime Green)
+  - 🔵 `RARE` (Cobalt Blue)
+  - 🟣 `EPIC` (Deep Purple)
+  - 🟡 `LEGENDARY` (Radiant Gold)
+- **Rich Hover Tooltips**: Displays item name, rarity tag, slot type, full stat breakdown, and lore description.
+
+---
+
+### ⚔️ Real-Time Combat & Health Bar Engine
+- **Hitbox2D & Hurtbox2D Architecture**: Dedicated collision areas using Godot 2D layers (`is_player_attack` flag to prevent friendly fire).
+- **Damage Formula**:
+  $$\text{Damage} = \max\left(1, \left(\text{Attacker ATK} \times \text{rand}(0.85, 1.15) - \text{Target DEF} \times 0.5\right)\right) \times \text{CritMultiplier}$$
+- **Dynamic Feedback**:
+  - Floating animated damage numbers with critical hit styling.
+  - Directional knockback impulse with smooth friction deceleration.
+  - Invulnerability cooldown frames with sprite modulation flash.
+- **Overhead HealthBar2D**: Smooth green/red health bar with delayed amber lag bar for satisfying combat readability.
+
+---
+
+### 🏰 Procedural Obsidian Dungeon & Abyssal Rift Titan Boss
+- **Chamber Generation** (`DungeonInterior2D.gd`, `DungeonInteriorGenerator.gd`):
+  - 40x40 procedural dungeon interior chamber with obsidian cobble floors, ancient demonic runes, wall sconce torches, iron prison bars, and chest alcoves.
+  - Seamless zero-load transition between Overworld and Dungeon with instant coordinate positioning.
+- **Hostile Dungeon Mobs** (`DungeonMob2D.gd`):
+  - Skeleton Warriors patrol corridors, aggro onto the hero within 140px, execute scimitar slashes, and drop randomized loot.
+- **Abyssal Rift Titan Encounter** (`DungeonBoss2D.gd`, `BossHealthBar.gd`):
+  - 550 Max HP boss with ground slam AoE shockwave causing 260 knockback.
+  - **Phase 2 Enrage**: Below 50% HP, gains red flame aura, $+40\%$ speed, and summons skeleton minion reinforcements.
+  - **Top-of-Screen Boss Health Bar**: Cinematic banner with health bar, skull icon, and victory fanfare.
+- **Random Loot Table & Magnetic Drops** (`LootTable.gd`, `LootItem2D.gd`):
+  - Defeated enemies and bosses burst into floating, bouncing loot items.
+  - Features rarity-colored glowing rings and magnetic attraction that smoothly flies into the player when within 70px.
 
 ---
 

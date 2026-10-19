@@ -58,6 +58,8 @@
 > 10. **Audio Fidelity & Realm Settings** (`screenshots/realm_settings_audio_modal.png`): Settings modal with Master, SFX, and Ambient sliders, mute button, and visual toggles.
 > 11. **Hero Character & RPG Inventory UI** (`screenshots/rpg_hero_inventory_equipment.png`): Open the player inventory (`I` or `B`) showing the 24-slot backpack, 5-slot paperdoll gear, hover tooltips, and real-time RPG stats.
 > 12. **Procedural Dungeon Chamber & Abyssal Rift Titan Boss** (`screenshots/rpg_dungeon_boss_encounter.png`): Step onto the stone stairs portal in the Overworld to enter the 40x40 obsidian dungeon arena and face the Titan boss.
+> 13. **Animated Floating Mana Stones** (`screenshots/rpg_mana_stones_animated.png`): Approach a Mana Stone at the Solar Altar or mountain lake, capturing its 6-frame floating hover, cyan glow, and `✨ [E] Commune with Mana Stone` prompt.
+> 14. **Flourishing World Foliage & Giant World Trees** (`screenshots/rpg_flourishing_world_foliage.png`): View of the Whispering Redwood Forest showcasing the Giant Ancient World Trees, lush canopy oaks, orchard trees, flowering bushes, and Y-sorted depth occlusion.
 
 ---
 
@@ -143,6 +145,41 @@ Characters and monsters utilize multi-animation `AnimatedSprite2D` nodes driven 
 - **Random Loot Table & Magnetic Drops** (`LootTable.gd`, `LootItem2D.gd`):
   - Defeated enemies and bosses burst into floating, bouncing loot items.
   - Features rarity-colored glowing rings and magnetic attraction that smoothly flies into the player when within 70px.
+
+---
+
+## 🌿 Phase 5: Flourishing World Foliage & Animated Floating Mana Stones
+
+In Phase 5, the world landscape was dramatically enhanced into a flourishing, organic fantasy realm utilizing designated high-fidelity pixel assets from `asserts/file/TILED_files/`:
+
+### 🔷 Animated Floating Mana Stones (`Flying_stone.png`, `ManaStone2D.gd`)
+- **6-Frame Looping Levitation**:
+  - Utilizes `Flying_stone.png` ($960 \times 128$) sliced into 6 distinct $160 \times 128$ frames rendered via an `AnimatedSprite2D` running at 7 FPS.
+  - **Dynamic Sine Hover**: Moves vertically on a mathematical wave ($\sin(t \times 2.2) \times 6.0\text{px}$) with orbiting arcane crystal fragments.
+  - **Pulsing Arcane Glow**: Ambient radial glow polygon that pulses in cyan/violet alpha ($\alpha \in [0.20, 0.45]$) synchronized with hovering frequency.
+- **Interactive Player Communion**:
+  - Proximity `Area2D` detects the player hero, presenting an in-world interaction prompt: `✨ [E] Commune with Mana Stone`.
+  - Harvesting awards $+25$ Mana Stones to the settlement stockpile (`GameManager.mana_stones`), grants a `crystal_mana` consumable to the player's inventory, plays an ethereal chime SFX, and displays floating animated upward popups.
+  - Placed at iconic mystical locations:
+    1. **Solar Altar Temple** (`grid: 69, 38`)
+    2. **Sacred Mountain Lake** (`grid: 46, 24`)
+    3. **Ancient Leyline Glade** (`grid: 88, 52`)
+    4. **Whispering Glade Sanctuary** (`grid: 26, 42`)
+
+---
+
+### 🌳 Y-Sorted World Foliage & Prop Engine (`Objects.png`, `WorldDecorator2D.gd`, `WorldProp2D.gd`)
+- **Authentic 2D RPG Depth Occlusion**:
+  - `MainGame2D`, `Characters`, `Wildlife`, and `WorldDecorations` are configured with `y_sort_enabled = true`.
+  - Props are anchored at their ground footprint with customized base collision boxes. Characters and wildlife walk **behind** sprawling tree canopies and **in front of** solid trunks seamlessly.
+- **Catalogued Environmental Objects**:
+  - **Giant Ancient World Trees** ($184 \times 302$): Towering forest centerpieces with massive leafy canopies and sprawling mossy roots.
+  - **Tall Oak & Deciduous Trees** ($88 \times 126$ and $92 \times 138$): Clustered across woodlands and mountain valleys.
+  - **Village Orchard Trees** ($72 \times 87$): Blooming fruit trees bordering village farmsteads and cobblestone avenues.
+  - **Flowering Berry Bushes** ($41 \times 41$ to $46 \times 45$): Decorative hedges lining riversides and garden trails.
+  - **Ancient Stone Monoliths** ($55 \times 139$): Runed standing stones marking leyline junctures.
+  - **Granite Boulders** ($38 \times 36$, $36 \times 31$): Rugged crags along riverbanks and mountain spines.
+  - **Village Infrastructure**: Street lantern posts ($29 \times 64$), signposts ($31 \times 49$), and wooden barrels/crates ($32 \times 30$) outside storehouses and granaries.
 
 ---
 

@@ -275,6 +275,21 @@ Configured support for the official PixelLab AI MCP server (`https://api.pixella
 
 ---
 
+### 🖱️ Custom RPG Mouse Cursor & Contextual WASD Movement Loop
+Resolved mouse movement conflicts and cursor behavior:
+1. **Context-Aware Mouse Cursor Visibility**:
+   - **Active Gameplay**: Mouse cursor is automatically hidden (`Input.mouse_mode = Input.MOUSE_MODE_HIDDEN`) during active third-person hero exploration and combat, ensuring pure, unobstructed WASD keyboard control.
+   - **Menus & Inventory**: Opening the **Inventory (`I` or `B`)**, **Settings Panel**, **Save/Load Points**, **New World Customizer**, **Death Screen**, or **Main Title Menu** automatically presents the mouse (`Input.mouse_mode = Input.MOUSE_MODE_VISIBLE`).
+2. **Custom Pixel-Art RPG Cursors** (`asserts/ui/`):
+   - `custom_rpg_cursor.png`: 16-bit ornate fantasy dagger pointer with golden blade beveling, cyan mana core jewel, and drop shadow.
+   - `custom_rpg_cursor_pointer.png`: Ornate golden gauntlet with index finger pointing for hovering over item slots and buttons.
+3. **Display & Camera Drag Hardening**:
+   - Locked aspect ratio with `window/stretch/aspect="keep"` in `project.godot` to prevent coordinate warping or desync across screen sizes.
+   - Enabled VSync (`vsync_mode=1`) and capped framerate to 60 FPS (`max_fps=60`) to eliminate high-FPS Windows input polling stutter.
+   - Guarded `CameraController2D.gd` and `MinimapRadar.gd` against stuck dragging states by verifying active mouse button state on every motion event.
+
+---
+
 ## 🔬 Reverse Engineering WorldBox & REA Toolchain Integration
 
 We integrated the **Reverse Engineer Anything (REA)** skills framework (`git@github.com:morluto/rea.git`) into our workspace and global configuration, registering the REA MCP server for live autonomous inspection:

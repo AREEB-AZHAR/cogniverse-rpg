@@ -60,6 +60,11 @@
 > 12. **Procedural Dungeon Chamber & Abyssal Rift Titan Boss** (`screenshots/rpg_dungeon_boss_encounter.png`): Step onto the stone stairs portal in the Overworld to enter the 40x40 obsidian dungeon arena and face the Titan boss.
 > 13. **Animated Floating Mana Stones** (`screenshots/rpg_mana_stones_animated.png`): Approach a Mana Stone at the Solar Altar or mountain lake, capturing its 6-frame floating hover, cyan glow, and `✨ [E] Commune with Mana Stone` prompt.
 > 14. **Flourishing World Foliage & Giant World Trees** (`screenshots/rpg_flourishing_world_foliage.png`): View of the Whispering Redwood Forest showcasing the Giant Ancient World Trees, lush canopy oaks, orchard trees, flowering bushes, and Y-sorted depth occlusion.
+> 15. **Main Title Menu & Starfield** (`screenshots/rpg_main_title_menu.png`): Main Title Screen showcasing the celestial floating starfield, title banner, Start New World, Load Save Points, Settings, and Quit buttons.
+> 16. **New World Customization Screen** (`screenshots/rpg_new_world_customizer.png`): Customization panel showing Realm Name, Seed Randomizer (`🎲`), Difficulty dropdown (Peaceful to Nightmare), Biome Bias, and Forge button.
+> 17. **Dramatic RPG Death & Revival Screen** (`screenshots/rpg_death_game_over_screen.png`): Game Over screen displaying pulsing blood vignette, stats recap (days, gold, fallen coordinates), "Revive at Altar", and "Exit to Menu".
+> 18. **Minecraft-Style 2D Walled City & Castle** (`screenshots/rpg_walled_city_castle_biome.png`): Bird's eye view of a fortified biome city with stone perimeter walls, gatehouses, King's Castle, Town Hall, Adventurers' Guild, Blacksmith shop, Alchemy store, cottages, and paved roads.
+> 19. **Ancient Waypoint Obelisk & Respawn Binding** (`screenshots/rpg_ancient_waypoint_obelisk.png`): Glowing azure runic waypoint pillar in city plaza, showing respawn binding and HP restoration.
 
 ---
 
@@ -180,6 +185,93 @@ In Phase 5, the world landscape was dramatically enhanced into a flourishing, or
   - **Ancient Stone Monoliths** ($55 \times 139$): Runed standing stones marking leyline junctures.
   - **Granite Boulders** ($38 \times 36$, $36 \times 31$): Rugged crags along riverbanks and mountain spines.
   - **Village Infrastructure**: Street lantern posts ($29 \times 64$), signposts ($31 \times 49$), and wooden barrels/crates ($32 \times 30$) outside storehouses and granaries.
+
+---
+
+## 🏰 Phase 6: Title Screen, Death / Game Over Screen, Minecraft-Style Chunked WorldGen with Walled Cities & PixelLab MCP Integration
+
+In Phase 6, the game's foundation expanded into a full-fledged RPG title with title menu flows, death recovery loops, procedural Minecraft-inspired 2D chunk generation, fortified walled cities with King's Castles, and PixelLab AI asset generation integration.
+
+### 🛡️ Dungeon Bug Root-Cause & Resolution
+1. **Player Occlusion / Disappearance Bug**:
+   - **Root Cause**: `player_character` was previously instantiated inside `characters_container` (`$Characters`). When entering the dungeon rift, `MainGame2D.gd` set `characters_container.visible = false` to hide overworld NPCs, unintentionally hiding the player hero!
+   - **Fix**: Added a dedicated `[node name="PlayerContainer" type="Node2D"]` in `main_game_2d.tscn` with `y_sort_enabled = true`. The hero is parented to `PlayerContainer`, guaranteeing visibility across all world and dungeon transitions.
+2. **Ambiguous Facing Direction**:
+   - Added a visible golden directional chevron polygon (`FacingIndicator`) to `AttackPivot`.
+   - Rotates smoothly in 360 degrees matching movement input and mouse aim.
+   - Added `face_direction(dir: Vector2)` helper to programmatically orient the hero upon entry into chambers or altars.
+3. **Dungeon Desync upon Player Defeat**:
+   - **Root Cause**: Dying in the dungeon set coordinates to the overworld solar altar while the dungeon scene instance remained active and overworld layers remained hidden, stranding the player in a void.
+   - **Fix**: Wire `player_died` signal to clean up the dungeon instance immediately, unhide overworld layers, reset ambient lighting, and trigger the new `DeathScreenUI`.
+
+---
+
+### ☠️ Dramatic RPG Death / Game Over Screen (`DeathScreenUI.gd`, `DeathScreenUI.tscn`)
+- **Pulsing Blood Vignette**: Dynamic blood-red vignette (`Color(0.18, 0.02, 0.02, alpha)`) pulsing smoothly via sine wave.
+- **Combat Stats Recap**: Displays fallen coordinate $(X, Y)$, total days survived (`GameManager.day`), and total accumulated gold (`InventoryManager.gold`).
+- **Two Strategic Player Choices**:
+  1. `❤️ Revive at Waypoint Altar`: Restores health to 100%, revives the player at the nearest active Waypoint or Solar Altar (`GameManager.active_respawn_point`), and logs a resurrection chime event.
+  2. `🏠 Exit to Menu`: Cleans up active game state and returns to the Title Menu.
+
+---
+
+### 🌟 Main Title Menu & Modal Systems (`MainMenuUI.gd`, `MainMenuUI.tscn`)
+A retro title screen with animated celestial starfield, title banner, and modal management:
+- **`Start New World`**: Opens the New World Customizer modal.
+- **`Load Save Points`**: Opens the Save/Load modal (`SaveLoadUI.gd`) with 3 persistent save slots displaying realm name, day count, hero level, and world seed.
+- **`Settings`**: Opens the Settings modal (`SettingsUI.gd`) featuring:
+  - Master, SFX, and BGM volume sliders with live audio response.
+  - Fullscreen / Windowed display mode toggle.
+  - Complete keyboard control reference table (`WASD`, `Space`, `Shift`, `I`, `Q`, `Tab`, `E`).
+- **`Quit Game`**: Gracefully terminates the application.
+
+---
+
+### 🎲 New World Customization Screen (`NewWorldConfigUI.gd`, `NewWorldConfigUI.tscn`)
+Allows players to customize their world parameters before embarking on their quest:
+- **World Name**: Custom text line edit (default: *"Realm of Genesis"*).
+- **Seed Input & Randomizer (`🎲 Rnd`)**: Generates 6-digit numeric seeds or accepts custom seeds for deterministic procedural generation.
+- **Difficulty Selection Dropdown**:
+  - `🌿 Peaceful`: Free building, zero hostile spawns.
+  - `⚔️ Adventurer`: Balanced RPG standard.
+  - `💀 Hardcore`: $+50\%$ monster attack power and lethality.
+  - `🔥 Nightmare`: Brutal elites, aggressive dungeon bosses, and scarce resources.
+- **Starting Biome Bias Dropdown**: Grand Continental, Whispering Redwoods, Ironcrag Mountains, Solar Badlands, or Glacial Frostlands.
+- **Walled Cities Toggle**: Checkbox ensuring perimeter fortress walls and gatehouses are placed.
+- **`✨ Forge & Enter Realm`**: Saves configuration to `GameManager` and transitions to `res://scene/main_game_2d.tscn`.
+
+---
+
+### 🗺️ Minecraft-Style 2D Chunk World Generation (`ChunkWorldGenerator2D.gd`)
+Implements procedural chunked 2D terrain generation across an 8x8 chunk grid ($16 \times 16$ tiles per chunk = $128 \times 128$ map):
+- **5 Distinct Biome Regions**:
+  1. `Sunlit Plains`: Fertile prairie, farmlands, wheat fields, and golden sunlight.
+  2. `Whispering Forest`: Ancient redwoods, giant oaks, mossy trails, and leylines.
+  3. `Ironcrag Mountains`: Rugged granite summits, volcanic fissures, and 10 mineral mines.
+  4. `Solar Badlands`: Golden sand dunes, arid desert scrub, and sun-baked sandstone.
+  5. `Permafrost Tundra`: Frozen lakes, snowy pine groves, and crystalline ice packs.
+- **Fortified Walled Cities in Every Biome**:
+  - **Perimeter Battlement Walls (`TILE_WALL`)**: Solid stone walls enclosing the settlement.
+  - **Gatehouses (`TILE_GATEHOUSE`)**: Fortified archways with iron portcullises on North, South, East, and West thoroughfares.
+  - **Cobblestone Road Network (`TILE_ROAD`)**: Paved streets connecting all city gates, civic plazas, and shop alleys.
+  - **King's Castle Keep (`TILE_CASTLE`)**: Majestic royal fortress situated at High North, flying royal purple banners with gold trim and iron portcullis.
+  - **Town Hall (`TILE_TOWNHALL`)**: Civic center with blue slate roof, central bell tower, and golden clock face.
+  - **Adventurers' Guild (`TILE_GUILD`)**: Stone barracks with quest board and flag heraldry.
+  - **Master Blacksmith Shop (`TILE_BLACKSMITH`)**: Workshop with active stone chimney smoke, blazing forge hearth, and heavy iron anvil. Interactive: forge razor Iron Broadswords for 30 Gold!
+  - **Apothecary Alchemy Store (`TILE_ALCHEMY`)**: Herbal shop with mystical green potion flask sign, cauldron steam, and herb drying bundles. Interactive: purchase Health Potions (+50 HP) for 15 Gold!
+  - **Residential Cottages (`TILE_COTTAGE_RED`, `TILE_COTTAGE_BLUE`)**: Cozy citizen homes lining residential side streets.
+- **Ancient Waypoint Pillars (`TILE_WAYPOINT`)**:
+  - Sacred obelisk in each city plaza with an ancient stone altar base, carved runic column, and pulsing azure mana core.
+  - **Interactive Resonance**: Stepping near or clicking the Waypoint sets `GameManager.active_respawn_point`, fully restores the hero's health, and logs an attunement chime to the Chronicle!
+
+---
+
+### 🎨 PixelLab AI MCP Integration & Client Tool (`pixellab_client.py`)
+Configured support for the official PixelLab AI MCP server (`https://api.pixellab.ai/mcp`):
+- **Global MCP Configuration**: Added `pixellab` SSE server entry to `~/.gemini/config/mcp_config.json` with `Authorization: Bearer ${PIXELLAB_API_KEY}`.
+- **Standalone Client Utility** (`script/tools/pixellab_client.py`):
+  - Supports PixelLab REST API v2 endpoints for generating RPG spritesheets, tilesets, props, and characters.
+  - Built-in zero-dependency procedural pixel art synthesis fallback generating valid 16-color retro RPG PNG assets when working offline or without an active API key.
 
 ---
 
